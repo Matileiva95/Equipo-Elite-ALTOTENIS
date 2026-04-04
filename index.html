@@ -284,24 +284,11 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <div class="balls"><div class="bl b1"></div><div class="bl b2"></div><div class="bl b3"></div></div>
       <span class="brand-name">ALTO<span>TENIS</span></span>
     </div>
-    <div class="login-sub" id="login-sub-text">Hub de entrenadores<br>Club de Tenis Providencia</div>
-
-    <!-- PASO 1: nombre + contraseña general -->
-    <div id="login-step1">
-      <input type="text" id="li-user" placeholder="Tu nombre" autocomplete="off" />
-      <input type="password" id="li-pass" placeholder="Contraseña general" />
-      <button class="login-btn" onclick="doLoginStep1()">Continuar</button>
-      <div class="login-err" id="li-err"></div>
-    </div>
-
-    <!-- PASO 2: selección de grupo + contraseña de grupo -->
-    <div id="login-step2" style="display:none;">
-      <div id="group-buttons"></div>
-      <input type="password" id="li-group-pass" placeholder="Contraseña del grupo" />
-      <button class="login-btn" onclick="doLoginStep2()" style="margin-top:4px;">Ingresar</button>
-      <button class="step-back" onclick="backToStep1()">← Volver</button>
-      <div class="login-err" id="li-err2"></div>
-    </div>
+    <div class="login-sub">Hub de entrenadores<br>Club de Tenis Providencia</div>
+    <input type="text" id="li-user" placeholder="Tu nombre" autocomplete="off" />
+    <input type="password" id="li-pass" placeholder="Contraseña" />
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-err" id="li-err"></div>
   </div>
 </div>
 
@@ -315,8 +302,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
         <span class="sb-brand-text">ALTO<span>TENIS</span></span>
       </div>
       <div class="sb-sub">Hub de entrenadores</div>
-      <div id="group-lbl" style="font-size:11px;font-weight:700;margin-top:3px;"></div>
-      <div id="group-lbl" style="font-size:11px;font-weight:700;margin-top:3px;"></div>
+
     </div>
     <div class="sb-nav">
       <div class="nav-lbl">General</div>
@@ -329,7 +315,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
     </div>
     <div class="sb-foot">
       <div class="sync-row"><div class="sync-dot" id="sync-dot"></div><span id="sync-lbl">Conectando...</span></div>
-      <div style="display:flex;flex-direction:column;gap:4px;"><button class="logout-btn" onclick="doLogout()">⇄ Cambiar grupo</button><button class="logout-btn" onclick="doFullLogout()" style="color:#e74c3c;">↩ Salir (<span id="user-lbl"></span>)</button></div>
+      <button class="logout-btn" onclick="doLogout()">↩ Salir (<span id="user-lbl"></span>)</button>
     </div>
   </div>
 
@@ -369,30 +355,10 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 const PASSWORD = "altotenis2025";
-const GROUPS = [
-  {
-    id: 'elite',
-    name: 'Elite',
-    password: 'elite2025',
-    color: '#FF6B00',
-    desc: 'Jugadores profesionales 17+',
-    binId: '69cc4157856a682189e92f38'  // BIN existente con datos actuales
-  },
-  {
-    id: 'formacion2',
-    name: 'Formación 2',
-    password: '2025f2',
-    color: '#1DA1D6',
-    desc: 'Jugadores competitivos 13-17',
-    binId: ''  // Se crea nuevo bin vacío al primer ingreso
-  }
-  // Agregar más grupos aquí en el futuro
-];
-let currentGroup = null;
-let pendingUser = '';
+const BIN_ELITE = "69cc4157856a682189e92f38";
 const JSONBIN_KEY="$2a$10$xvA/D4WX5A21q/U6sqDkGOSiKz6eKtuB7KqPXOljXnGfcxZCwEozi";
 const BIN_API="https://api.jsonbin.io/v3/b";
-let BIN_ID = "";
+let BIN_ID = BIN_ELITE;
 const COLORS=['#FF6B00','#1DA1D6','#2ecc71','#9b59b6','#e74c3c','#f39c12','#1abc9c','#e67e22','#3498db'];
 const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MONTHS_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -412,7 +378,6 @@ const DEFAULT_PLAYERS=[
   {id:8,name:"Max Becerra",age:15,ranking:"765 ITF",circuit:"itf",gender:"M",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]}
 ];
 
-const DEFAULT_F2_PLAYERS=[{"id": 0, "name": "Tristán Eston", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 1, "name": "Eduardo Peña", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 2, "name": "Clemente Soto", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 3, "name": "Benjamín Oyarzo", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 4, "name": "Santiago Clavero", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 5, "name": "Pedro Santana", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 6, "name": "Paula Gutiérrez", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "F", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 7, "name": "Sofía Peralta", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "F", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 8, "name": "Mariana Herdener", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "F", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 9, "name": "Max Becerra", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 10, "name": "José Ojeda", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}];
 let data={players:JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),reflections:[]};
 let user="",page="dashboard",pid=null,dtab="perfil";
 let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
@@ -421,62 +386,21 @@ let saveTimer=null,editingPlayerId=null;
 let selMode=false,selectedDays=new Set();
 
 // ── AUTH ──────────────────────────────────────────────────
-function doLoginStep1() {
+function doLogin() {
   const u = document.getElementById('li-user').value.trim();
   const p = document.getElementById('li-pass').value;
   if (!u) { document.getElementById('li-err').textContent = 'Ingresa tu nombre'; return; }
   if (p !== PASSWORD) { document.getElementById('li-err').textContent = 'Contraseña incorrecta'; return; }
-  pendingUser = u;
-  document.getElementById('login-step1').style.display = 'none';
-  document.getElementById('login-step2').style.display = 'block';
-  document.getElementById('login-sub-text').textContent = 'Selecciona tu grupo';
-  renderGroupBtns();
-}
-
-function selectGroup(groupId) {
-  currentGroup = GROUPS.find(g => g.id === groupId);
-  document.querySelectorAll('.group-btn').forEach(b => {
-    b.classList.remove('selected');
-    b.style.borderColor = 'var(--border)';
-  });
-  const btn = document.getElementById('gbtn-' + groupId);
-  if (btn) {
-    btn.classList.add('selected');
-    btn.style.borderColor = currentGroup.color;
-  }
-  document.getElementById('li-group-pass').focus();
-}
-
-function backToStep1() {
-  document.getElementById('login-step2').style.display = 'none';
-  document.getElementById('login-step1').style.display = 'block';
-  document.getElementById('login-sub-text').innerHTML = 'Hub de entrenadores<br>Club de Tenis Providencia';
-  document.getElementById('li-err').textContent = '';
-  currentGroup = null;
-}
-
-function doLoginStep2() {
-  if (!currentGroup) { document.getElementById('li-err2').textContent = 'Selecciona un grupo'; return; }
-  const p = document.getElementById('li-group-pass').value;
-  if (p !== currentGroup.password) { document.getElementById('li-err2').textContent = 'Contraseña incorrecta'; return; }
-  user = pendingUser;
-  // Usar BIN_ID hardcodeado del grupo si existe, sino buscar en localStorage
-  BIN_ID = currentGroup.binId || localStorage.getItem('at_bin_' + currentGroup.id) || '';
+  user = u;
+  BIN_ID = BIN_ELITE;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('user-lbl').textContent = user;
-  document.getElementById('group-lbl').textContent = currentGroup.name;
-  document.getElementById('group-lbl').style.color = currentGroup.color;
   if (history.pushState) history.pushState({page: 'dashboard'}, '', '');
   loadData();
 }
-
-function doLogin() { doLoginStep1(); }
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') {
-    if (document.getElementById('login-step2').style.display !== 'none') doLoginStep2();
-    else doLoginStep1();
-  }
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
 });
 
 // Botón atrás del celular → ir al dashboard
@@ -494,80 +418,25 @@ window.addEventListener('popstate', function(e) {
   }
 });
 function doLogout() {
-  // Cambiar grupo — mantiene nombre y no pide contraseña general
-  var savedUser = user;
-  currentGroup = null; BIN_ID = "";
+  user = ""; BIN_ID = BIN_ELITE;
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
-  document.getElementById('login-step1').style.display = 'none';
-  document.getElementById('login-step2').style.display = 'block';
-  document.getElementById('login-sub-text').textContent = 'Selecciona tu grupo';
-  document.getElementById('li-group-pass').value = '';
-  document.getElementById('li-err2').textContent = '';
-  pendingUser = savedUser;
-  user = "";
-  renderGroupBtns();
-}
-
-function renderGroupBtns() {
-  var btns = "";
-  for (var i = 0; i < GROUPS.length; i++) {
-    var g = GROUPS[i];
-    btns += "<button class=\"group-btn\" id=\"gbtn-" + g.id + "\" onclick=\"selectGroup('" + g.id + "')\">";
-    btns += "<div class=\"group-btn-inner\">";
-    btns += "<div class=\"group-dot\" style=\"background:" + g.color + ";\"></div>";
-    btns += "<div><div class=\"group-name\">" + g.name + "</div>";
-    btns += "<div class=\"group-desc\">" + g.desc + "</div></div>";
-    btns += "</div></button>";
-  }
-  document.getElementById("group-buttons").innerHTML = btns;
-}
-
-function doFullLogout() {
-  user = ""; currentGroup = null; BIN_ID = ""; pendingUser = "";
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-step1').style.display = 'block';
-  document.getElementById('login-step2').style.display = 'none';
-  document.getElementById('login-sub-text').innerHTML = 'Hub de entrenadores<br>Club de Tenis Providencia';
-  document.getElementById('li-user').value = '';
   document.getElementById('li-pass').value = '';
-  document.getElementById('li-group-pass').value = '';
   document.getElementById('li-err').textContent = '';
-  document.getElementById('li-err2').textContent = '';
 }
 
 // ── SYNC ──────────────────────────────────────────────────
 function setSS(s,l){const d=document.getElementById('sync-dot'),lb=document.getElementById('sync-lbl');if(d)d.className='sync-dot '+s;if(lb)lb.textContent=l;}
 async function loadData(){
   setSS('syncing','Cargando...');
-  // Datos por defecto según grupo
-  if (currentGroup && currentGroup.id === 'formacion2') {
-    data = {players: JSON.parse(JSON.stringify(DEFAULT_F2_PLAYERS)), reflections: [], scouting: []};
-  } else if (currentGroup && currentGroup.id === 'elite') {
-    data = {players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)), reflections: [], scouting: []};
-  } else {
-    data = {players: [], reflections: [], scouting: []};
-  }
+  data = {players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)), reflections: [], scouting: []};
   try{
-    if(!BIN_ID){
-      // Crear nuevo bin para este grupo
-      const binName = 'altotenis-' + (currentGroup ? currentGroup.id : 'hub');
-      const res = await fetch(BIN_API, {method:'POST', headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY,'X-Bin-Name':binName}, body:JSON.stringify(data)});
-      const d = await res.json();
-      BIN_ID = d.metadata.id;
-      localStorage.setItem('at_bin_' + (currentGroup ? currentGroup.id : 'hub'), BIN_ID);
-      if(currentGroup) currentGroup.binId = BIN_ID;
-      setSS('synced','Bin creado · '+now());
-    } else {
-      const res=await fetch(`${BIN_API}/${BIN_ID}/latest`,{headers:{'X-Master-Key':JSONBIN_KEY}});
-      const d=await res.json();
-      if(d.record){data=d.record;data.players=data.players.map(p=>({rankingHistory:[],...p}));}
-      setSS('synced','Sincronizado · '+now());
-    }
+    const res=await fetch(`${BIN_API}/${BIN_ID}/latest`,{headers:{'X-Master-Key':JSONBIN_KEY}});
+    const d=await res.json();
+    if(d.record){data=d.record;data.players=data.players.map(p=>({rankingHistory:[],...p}));}
+    setSS('synced','Sincronizado · '+now());
   }catch(e){
-    const dataKey='at_data_'+(currentGroup?currentGroup.id:'hub');
-    const l=localStorage.getItem(dataKey);
+    const l=localStorage.getItem('at_data_elite');
     if(l)try{data=JSON.parse(l);}catch(e){}
     setSS('error','Sin conexión — datos locales');
   }
@@ -579,14 +448,13 @@ async function refreshData(){
   catch(e){setSS('error','Sin conexión');}
 }
 async function saveData(){
-  const dataKey = 'at_data_'+(currentGroup?currentGroup.id:'hub');
-  localStorage.setItem(dataKey,JSON.stringify(data));
+  localStorage.setItem('at_data_elite',JSON.stringify(data));
   if(!BIN_ID){setSS('synced','Guardado local');return;}
   setSS('syncing','Guardando...');
   try{await fetch(`${BIN_API}/${BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY},body:JSON.stringify(data)});setSS('synced','Guardado · '+now());}
   catch(e){setSS('error','Error al guardar');}
 }
-function scheduleSync(){const dataKey='at_data_'+(currentGroup?currentGroup.id:'hub');localStorage.setItem(dataKey,JSON.stringify(data));if(saveTimer)clearTimeout(saveTimer);setSS('syncing','Guardando...');saveTimer=setTimeout(saveData,1200);}
+function scheduleSync(){localStorage.setItem('at_data_elite',JSON.stringify(data));if(saveTimer)clearTimeout(saveTimer);setSS('syncing','Guardando...');saveTimer=setTimeout(saveData,1200);}
 function now(){return new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});}
 
 // ── NAV ───────────────────────────────────────────────────
@@ -637,7 +505,7 @@ function renderDashboard(){
 
   return `
     <div class="page-header">
-      <div><div class="page-title">Dashboard</div><div class="page-sub">${wLabel_str} · Hola, ${user} <span style="font-weight:600;color:${currentGroup?currentGroup.color:'var(--orange)'}">· ${currentGroup?currentGroup.name:''}</span></div></div>
+      <div><div class="page-title">Dashboard</div><div class="page-sub">${wLabel_str} · Hola, ${user} </div></div>
       <button class="btn btn-g btn-sm" onclick="refreshData().then(()=>renderMain())">↺ Actualizar</button>
     </div>
 
@@ -1188,17 +1056,6 @@ async function addNote(){
 
 // ── AGREGAR/EDITAR JUGADOR ────────────────────────────────
 function renderModalForm(p){
-  const isF2=currentGroup&&currentGroup.id==='formacion2';
-  if(isF2){return `
-    <div class="fg fg-full"><label>Nombre completo</label><input id="m-name" value="${p?p.name||'':''}" placeholder="Ej: Martina López" /></div>
-    <div class="fg"><label>Edad</label><input id="m-age" type="number" value="${p?p.age||'':''}" placeholder="14" /></div>
-    <div class="fg"><label>Género</label><select id="m-gender"><option value="M" ${!p||p.gender==='M'?'selected':''}>Masculino</option><option value="F" ${p&&p.gender==='F'?'selected':''}>Femenino</option></select></div>
-    <div class="fg"><label>Mano dominante</label><select id="m-hand"><option value="Diestro" ${!p||p.hand==='Diestro'?'selected':''}>Diestro</option><option value="Zurdo" ${p&&p.hand==='Zurdo'?'selected':''}>Zurdo</option></select></div>
-    <div class="fg"><label>Categoría</label><select id="m-categoria"><option value="Sub-12" ${p&&p.categoria==='Sub-12'?'selected':''}>Sub-12</option><option value="Sub-14" ${!p||p.categoria==='Sub-14'?'selected':''}>Sub-14</option><option value="Sub-16" ${p&&p.categoria==='Sub-16'?'selected':''}>Sub-16</option><option value="Sub-18" ${p&&p.categoria==='Sub-18'?'selected':''}>Sub-18</option></select></div>
-    <div class="fg"><label>Ranking nacional (Tennis Chile)</label><input id="m-rank-nacional" type="number" value="${p&&p.rankings?p.rankings.nacional||'':''}" placeholder="Ej: 45" /></div>
-    <div class="fg"><label>Ranking COSAT</label><input id="m-rank-cosat" type="number" value="${p&&p.rankings?p.rankings.cosat||'':''}" placeholder="Ej: 120" /></div>
-    <div class="fg"><label>Ranking ITF Junior</label><input id="m-rank-itf" type="number" value="${p&&p.rankings?p.rankings.itf||'':''}" placeholder="Ej: 650" /></div>
-  `;}
   return `
     <div class="fg fg-full"><label>Nombre completo</label><input id="m-name" value="${p?p.name||'':''}" placeholder="Ej: Martina López" /></div>
     <div class="fg"><label>Edad</label><input id="m-age" type="number" value="${p?p.age||'':''}" placeholder="18" /></div>
@@ -1227,30 +1084,20 @@ function openEditPlayer(i){
 function closePlayerModal(){document.getElementById('player-modal').classList.remove('open');}
 async function savePlayerModal(){
   const name=document.getElementById('m-name').value.trim();if(!name){alert('Ingresa el nombre del jugador');return;}
-  const isF2=currentGroup&&currentGroup.id==='formacion2';
-  let pd;
-  if(isF2){
-    const rN=parseInt(document.getElementById('m-rank-nacional')?.value)||null;
-    const rC=parseInt(document.getElementById('m-rank-cosat')?.value)||null;
-    const rI=parseInt(document.getElementById('m-rank-itf')?.value)||null;
-    let rankDisplay=rN?'Nac. #'+rN:rI?'ITF #'+rI:rC?'COSAT #'+rC:'Sin ranking';
-    pd={name,age:parseInt(document.getElementById('m-age').value)||0,ranking:rankDisplay,circuit:'itf',
-      gender:document.getElementById('m-gender').value,hand:document.getElementById('m-hand').value,
-      categoria:document.getElementById('m-categoria').value,
-      rankings:{nacional:rN,cosat:rC,itf:rI},
-      style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]};
-  } else {
-    pd={name,age:parseInt(document.getElementById('m-age').value)||0,
-      ranking:document.getElementById('m-ranking')?.value||'',
-      circuit:document.getElementById('m-circuit')?.value||'atp',
-      gender:document.getElementById('m-gender').value,
-      hand:document.getElementById('m-hand').value,
-      style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]};
-  }
+  const pd={
+    name,
+    age:parseInt(document.getElementById('m-age').value)||0,
+    ranking:document.getElementById('m-ranking')?.value||'',
+    circuit:document.getElementById('m-circuit')?.value||'atp',
+    gender:document.getElementById('m-gender').value,
+    hand:document.getElementById('m-hand').value,
+    style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]
+  };
   if(editingPlayerId!==null){data.players[editingPlayerId]={...data.players[editingPlayerId],...pd,id:editingPlayerId};}
   else{const newId=data.players.length;data.players.push({...pd,id:newId});}
   scheduleSync();closePlayerModal();renderAll();if(editingPlayerId!==null)pid=editingPlayerId;
 }
+
 async function deletePlayer(){
   if(!confirm('¿Eliminar a '+data.players[editingPlayerId].name+'?'))return;
   data.players.splice(editingPlayerId,1);data.players.forEach((p,i)=>p.id=i);
