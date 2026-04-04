@@ -329,7 +329,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
     </div>
     <div class="sb-foot">
       <div class="sync-row"><div class="sync-dot" id="sync-dot"></div><span id="sync-lbl">Conectando...</span></div>
-      <div style="display:flex;flex-direction:column;gap:4px;"><button class="logout-btn" onclick="doLogout()">⇄ Cambiar grupo</button><button class="logout-btn" onclick="doFullLogout()" style="color:#e74c3c;">↩ Salir</button></div>
+      <div style="display:flex;flex-direction:column;gap:4px;"><button class="logout-btn" onclick="doLogout()">⇄ Cambiar grupo</button><button class="logout-btn" onclick="doFullLogout()" style="color:#e74c3c;">↩ Salir (<span id="user-lbl"></span>)</button></div>
     </div>
   </div>
 
@@ -489,20 +489,6 @@ document.addEventListener('keydown', e => {
   }
 });
 
-function doFullLogout() {
-  user = ""; currentGroup = null; BIN_ID = ""; pendingUser = "";
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-step1').style.display = 'block';
-  document.getElementById('login-step2').style.display = 'none';
-  document.getElementById('login-sub-text').innerHTML = 'Hub de entrenadores<br>Club de Tenis Providencia';
-  document.getElementById('li-user').value = '';
-  document.getElementById('li-pass').value = '';
-  document.getElementById('li-group-pass').value = '';
-  document.getElementById('li-err').textContent = '';
-  document.getElementById('li-err2').textContent = '';
-}
-
 // Botón atrás del celular → ir al dashboard
 window.addEventListener('popstate', function(e) {
   if(document.getElementById('app').style.display !== 'none') {
@@ -518,27 +504,46 @@ window.addEventListener('popstate', function(e) {
   }
 });
 function doLogout() {
-  // Guardar nombre para no tener que reingresarlo
-  const savedUser = user;
+  // Cambiar grupo — mantiene nombre y no pide contraseña general
+  var savedUser = user;
   currentGroup = null; BIN_ID = "";
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
-  // Ir directo a selección de grupos (step 2) sin pedir nombre ni contraseña general
   document.getElementById('login-step1').style.display = 'none';
   document.getElementById('login-step2').style.display = 'block';
   document.getElementById('login-sub-text').textContent = 'Selecciona tu grupo';
   document.getElementById('li-group-pass').value = '';
   document.getElementById('li-err2').textContent = '';
-  // Mantener el nombre del usuario y renderizar botones de grupos
   pendingUser = savedUser;
   user = "";
-  document.getElementById('group-buttons').innerHTML = GROUPS.map(g => `
-    <button class="group-btn" id="gbtn-\${g.id}" onclick="selectGroup('\${g.id}')">
-      <div class="group-btn-inner">
-        <div class="group-dot" style="background:\${g.color};"></div>
-        <div><div class="group-name">\${g.name}</div><div class="group-desc">\${g.desc}</div></div>
-      </div>
-    </button>`).join('');
+  renderGroupBtns();
+}
+
+function renderGroupBtns() {
+  var btns = '';
+  for (var i = 0; i < GROUPS.length; i++) {
+    var g = GROUPS[i];
+    btns += '<button class="group-btn" id="gbtn-' + g.id + '" onclick="selectGroup('' + g.id + '')">';
+    btns += '<div class="group-btn-inner">';
+    btns += '<div class="group-dot" style="background:' + g.color + ';"></div>';
+    btns += '<div><div class="group-name">' + g.name + '</div><div class="group-desc">' + g.desc + '</div></div>';
+    btns += '</div></button>';
+  }
+  document.getElementById('group-buttons').innerHTML = btns;
+}
+
+function doFullLogout() {
+  user = ""; currentGroup = null; BIN_ID = ""; pendingUser = "";
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-step1').style.display = 'block';
+  document.getElementById('login-step2').style.display = 'none';
+  document.getElementById('login-sub-text').innerHTML = 'Hub de entrenadores<br>Club de Tenis Providencia';
+  document.getElementById('li-user').value = '';
+  document.getElementById('li-pass').value = '';
+  document.getElementById('li-group-pass').value = '';
+  document.getElementById('li-err').textContent = '';
+  document.getElementById('li-err2').textContent = '';
 }
 
 // ── SYNC ──────────────────────────────────────────────────
