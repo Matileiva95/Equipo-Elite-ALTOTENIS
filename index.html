@@ -252,6 +252,28 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 .group-desc{font-size:11px;color:var(--g3);}
 .step-back{width:100%;margin-top:8px;padding:10px;background:none;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;cursor:pointer;color:var(--g3);}
 .step-back:hover{background:var(--g5);}
+
+/* BIBLIOTECA DE EJERCICIOS */
+.bib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:14px;}
+.bib-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .15s;}
+.bib-card:hover{border-color:var(--g4);box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.bib-card-type{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:8px;}
+.bib-type-tecnico{background:#fff3e0;color:#e65100;}
+.bib-type-canasto{background:#e8f5e9;color:#2e7d32;}
+.bib-type-tactico{background:#e3f2fd;color:#1565c0;}
+.bib-card-title{font-size:14px;font-weight:600;color:var(--gray);margin-bottom:5px;}
+.bib-card-desc{font-size:12px;color:var(--g2);line-height:1.5;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.bib-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.bib-tag{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;background:var(--g5);color:var(--g3);border:1px solid var(--border);}
+.bib-shared{background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;}
+.bib-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.bib-filter-btn{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--g3);transition:all .13s;}
+.bib-filter-btn.active{border-color:var(--orange);background:var(--ol);color:var(--od);}
+.bib-detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center;padding:20px;}
+.bib-detail-overlay.open{display:flex;}
+.bib-detail-modal{background:var(--white);border-radius:14px;padding:24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}
+.bib-form-section{font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px;}
+@media(max-width:700px){.bib-grid{grid-template-columns:1fr!important;}}
 </style>
 </head>
 <body>
@@ -1212,40 +1234,7 @@ async function deletePlayer(){
 }
 
 // ── COACHING ──────────────────────────────────────────────
-function renderCoaching(){
-  return `
-    <div class="page-header"><div><div class="page-title">Coaching</div><div class="page-sub">Herramientas para el equipo técnico</div></div></div>
-    <div class="g2">
-      <div class="card" style="grid-column:1/-1;">
-        <div style="font-size:14px;font-weight:600;margin-bottom:12px;">★ Generador de plan de entrenamiento</div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
-          <button class="fpill fp-t" onclick="togglePTag(this)">Técnico</button>
-          <button class="fpill" onclick="togglePTag(this)">Táctico</button>
-          <button class="fpill" onclick="togglePTag(this)">Físico</button>
-          <button class="fpill" onclick="togglePTag(this)">Mental</button>
-        </div>
-        <div class="input-row" style="margin-bottom:10px;">
-          <input type="text" id="plan-input" placeholder="Ej: jugadora 19 años, mejorar topspin, torneo en 3 semanas..." />
-          <button class="btn btn-o btn-sm" onclick="genPlan()">Generar ↗</button>
-        </div>
-        <div class="ai-result" id="plan-result">Describe el perfil del jugador para generar un plan personalizado.</div>
-      </div>
-      <div class="card">
-        <div style="font-size:14px;font-weight:600;margin-bottom:12px;">◉ Recursos de coaching</div>
-        <div class="input-row" style="margin-bottom:10px;">
-          <input type="text" id="resource-input" placeholder="Ej: saque, táctica en tierra batida..." />
-          <button class="btn btn-b btn-sm" onclick="searchRes()">Buscar ↗</button>
-        </div>
-        <div class="ai-result" id="resource-result">Busca conceptos, metodologías o situaciones tácticas.</div>
-      </div>
-      <div class="card">
-        <div style="font-size:14px;font-weight:600;margin-bottom:12px;">✎ Mis reflexiones</div>
-        <textarea id="ref-input" placeholder="Reflexión sobre tu práctica como entrenador..." style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;resize:vertical;min-height:70px;margin-bottom:8px;font-family:'DM Sans',sans-serif;"></textarea>
-        <button class="btn btn-b btn-sm" onclick="saveRef()">Guardar reflexión</button>
-        <div id="ref-list" style="margin-top:12px;">${(data.reflections||[]).slice(0,6).map(r=>`<div class="note-item"><div class="note-text">${r.text}</div><div class="note-meta">${r.date} · ${r.author||''}</div></div>`).join('')||'<div class="empty">Sin reflexiones aún</div>'}</div>
-      </div>
-    </div>`;
-}
+// renderCoaching reemplazado por biblioteca de ejercicios arriba
 function togglePTag(el){const cls=FOCO_CLS[el.textContent]||'fp-t';if(el.classList.contains(cls)){el.className='fpill';activePlanTags=activePlanTags.filter(x=>x!==el.textContent);}else{el.className='fpill '+cls;activePlanTags.push(el.textContent);}}
 async function genPlan(){
   const input=document.getElementById('plan-input').value.trim(),result=document.getElementById('plan-result');if(!input)return;
@@ -1264,6 +1253,209 @@ async function saveRef(){
   const date=new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
   data.reflections=data.reflections||[];data.reflections.unshift({text,date,author:user});scheduleSync();document.getElementById('ref-input').value='';
   const list=document.getElementById('ref-list');if(list)list.innerHTML=data.reflections.slice(0,6).map(r=>`<div class="note-item"><div class="note-text">${r.text}</div><div class="note-meta">${r.date} · ${r.author||''}</div></div>`).join('');
+}
+
+
+// ── BIBLIOTECA DE EJERCICIOS ──────────────────────────────
+const ITF_EJERCICIOS = [{"nombre": "Fondo - Situación ofensiva", "tipo": "tactico", "objetivo": "Entrenar el ataque desde el fondo usando el mejor golpe para mover al rival y buscar ganadores", "duracion": "20", "jugadores": "2", "descripcion": "Desde posición ofensiva dentro de la cancha, usar el mejor golpe para mover al contrario. Buscar dejadas para sorprender y subir a la red. Usar toda la cancha.", "tags": ["Fondo", "Ofensivo", "Derecha", "Revés"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Fondo - Situación defensiva", "tipo": "tactico", "objetivo": "Recuperar la posición y neutralizar la ventaja del rival con golpes altos profundos", "duracion": "20", "jugadores": "2", "descripcion": "Bajo presión, jugar golpes altos y profundos. Moverse en diagonal hacia la pelota. Priorizar control sobre potencia. Cambiar el ritmo con pelotas altas seguidas de anguladas.", "tags": ["Fondo", "Defensivo", "Recuperación"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Fondo - Contra el que sube a la red", "tipo": "tactico", "objetivo": "Entrenar passing shots y globos cuando el rival sube", "duracion": "20", "jugadores": "2", "descripcion": "Jugador A sube a la red con aproximación. Jugador B practica passing shots cruzados cortos y angulados, paralelos fuertes y profundos, y globos liftados altos.", "tags": ["Fondo", "Passing", "Globo", "Red"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Saque - Primer servicio + golpe de fondo", "tipo": "tactico", "objetivo": "Dominar el punto desde el saque con el primer golpe de fondo", "duracion": "20", "jugadores": "2", "descripcion": "Sacar con 70-80% de potencia máxima. Tras el saque, posicionarse hacia la izquierda y atacar con derecha cruzada de dentro hacia afuera. Variar dirección del saque para crear incertidumbre.", "tags": ["Saque", "Primer saque", "Derecha"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Saque - Segundo servicio agresivo", "tipo": "tactico", "objetivo": "Ser agresivo con el segundo saque y dominar el siguiente golpe", "duracion": "20", "jugadores": "2", "descripcion": "100% de entrada con el segundo saque. Variar efecto y velocidad. Tras buen segundo saque, rodear el revés y pegar derecha cruzada de dentro hacia afuera o en paralelo.", "tags": ["Saque", "Segundo saque"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Resto - Primer saque", "tipo": "tactico", "objetivo": "Regularidad y neutralización en el resto del primer saque", "duracion": "15", "jugadores": "2", "descripcion": "Buscar regularidad. No regalar puntos. Contra saque angulado, anticiparse y jugar cruzado. Contra primer saque débil, avanzar para volear o quedarse en el fondo.", "tags": ["Resto", "Primer saque", "Regularidad"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Resto - Segundo saque ofensivo", "tipo": "tactico", "objetivo": "Atacar el segundo saque del rival para dominar el punto", "duracion": "15", "jugadores": "2", "descripcion": "Atacar el segundo saque pegando la pelota cuando sube a altura del hombro. Rodear el revés para pegar derecha de ataque. Moverse hacia adelante para posición dominante.", "tags": ["Resto", "Segundo saque", "Ataque"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Subida a la red - Aproximación y volea", "tipo": "tactico", "objetivo": "Entrenar la subida sorpresiva, el golpe de aproximación y el juego en la red", "duracion": "25", "jugadores": "2", "descripcion": "Usar el mejor golpe para la aproximación. Dirigir al lado débil del rival. Split step antes de la volea. No más de 3 voleas para terminar el punto. Las voleas a media cancha: profundas y bajas. Las voleas cerca de la red: anguladas y cortas.", "tags": ["Red", "Volea", "Aproximación", "Subida"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Drill canasto - Fondo cruzado-paralelo", "tipo": "canasto", "objetivo": "Mejorar consistencia y dirección desde el fondo", "duracion": "15", "jugadores": "1", "descripcion": "Entrenador alimenta con canasto desde la red. Jugador alterna golpes cruzados profundos y paralelos desde el fondo. 3 series de 20 pelotas por lado. Foco en posición y finish del golpe.", "tags": ["Canasto", "Fondo", "Derecha", "Revés"], "visible": "shared", "fuente": "Altotenis"}, {"nombre": "Drill canasto - Ataque desde zona 3/4", "tipo": "canasto", "objetivo": "Entrenar el golpe ofensivo desde adentro de la cancha", "duracion": "15", "jugadores": "1", "descripcion": "Entrenador alimenta pelotas cortas a zona 3/4. Jugador avanza y ataca con derecha o revés a la cancha abierta. Énfasis en timing de entrada y finish agresivo. 3 series de 15 pelotas.", "tags": ["Canasto", "Ataque", "Zona 3/4", "Ofensivo"], "visible": "shared", "fuente": "Altotenis"}];
+
+let bibFilter = 'todos';
+let bibSearch = '';
+let bibViewIdx = null;
+let showBibForm = false;
+let editingBibIdx = null;
+
+function renderCoaching() {
+  const reflections = data.reflections || [];
+  const ejercicios = data.ejercicios || [];
+  const allEjercicios = [...ITF_EJERCICIOS, ...ejercicios];
+
+  const filtered = allEjercicios.filter(e => {
+    const matchFilter = bibFilter === 'todos' || e.tipo === bibFilter || (bibFilter === 'shared' && e.visible === 'shared') || (bibFilter === 'mios' && e.addedBy === user);
+    const matchSearch = !bibSearch || e.nombre.toLowerCase().includes(bibSearch.toLowerCase()) || (e.descripcion||'').toLowerCase().includes(bibSearch.toLowerCase()) || (e.tags||[]).some(t=>t.toLowerCase().includes(bibSearch.toLowerCase()));
+    return matchFilter && matchSearch;
+  });
+
+  return `
+    <div class="page-header">
+      <div><div class="page-title">Biblioteca de ejercicios</div>
+      <div class="page-sub">Ejercicios técnicos, drills y patrones tácticos del equipo</div></div>
+      <button class="btn btn-o btn-sm" onclick="openBibForm(null)">+ Agregar ejercicio</button>
+    </div>
+
+    ${showBibForm ? renderBibForm(editingBibIdx) : ''}
+    ${bibViewIdx !== null ? renderBibDetail(allEjercicios[bibViewIdx], bibViewIdx) : ''}
+
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <input type="text" placeholder="Buscar ejercicio..." value="${bibSearch}"
+        oninput="bibSearch=this.value;renderMain();"
+        style="flex:1;min-width:180px;padding:9px 14px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);" />
+    </div>
+
+    <div class="bib-filters">
+      ${[['todos','Todos'],['tecnico','Técnico'],['canasto','Canasto'],['tactico','Táctico'],['shared','Compartidos'],['mios','Mis ejercicios']].map(([v,l])=>
+        `<button class="bib-filter-btn${bibFilter===v?' active':''}" onclick="bibFilter='${v}';renderMain();">${l}</button>`
+      ).join('')}
+    </div>
+
+    <div style="font-size:12px;color:var(--g3);margin-bottom:10px;">${filtered.length} ejercicio${filtered.length!==1?'s':''}</div>
+
+    ${filtered.length === 0
+      ? `<div class="card"><div class="empty">No hay ejercicios que coincidan con la búsqueda.</div></div>`
+      : `<div class="bib-grid">${filtered.map((e,i) => {
+          const realIdx = allEjercicios.indexOf(e);
+          return renderBibCard(e, realIdx);
+        }).join('')}</div>`
+    }
+
+    <div class="card" style="margin-top:20px;">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px;">✎ Reflexiones del equipo técnico</div>
+      <textarea id="ref-input" placeholder="Reflexión sobre tu práctica como entrenador..." style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;resize:vertical;min-height:70px;margin-bottom:8px;font-family:'DM Sans',sans-serif;"></textarea>
+      <button class="btn btn-b btn-sm" onclick="saveRef()">Guardar reflexión</button>
+      <div id="ref-list" style="margin-top:12px;">${(data.reflections||[]).slice(0,6).map(r=>`<div class="note-item"><div class="note-text">${r.text}</div><div class="note-meta">${r.date} · ${r.author||''}</div></div>`).join('')||'<div class="empty">Sin reflexiones aún</div>'}</div>
+    </div>`;
+}
+
+function renderBibCard(e, idx) {
+  const typeStyle = {tecnico:'bib-type-tecnico',canasto:'bib-type-canasto',tactico:'bib-type-tactico'}[e.tipo]||'bib-type-tecnico';
+  const typeLabel = {tecnico:'Técnico',canasto:'Canasto',tactico:'Táctico'}[e.tipo]||e.tipo;
+  const isCustom = !e.fuente || e.fuente === 'Altotenis' || e.addedBy;
+  return `<div class="bib-card" onclick="bibViewIdx=${idx};showBibForm=false;renderMain();">
+    <div class="bib-card-type ${typeStyle}">${typeLabel}</div>
+    <div class="bib-card-title">${e.nombre}</div>
+    <div class="bib-card-desc">${e.objetivo||e.descripcion||''}</div>
+    <div class="bib-card-meta">
+      ${e.duracion?`<span class="bib-tag">⏱ ${e.duracion} min</span>`:''}
+      ${e.jugadores?`<span class="bib-tag">👥 ${e.jugadores}</span>`:''}
+      ${e.visible==='shared'?`<span class="bib-tag bib-shared">Compartido</span>`:`<span class="bib-tag">Privado</span>`}
+      ${e.fuente==='ITF'?`<span class="bib-tag" style="background:var(--bl);color:var(--bd);border-color:var(--blue);">ITF</span>`:''}
+      ${isCustom&&e.addedBy?`<span class="bib-tag">${e.addedBy}</span>`:''}
+    </div>
+  </div>`;
+}
+
+function renderBibDetail(e, idx) {
+  if(!e) return '';
+  const typeStyle = {tecnico:'bib-type-tecnico',canasto:'bib-type-canasto',tactico:'bib-type-tactico'}[e.tipo]||'';
+  const typeLabel = {tecnico:'Técnico',canasto:'Canasto',tactico:'Táctico'}[e.tipo]||e.tipo;
+  const isCustom = e.addedBy;
+  return `<div class="card" style="margin-bottom:14px;border-color:var(--orange);">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div class="bib-card-type ${typeStyle}" style="margin-bottom:6px;">${typeLabel}</div>
+        <div style="font-size:16px;font-weight:600;">${e.nombre}</div>
+        ${e.fuente==='ITF'?`<div style="font-size:11px;color:var(--blue);margin-top:2px;">Fuente: ITF Coach Education</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;">
+        ${isCustom?`<button onclick="openBibForm(${idx})" style="font-size:11px;padding:4px 10px;background:var(--bl);color:var(--bd);border:1px solid var(--blue);border-radius:4px;cursor:pointer;">Editar</button>`:''}
+        <button onclick="bibViewIdx=null;renderMain();" style="font-size:11px;padding:4px 10px;background:var(--g5);color:var(--g2);border:1px solid var(--border);border-radius:4px;cursor:pointer;">Cerrar ✕</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      ${e.duracion?`<div style="text-align:center;padding:8px 14px;background:var(--g5);border-radius:var(--rsm);"><div style="font-size:16px;font-weight:700;">${e.duracion}</div><div style="font-size:10px;color:var(--g3);">minutos</div></div>`:''}
+      ${e.jugadores?`<div style="text-align:center;padding:8px 14px;background:var(--g5);border-radius:var(--rsm);"><div style="font-size:16px;font-weight:700;">${e.jugadores}</div><div style="font-size:10px;color:var(--g3);">jugadores</div></div>`:''}
+    </div>
+    ${e.objetivo?`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Objetivo</div><div style="font-size:13px;color:var(--gray);line-height:1.6;">${e.objetivo}</div></div>`:''}
+    ${e.descripcion?`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Descripción</div><div style="font-size:13px;color:var(--gray);line-height:1.7;white-space:pre-line;">${e.descripcion}</div></div>`:''}
+    ${e.tags&&e.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">${e.tags.map(t=>`<span class="bib-tag">${t}</span>`).join('')}</div>`:''}
+  </div>`;
+}
+
+function renderBibForm(idx) {
+  const isEdit = idx !== null && idx !== undefined;
+  const allE = [...ITF_EJERCICIOS, ...(data.ejercicios||[])];
+  const e = isEdit ? allE[idx] : null;
+  const customIdx = isEdit ? idx - ITF_EJERCICIOS.length : null;
+  return `<div class="card" style="margin-bottom:14px;border-color:var(--blue);">
+    <div style="font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+      <span style="background:${isEdit?'var(--blue)':'var(--orange)'};color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;">${isEdit?'Editando':'+ Nuevo'}</span>
+      ${isEdit?'Editar ejercicio':'Agregar ejercicio'}
+    </div>
+    <div class="form-grid" style="margin-bottom:12px;">
+      <div class="fg fg-full"><label>Nombre del ejercicio</label><input id="bib-nombre" value="${e?e.nombre||'':''}" placeholder="Ej: Drill cruzado-paralelo con canasto" /></div>
+      <div class="fg"><label>Tipo</label>
+        <select id="bib-tipo">
+          <option value="tecnico" ${!e||e.tipo==='tecnico'?'selected':''}>Técnico</option>
+          <option value="canasto" ${e&&e.tipo==='canasto'?'selected':''}>Canasto</option>
+          <option value="tactico" ${e&&e.tipo==='tactico'?'selected':''}>Táctico</option>
+        </select>
+      </div>
+      <div class="fg"><label>Visibilidad</label>
+        <select id="bib-visible">
+          <option value="shared" ${!e||e.visible==='shared'?'selected':''}>Compartido con el equipo</option>
+          <option value="private" ${e&&e.visible==='private'?'selected':''}>Solo yo (privado)</option>
+        </select>
+      </div>
+      <div class="fg"><label>Duración (minutos)</label><input type="number" id="bib-duracion" value="${e?e.duracion||'':''}" placeholder="Ej: 20" /></div>
+      <div class="fg"><label>Jugadores necesarios</label><input type="number" id="bib-jugadores" value="${e?e.jugadores||'':''}" placeholder="Ej: 2" /></div>
+    </div>
+    <div class="fg" style="margin-bottom:10px;"><label>Objetivo</label>
+      <input id="bib-objetivo" value="${e?e.objetivo||'':''}" placeholder="¿Qué se trabaja con este ejercicio?" />
+    </div>
+    <div class="fg" style="margin-bottom:10px;"><label>Descripción paso a paso</label>
+      <textarea id="bib-desc" style="min-height:100px;width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;" placeholder="Describe el ejercicio en detalle: posición inicial, desarrollo, variantes...">${e?e.descripcion||'':''}</textarea>
+    </div>
+    <div class="fg" style="margin-bottom:14px;"><label>Etiquetas (separadas por coma)</label>
+      <input id="bib-tags" value="${e&&e.tags?e.tags.join(', '):''}" placeholder="Ej: Fondo, Derecha, Ofensivo" />
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-o btn-sm" onclick="saveBib(${isEdit?customIdx:null})">${isEdit?'Guardar cambios':'Agregar ejercicio'}</button>
+      ${isEdit&&customIdx>=0?`<button class="btn btn-red btn-sm" onclick="deleteBib(${customIdx})">Eliminar</button>`:''}
+      <button class="btn btn-g btn-sm" onclick="cancelBibForm()">Cancelar</button>
+    </div>
+  </div>`;
+}
+
+function openBibForm(idx) {
+  showBibForm = true;
+  editingBibIdx = idx;
+  bibViewIdx = null;
+  renderMain();
+  window.scrollTo(0,0);
+}
+
+function cancelBibForm() {
+  showBibForm = false;
+  editingBibIdx = null;
+  renderMain();
+}
+
+async function saveBib(customIdx) {
+  const nombre = document.getElementById('bib-nombre')?.value?.trim();
+  if(!nombre){alert('El nombre es obligatorio');return;}
+  const tagsRaw = document.getElementById('bib-tags')?.value||'';
+  const e = {
+    nombre,
+    tipo: document.getElementById('bib-tipo')?.value||'tecnico',
+    visible: document.getElementById('bib-visible')?.value||'shared',
+    duracion: document.getElementById('bib-duracion')?.value||'',
+    jugadores: document.getElementById('bib-jugadores')?.value||'',
+    objetivo: document.getElementById('bib-objetivo')?.value||'',
+    descripcion: document.getElementById('bib-desc')?.value||'',
+    tags: tagsRaw.split(',').map(t=>t.trim()).filter(Boolean),
+    addedBy: user,
+    fuente: 'Altotenis',
+    fecha: new Date().toLocaleDateString('es-CL')
+  };
+  data.ejercicios = data.ejercicios || [];
+  if(customIdx !== null && customIdx >= 0) {
+    data.ejercicios[customIdx] = e;
+  } else {
+    data.ejercicios.push(e);
+  }
+  showBibForm = false;
+  editingBibIdx = null;
+  scheduleSync();
+  renderMain();
+}
+
+async function deleteBib(customIdx) {
+  if(!confirm('¿Eliminar este ejercicio?')) return;
+  data.ejercicios.splice(customIdx, 1);
+  showBibForm = false;
+  editingBibIdx = null;
+  scheduleSync();
+  renderMain();
 }
 
 // ── IA via servidor Render ────────────────────────────────
