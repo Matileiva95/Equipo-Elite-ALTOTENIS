@@ -329,7 +329,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
     </div>
     <div class="sb-foot">
       <div class="sync-row"><div class="sync-dot" id="sync-dot"></div><span id="sync-lbl">Conectando...</span></div>
-      <button class="logout-btn" onclick="doLogout()">↩ Salir (<span id="user-lbl"></span>)</button>
+      <div style="display:flex;flex-direction:column;gap:4px;"><button class="logout-btn" onclick="doLogout()">⇄ Cambiar grupo</button><button class="logout-btn" onclick="doFullLogout()" style="color:#e74c3c;">↩ Salir</button></div>
     </div>
   </div>
 
@@ -412,6 +412,7 @@ const DEFAULT_PLAYERS=[
   {id:8,name:"Max Becerra",age:15,ranking:"765 ITF",circuit:"itf",gender:"M",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]}
 ];
 
+const DEFAULT_F2_PLAYERS=[{"id": 0, "name": "Tristán Eston", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 1, "name": "Eduardo Peña", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 2, "name": "Clemente Soto", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 3, "name": "Benjamín Oyarzo", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 4, "name": "Santiago Clavero", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 5, "name": "Pedro Santana", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 6, "name": "Paula Gutiérrez", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "F", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 7, "name": "Sofía Peralta", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "F", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 8, "name": "Mariana Herdener", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "F", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 9, "name": "Max Becerra", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}, {"id": 10, "name": "José Ojeda", "age": 15, "ranking": "Sin ranking", "circuit": "itf", "gender": "M", "hand": "Diestro", "categoria": "Sub-16", "rankings": {"nacional": null, "cosat": null, "itf": null}, "style": "", "goal": "", "stars": 0, "rankingHistory": [], "notes": [], "events": {}, "weekPlans": []}];
 let data={players:JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),reflections:[]};
 let user="",page="dashboard",pid=null,dtab="perfil";
 let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
@@ -488,6 +489,20 @@ document.addEventListener('keydown', e => {
   }
 });
 
+function doFullLogout() {
+  user = ""; currentGroup = null; BIN_ID = ""; pendingUser = "";
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-step1').style.display = 'block';
+  document.getElementById('login-step2').style.display = 'none';
+  document.getElementById('login-sub-text').innerHTML = 'Hub de entrenadores<br>Club de Tenis Providencia';
+  document.getElementById('li-user').value = '';
+  document.getElementById('li-pass').value = '';
+  document.getElementById('li-group-pass').value = '';
+  document.getElementById('li-err').textContent = '';
+  document.getElementById('li-err2').textContent = '';
+}
+
 // Botón atrás del celular → ir al dashboard
 window.addEventListener('popstate', function(e) {
   if(document.getElementById('app').style.display !== 'none') {
@@ -503,16 +518,27 @@ window.addEventListener('popstate', function(e) {
   }
 });
 function doLogout() {
-  user = ""; currentGroup = null; BIN_ID = ""; pendingUser = "";
+  // Guardar nombre para no tener que reingresarlo
+  const savedUser = user;
+  currentGroup = null; BIN_ID = "";
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
-  document.getElementById('login-step1').style.display = 'block';
-  document.getElementById('login-step2').style.display = 'none';
-  document.getElementById('login-sub-text').innerHTML = 'Hub de entrenadores<br>Club de Tenis Providencia';
-  document.getElementById('li-pass').value = '';
+  // Ir directo a selección de grupos (step 2) sin pedir nombre ni contraseña general
+  document.getElementById('login-step1').style.display = 'none';
+  document.getElementById('login-step2').style.display = 'block';
+  document.getElementById('login-sub-text').textContent = 'Selecciona tu grupo';
   document.getElementById('li-group-pass').value = '';
-  document.getElementById('li-err').textContent = '';
   document.getElementById('li-err2').textContent = '';
+  // Mantener el nombre del usuario y renderizar botones de grupos
+  pendingUser = savedUser;
+  user = "";
+  document.getElementById('group-buttons').innerHTML = GROUPS.map(g => `
+    <button class="group-btn" id="gbtn-\${g.id}" onclick="selectGroup('\${g.id}')">
+      <div class="group-btn-inner">
+        <div class="group-dot" style="background:\${g.color};"></div>
+        <div><div class="group-name">\${g.name}</div><div class="group-desc">\${g.desc}</div></div>
+      </div>
+    </button>`).join('');
 }
 
 // ── SYNC ──────────────────────────────────────────────────
@@ -520,10 +546,12 @@ function setSS(s,l){const d=document.getElementById('sync-dot'),lb=document.getE
 async function loadData(){
   setSS('syncing','Cargando...');
   // Datos por defecto según grupo
-  if (currentGroup && currentGroup.id !== 'elite') {
-    data = {players: [], reflections: [], scouting: []};
-  } else {
+  if (currentGroup && currentGroup.id === 'formacion2') {
+    data = {players: JSON.parse(JSON.stringify(DEFAULT_F2_PLAYERS)), reflections: [], scouting: []};
+  } else if (currentGroup && currentGroup.id === 'elite') {
     data = {players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)), reflections: [], scouting: []};
+  } else {
+    data = {players: [], reflections: [], scouting: []};
   }
   try{
     if(!BIN_ID){
