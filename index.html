@@ -430,17 +430,7 @@ function doLoginStep1() {
   document.getElementById('login-step1').style.display = 'none';
   document.getElementById('login-step2').style.display = 'block';
   document.getElementById('login-sub-text').textContent = 'Selecciona tu grupo';
-  // Renderizar botones de grupos
-  document.getElementById('group-buttons').innerHTML = GROUPS.map(g => `
-    <button class="group-btn" id="gbtn-${g.id}" onclick="selectGroup('${g.id}')">
-      <div class="group-btn-inner">
-        <div class="group-dot" style="background:${g.color};"></div>
-        <div>
-          <div class="group-name">${g.name}</div>
-          <div class="group-desc">${g.desc}</div>
-        </div>
-      </div>
-    </button>`).join('');
+  renderGroupBtns();
 }
 
 function selectGroup(groupId) {
@@ -520,16 +510,17 @@ function doLogout() {
 }
 
 function renderGroupBtns() {
-  var btns = '';
+  var btns = "";
   for (var i = 0; i < GROUPS.length; i++) {
     var g = GROUPS[i];
-    btns += '<button class="group-btn" id="gbtn-' + g.id + '" onclick="selectGroup('' + g.id + '')">';
-    btns += '<div class="group-btn-inner">';
-    btns += '<div class="group-dot" style="background:' + g.color + ';"></div>';
-    btns += '<div><div class="group-name">' + g.name + '</div><div class="group-desc">' + g.desc + '</div></div>';
-    btns += '</div></button>';
+    btns += "<button class=\"group-btn\" id=\"gbtn-" + g.id + "\" onclick=\"selectGroup('" + g.id + "')\">";
+    btns += "<div class=\"group-btn-inner\">";
+    btns += "<div class=\"group-dot\" style=\"background:" + g.color + ";\"></div>";
+    btns += "<div><div class=\"group-name\">" + g.name + "</div>";
+    btns += "<div class=\"group-desc\">" + g.desc + "</div></div>";
+    btns += "</div></button>";
   }
-  document.getElementById('group-buttons').innerHTML = btns;
+  document.getElementById("group-buttons").innerHTML = btns;
 }
 
 function doFullLogout() {
