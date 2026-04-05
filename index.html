@@ -1130,13 +1130,8 @@ function renderPerfil(p){
       <div class="fg"><label>Encordado principal</label><input id="f-cuerda1" value="${eq.cuerdaPrincipal||''}" placeholder="Ej: Poly Tour Pro 1.25mm" /></div>
       <div class="fg"><label>Encordado cruzado</label><input id="f-cuerda2" value="${eq.cuerdaCruzada||''}" placeholder="Ej: Poly Tour Spin 1.25mm" /></div>
       <div class="fg"><label>Tensión habitual</label><input id="f-tension" value="${eq.tension||''}" placeholder="Ej: 20 kg / 44 lbs" /></div>
-      <div class="fg"><label>Balance de raqueta</label>
-        <select id="f-balance">
-          <option value="" ${!eq.balance?'selected':''}>Sin definir</option>
-          <option value="Cabeza pesada" ${eq.balance==='Cabeza pesada'?'selected':''}>Cabeza pesada</option>
-          <option value="Equilibrada" ${eq.balance==='Equilibrada'?'selected':''}>Equilibrada</option>
-          <option value="Mango pesado" ${eq.balance==='Mango pesado'?'selected':''}>Mango pesado</option>
-        </select>
+      <div class="fg"><label>Balance de raqueta (mm)</label>
+        <input type="text" id="f-balance" value="${eq.balance||''}" placeholder="Ej: 31.3 mm o Cabeza pesada" />
       </div>
     </div>
 
@@ -1762,66 +1757,78 @@ async function deleteBib(customIdx) {
 }
 
 
-// ── LECTURA DE ESTADÍSTICAS POR IMAGEN ───────────────────
-async function leerStatsImagen(input, pName) {
-  const file = input.files[0];
-  if (!file) return;
+// ── LECTURA DE ESTADÍSTICAS POR IMAGEN (múltiple) ────────
+async function leerStatsImagenes(input, pName) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
 
   const status = document.getElementById('vision-status');
-  if (status) { status.style.display = 'block'; status.textContent = '📷 Leyendo estadísticas con IA...'; }
+  if (status) {
+    status.style.display = 'block';
+    status.style.background = 'var(--bl)';
+    status.style.color = 'var(--bd)';
+    status.textContent = `📷 Leyendo ${files.length} imagen${files.length>1?'es':''} con IA...`;
+  }
 
   try {
-    // Convertir imagen a base64
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
+    // Inicializar setData limpio
+    setData = { 1:{j:{},r:{}}, 2:{j:{},r:{}}, 3:{j:{},r:{}} };
 
-    const mediaType = file.type || 'image/jpeg';
+    // Procesar cada imagen en secuencia y combinar resultados
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (status) status.textContent = `📷 Procesando imagen ${i+1} de ${files.length}...`;
 
-    const res = await fetch(`${AI_SERVER}/ai-vision`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64: base64, mediaType, formato: statsFormato })
-    });
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-    const result = await res.json();
+      const res = await fetch(`${AI_SERVER}/ai-vision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mediaType: file.type || 'image/jpeg', formato: statsFormato })
+      });
 
-    if (!result.success) {
-      if (status) { status.style.display = 'block'; status.style.background = '#fdeaea'; status.style.color = '#c0392b'; status.textContent = 'No se pudieron leer las estadísticas. Intenta con una imagen más clara.'; }
-      return;
-    }
+      const result = await res.json();
+      if (!result.success || !result.data?.sets) continue;
 
-    // Cargar datos extraídos en setData
-    const extracted = result.data;
-    if (extracted.sets) {
-      setData = { 1:{j:{},r:{}}, 2:{j:{},r:{}}, 3:{j:{},r:{}} };
+      // Combinar datos — los nuevos valores sobreescriben los vacíos
+      const extracted = result.data;
+      if (extracted.formato) statsFormato = extracted.formato;
+
       Object.entries(extracted.sets).forEach(([setNum, sd]) => {
-        if (setData[setNum]) {
-          setData[setNum].j = sd.j || {};
-          setData[setNum].r = sd.r || {};
-        }
+        if (!setData[setNum]) setData[setNum] = {j:{},r:{}};
+        // Merge — solo sobreescribir si hay valor
+        ['j','r'].forEach(side => {
+          Object.entries(sd[side]||{}).forEach(([key, val]) => {
+            if (val !== null && val !== undefined) {
+              setData[setNum][side][key] = val;
+            }
+          });
+        });
       });
     }
 
-    // Actualizar formato si viene en la respuesta
-    if (extracted.formato) statsFormato = extracted.formato;
-
-    // Re-renderizar formulario con datos
+    // Re-renderizar formulario con datos combinados
     const content = document.getElementById('set-form-content');
     if (content) content.innerHTML = renderSetForm(pName, activeSet);
 
     if (status) {
       status.style.background = '#eafaf1';
       status.style.color = '#27ae60';
-      status.textContent = '✓ Estadísticas leídas correctamente. Revisa los datos antes de guardar.';
-      setTimeout(() => { if(status) status.style.display = 'none'; }, 4000);
+      status.textContent = `✓ ${files.length} imagen${files.length>1?'es':''} procesada${files.length>1?'s':''}. Revisa los datos antes de guardar.`;
+      setTimeout(() => { if(status) status.style.display = 'none'; }, 5000);
     }
 
   } catch (e) {
-    if (status) { status.style.display = 'block'; status.style.background = '#fdeaea'; status.style.color = '#c0392b'; status.textContent = 'Error al conectar con el servidor. Verifica tu conexión.'; }
+    if (status) {
+      status.style.background = '#fdeaea';
+      status.style.color = '#c0392b';
+      status.textContent = 'Error al conectar con el servidor. Verifica tu conexión.';
+    }
   }
 }
 
@@ -2242,8 +2249,8 @@ function renderStatsForm(p, editIdx) {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
       <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;">Estadísticas por set</div>
       <label style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--ol);color:var(--od);border:1px solid var(--orange);border-radius:var(--rsm);font-size:12px;font-weight:500;cursor:pointer;">
-        📷 Subir foto de stats
-        <input type="file" accept="image/*" style="display:none;" onchange="leerStatsImagen(this,'\${pName}')" />
+        📷 Subir fotos de stats
+        <input type="file" accept="image/*" multiple style="display:none;" onchange="leerStatsImagenes(this,'\${pName}')" />
       </label>
     </div>
     <div id="vision-status" style="display:none;padding:8px 12px;background:var(--bl);color:var(--bd);border-radius:var(--rsm);font-size:12px;margin-bottom:8px;">Leyendo estadísticas...</div>
