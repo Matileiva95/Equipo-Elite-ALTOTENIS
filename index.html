@@ -2126,9 +2126,24 @@ function renderStatsForm(p, editIdx) {
   const s = isEdit ? stats[editIdx] : null;
   return `<div class="card">
     <div style="font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-      <span style="background:${isEdit?'var(--blue)':'var(--blue)'};color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;">${isEdit?'Editando':'+ Nuevo'}</span>
+      <span style="background:var(--blue);color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;">${isEdit?'Editando':'+ Nuevo'}</span>
       ${isEdit?'Editar estadísticas':'Registrar estadísticas de partido'}
     </div>
+
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Formato de torneo</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="statsFormato='itf';document.getElementById('set-form-content').innerHTML=renderSetForm('${pName}',activeSet);"
+          style="padding:7px 18px;border-radius:var(--rsm);font-size:13px;cursor:pointer;font-weight:500;border:2px solid ${statsFormato==='itf'?'var(--orange)':'var(--border)'};background:${statsFormato==='itf'?'var(--ol)':'transparent'};color:${statsFormato==='itf'?'var(--od)':'var(--g2)'};">
+          ITF
+        </button>
+        <button onclick="statsFormato='atp';document.getElementById('set-form-content').innerHTML=renderSetForm('${pName}',activeSet);"
+          style="padding:7px 18px;border-radius:var(--rsm);font-size:13px;cursor:pointer;font-weight:500;border:2px solid ${statsFormato==='atp'?'var(--blue)':'var(--border)'};background:${statsFormato==='atp'?'var(--bl)':'transparent'};color:${statsFormato==='atp'?'var(--bd)':'var(--g2)'};">
+          Challenger / ATP
+        </button>
+      </div>
+    </div>
+
     <div class="form-grid" style="margin-bottom:16px;">
       <div class="fg"><label>Fecha</label><input type="date" id="sf-fecha" value="${s?s.fecha:today}" /></div>
       <div class="fg"><label>Rival</label><input type="text" id="sf-rival" value="${s?s.rival:''}" placeholder="Nombre del rival" /></div>
@@ -2140,19 +2155,22 @@ function renderStatsForm(p, editIdx) {
     </div>
 
     <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Estadísticas por set</div>
-    <div class="set-tabs" id="set-tabs">
+    <div class="set-tabs">
       <button class="set-tab active" onclick="switchSet(1,this)">Set 1</button>
       <button class="set-tab" onclick="switchSet(2,this)">Set 2</button>
       <button class="set-tab" onclick="switchSet(3,this)">Set 3</button>
     </div>
-
     <div id="set-form-content">${renderSetForm(pName, 1)}</div>
 
     <div class="fg" style="margin-top:14px;margin-bottom:14px;">
       <label>Observaciones del partido</label>
-      <textarea id="sf-obs" placeholder="Notas tácticas, mentales, físicas del partido..." style="min-height:70px;width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;"></textarea>
+      <textarea id="sf-obs" placeholder="Notas tácticas, mentales, físicas del partido..." style="min-height:70px;width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;">${s?s.observaciones||'':''}</textarea>
     </div>
-    <button class="btn btn-b btn-sm" onclick="saveStats()">Guardar estadísticas</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-b btn-sm" onclick="saveStats()">${isEdit?'Guardar cambios':'Guardar estadísticas'}</button>
+      ${isEdit?`<button class="btn btn-red btn-sm" onclick="event.stopPropagation();deleteStats(${editIdx})">Eliminar</button>
+      <button class="btn btn-g btn-sm" onclick="cancelEditStats()">Cancelar</button>`:''}
+    </div>
   </div>`;
 }
 
