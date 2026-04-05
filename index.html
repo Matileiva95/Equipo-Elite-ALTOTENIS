@@ -1740,6 +1740,70 @@ async function deleteBib(customIdx) {
   renderMain();
 }
 
+
+// ── LECTURA DE ESTADÍSTICAS POR IMAGEN ───────────────────
+async function leerStatsImagen(input, pName) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const status = document.getElementById('vision-status');
+  if (status) { status.style.display = 'block'; status.textContent = '📷 Leyendo estadísticas con IA...'; }
+
+  try {
+    // Convertir imagen a base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const mediaType = file.type || 'image/jpeg';
+
+    const res = await fetch(`${AI_SERVER}/ai-vision`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64, mediaType, formato: statsFormato })
+    });
+
+    const result = await res.json();
+
+    if (!result.success) {
+      if (status) { status.style.display = 'block'; status.style.background = '#fdeaea'; status.style.color = '#c0392b'; status.textContent = 'No se pudieron leer las estadísticas. Intenta con una imagen más clara.'; }
+      return;
+    }
+
+    // Cargar datos extraídos en setData
+    const extracted = result.data;
+    if (extracted.sets) {
+      setData = { 1:{j:{},r:{}}, 2:{j:{},r:{}}, 3:{j:{},r:{}} };
+      Object.entries(extracted.sets).forEach(([setNum, sd]) => {
+        if (setData[setNum]) {
+          setData[setNum].j = sd.j || {};
+          setData[setNum].r = sd.r || {};
+        }
+      });
+    }
+
+    // Actualizar formato si viene en la respuesta
+    if (extracted.formato) statsFormato = extracted.formato;
+
+    // Re-renderizar formulario con datos
+    const content = document.getElementById('set-form-content');
+    if (content) content.innerHTML = renderSetForm(pName, activeSet);
+
+    if (status) {
+      status.style.background = '#eafaf1';
+      status.style.color = '#27ae60';
+      status.textContent = '✓ Estadísticas leídas correctamente. Revisa los datos antes de guardar.';
+      setTimeout(() => { if(status) status.style.display = 'none'; }, 4000);
+    }
+
+  } catch (e) {
+    if (status) { status.style.display = 'block'; status.style.background = '#fdeaea'; status.style.color = '#c0392b'; status.textContent = 'Error al conectar con el servidor. Verifica tu conexión.'; }
+  }
+}
+
 // ── IA via servidor Render ────────────────────────────────
 const AI_SERVER = "https://altotenis-ai.onrender.com";
 async function callAI(prompt){
@@ -2154,7 +2218,14 @@ function renderStatsForm(p, editIdx) {
       <div class="fg"><label>Marcador</label><input type="text" id="sf-marcador" value="${s?s.marcador:''}" placeholder="Ej: 6-3 4-6 6-2" /></div>
     </div>
 
-    <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Estadísticas por set</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;">Estadísticas por set</div>
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--ol);color:var(--od);border:1px solid var(--orange);border-radius:var(--rsm);font-size:12px;font-weight:500;cursor:pointer;">
+        📷 Subir foto de stats
+        <input type="file" accept="image/*" style="display:none;" onchange="leerStatsImagen(this,'\${pName}')" />
+      </label>
+    </div>
+    <div id="vision-status" style="display:none;padding:8px 12px;background:var(--bl);color:var(--bd);border-radius:var(--rsm);font-size:12px;margin-bottom:8px;">Leyendo estadísticas...</div>
     <div class="set-tabs">
       <button class="set-tab active" onclick="switchSet(1,this)">Set 1</button>
       <button class="set-tab" onclick="switchSet(2,this)">Set 2</button>
