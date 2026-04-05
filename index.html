@@ -2321,19 +2321,22 @@ function renderSetFormATP(pName, setNum, sd) {
                   const den = sd[side][f.key+'_den']??'';
                   const pct = (num!==''&&den!==''&&den>0)?Math.round(num/den*100):'';
                   return `<div style="display:flex;gap:4px;align-items:center;">
-                    <input type="number" style="width:42px;padding:6px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;text-align:center;outline:none;background:#fff;"
+                    <input type="number" id="atp-${setNum}-${side}-${f.key}-num"
+                      style="width:42px;padding:6px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;text-align:center;outline:none;background:#fff;"
                       value="${num}" placeholder="0"
-                      oninput="saveSetField(${setNum},'${side}','${f.key}_num',this.value);updatePct(${setNum},'${side}','${f.key}')" />
+                      oninput="saveSetFieldATP(${setNum},'${side}','${f.key}_num',this.value);calcPctATP('${setNum}','${side}','${f.key}')" />
                     <span style="color:var(--g3);font-size:13px;">/</span>
-                    <input type="number" style="width:42px;padding:6px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;text-align:center;outline:none;background:#fff;"
+                    <input type="number" id="atp-${setNum}-${side}-${f.key}-den"
+                      style="width:42px;padding:6px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;text-align:center;outline:none;background:#fff;"
                       value="${den}" placeholder="0"
-                      oninput="saveSetField(${setNum},'${side}','${f.key}_den',this.value);updatePct(${setNum},'${side}','${f.key}')" />
+                      oninput="saveSetFieldATP(${setNum},'${side}','${f.key}_den',this.value);calcPctATP('${setNum}','${side}','${f.key}')" />
                     <span id="pct-${setNum}-${side}-${f.key}" style="font-size:11px;font-weight:600;color:${side==='j'?'var(--od)':'var(--bd)'};min-width:32px;">${pct!==''?pct+'%':''}</span>
                   </div>`;
                 } else {
-                  return `<input type="number" style="padding:7px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;text-align:center;outline:none;background:#fff;"
+                  return `<input type="number" id="atp-${setNum}-${side}-${f.key}"
+                    style="padding:7px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;text-align:center;outline:none;background:#fff;"
                     value="${sd[side][f.key]??''}" placeholder="#"
-                    oninput="saveSetField(${setNum},'${side}','${f.key}',this.value)" />`;
+                    oninput="saveSetFieldATP(${setNum},'${side}','${f.key}',this.value)" />`;
                 }
               }).join('')}
             </div>
@@ -2342,12 +2345,23 @@ function renderSetFormATP(pName, setNum, sd) {
   </div>`;
 }
 
-function updatePct(setNum, side, key) {
-  const num = parseFloat(document.querySelector(`#sf-${setNum}-${side}-${key}_num`)?.value??setData[setNum]?.[side]?.[key+'_num']??0)||0;
-  const den = parseFloat(document.querySelector(`#sf-${setNum}-${side}-${key}_den`)?.value??setData[setNum]?.[side]?.[key+'_den']??0)||0;
-  const el = document.getElementById(`pct-${setNum}-${side}-${key}`);
-  if(el) el.textContent = den>0 ? Math.round(num/den*100)+'%' : '';
+function saveSetFieldATP(setNum, side, key, val) {
+  if (!setData[setNum]) setData[setNum] = {j:{},r:{}};
+  setData[setNum][side][key] = val !== '' ? parseFloat(val) : null;
 }
+
+function calcPctATP(setNum, side, key) {
+  const numEl = document.getElementById(`atp-${setNum}-${side}-${key}-num`);
+  const denEl = document.getElementById(`atp-${setNum}-${side}-${key}-den`);
+  const pctEl = document.getElementById(`pct-${setNum}-${side}-${key}`);
+  if(!numEl||!denEl||!pctEl) return;
+  const n = parseFloat(numEl.value)||0;
+  const d = parseFloat(denEl.value)||0;
+  pctEl.textContent = d>0 ? Math.round(n/d*100)+'%' : '';
+}
+
+
+
 
 function saveSetField(setNum, side, key, val) {
   if (!setData[setNum]) setData[setNum] = {j:{},r:{}};
@@ -2376,19 +2390,17 @@ async function saveStats() {
     if(statsFormato === 'atp') {
       const allATPFields = [...SET_FIELDS_ATP.servicio,...SET_FIELDS_ATP.resto,...SET_FIELDS_ATP.puntos];
       allATPFields.forEach(f => {
-        if(f.tipo==='frac'){
-          ['j','r'].forEach(side => {
-            ['_num','_den'].forEach(suffix => {
-              const el = document.querySelector(`[oninput*="${setNum},'${side}','${f.key}${suffix}"]`);
-              if(el && el.value !== '') setData[setNum][side][f.key+suffix] = parseFloat(el.value);
-            });
-          });
-        } else {
-          ['j','r'].forEach(side => {
-            const els = document.querySelectorAll(`input[oninput*="${setNum},'${side}','${f.key}'"]`);
-            els.forEach(el => { if(el && el.value !== '') setData[setNum][side][f.key] = parseFloat(el.value); });
-          });
-        }
+        ['j','r'].forEach(side => {
+          if(f.tipo==='frac'){
+            const numEl = document.getElementById(`atp-${setNum}-${side}-${f.key}-num`);
+            const denEl = document.getElementById(`atp-${setNum}-${side}-${f.key}-den`);
+            if(numEl && numEl.value !== '') setData[setNum][side][f.key+'_num'] = parseFloat(numEl.value);
+            if(denEl && denEl.value !== '') setData[setNum][side][f.key+'_den'] = parseFloat(denEl.value);
+          } else {
+            const el = document.getElementById(`atp-${setNum}-${side}-${f.key}`);
+            if(el && el.value !== '') setData[setNum][side][f.key] = parseFloat(el.value);
+          }
+        });
       });
     } else {
       SET_FIELDS_ITF.forEach(f => {
