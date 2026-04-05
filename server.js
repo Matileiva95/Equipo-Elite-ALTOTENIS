@@ -68,4 +68,4 @@ app.post('/ai-vision', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Altotenis AI Server v2 running on port
+app.listen(PORT, '0.0.0.0', () => console.log(`Altotenis AI Server v2 running on port ${PORT}`));
