@@ -866,37 +866,77 @@ async function addRanking(){
 }
 
 // PLAN SEMANAL
+const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+const TURNOS = ['1er turno','2do turno'];
+
 function renderPlan(p){
   const today=new Date(),wKey=weekKey(today),wLbl=weekLabel(wKey);
   const plans=p.weekPlans||[];
-  const cur=plans.find(pl=>pl.week===wKey)||{week:wKey,focos:[],descripcion:'',ejercicios:'',observaciones:''};
-  activeFocos=[...(cur.focos||[])];
-  const hist=plans.filter(pl=>pl.week!==wKey).slice(0,5);
+  const cur=plans.find(pl=>pl.week===wKey)||{week:wKey,dias:{}};
+  const hist=plans.filter(pl=>pl.week!==wKey).slice(0,8);
+
+  // Inicializar días si no existen
+  if(!cur.dias) cur.dias={};
+
   return `
     <div class="card" style="margin-bottom:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:15px;font-weight:600;">Plan semana actual</div>
         <span class="week-badge">${wLbl}</span>
       </div>
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;font-weight:500;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Focos de trabajo</div>
-        <div class="foco-pills">${FOCOS.map(f=>`<button class="fpill${activeFocos.includes(f)?' '+FOCO_CLS[f]:''}" onclick="toggleFoco(this,'${f}')">${f}</button>`).join('')}</div>
-      </div>
-      <div class="plan-grid">
-        <div class="fg" style="grid-column:1/-1;"><label>Descripción general</label><textarea id="plan-desc" placeholder="Ej: Semana de carga técnica...">${cur.descripcion||''}</textarea></div>
-        <div class="fg"><label>Ejercicios y drills</label><textarea id="plan-ejercicios" placeholder="- Drill derecha cruzada 20 min&#10;- Juego de puntos con restricción">${cur.ejercicios||''}</textarea></div>
-        <div class="fg"><label>Observaciones para el equipo</label><textarea id="plan-obs" placeholder="Ej: Coordinar con preparador físico...">${cur.observaciones||''}</textarea></div>
-      </div>
+
+      ${DIAS.map(dia => {
+        const diaData = cur.dias[dia] || {};
+        return `<div style="background:var(--g5);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--white);">
+            <div style="font-size:13px;font-weight:600;color:var(--gray);">${dia}</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+            ${TURNOS.map((turno,ti) => {
+              const turnoData = diaData[turno] || {tipo:'entrenamiento',focos:[],descripcion:''};
+              const isDescanso = turnoData.tipo === 'descanso';
+              const dotColor = ti===0 ? 'var(--orange)' : 'var(--blue)';
+              const labelColor = ti===0 ? 'var(--od)' : 'var(--bd)';
+              const borderStyle = ti===0 ? 'border-right:1px solid var(--border);' : '';
+              return `<div style="padding:12px 14px;${borderStyle}${isDescanso?'background:var(--restl);':''}">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                  <div style="display:flex;align-items:center;gap:5px;">
+                    <div style="width:7px;height:7px;border-radius:50%;background:${isDescanso?'var(--rest)':dotColor};"></div>
+                    <span style="font-size:11px;font-weight:600;color:${isDescanso?'var(--restd)':labelColor};text-transform:uppercase;letter-spacing:.04em;">${turno}</span>
+                  </div>
+                  <div style="display:flex;gap:4px;">
+                    <button onclick="setTurnoTipo('${wKey}','${dia}','${turno}','entrenamiento')" 
+                      style="font-size:9px;padding:2px 7px;border-radius:20px;cursor:pointer;border:1px solid ${!isDescanso?'var(--orange)':'var(--border)'};background:${!isDescanso?'var(--ol)':'transparent'};color:${!isDescanso?'var(--od)':'var(--g3)'};">Entr.</button>
+                    <button onclick="setTurnoTipo('${wKey}','${dia}','${turno}','descanso')"
+                      style="font-size:9px;padding:2px 7px;border-radius:20px;cursor:pointer;border:1px solid ${isDescanso?'var(--rest)':'var(--border)'};background:${isDescanso?'var(--restl)':'transparent'};color:${isDescanso?'var(--restd)':'var(--g3)'};">Desc.</button>
+                  </div>
+                </div>
+                ${isDescanso
+                  ? `<div style="font-size:12px;color:var(--restd);font-style:italic;">Día de descanso</div>`
+                  : `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">
+                      ${FOCOS.map(f=>`<button class="fpill${(turnoData.focos||[]).includes(f)?' '+FOCO_CLS[f]:''}" 
+                        style="font-size:10px;padding:2px 8px;"
+                        onclick="toggleTurnoFoco('${wKey}','${dia}','${turno}','${f}')">${f}</button>`).join('')}
+                    </div>
+                    <textarea placeholder="Descripción de la sesión..."
+                      style="width:100%;min-height:65px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;"
+                      oninput="setTurnoDesc('${wKey}','${dia}','${turno}',this.value)">${turnoData.descripcion||''}</textarea>`
+                }
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+
       ${cur.updatedBy?`<div class="updated-by">Última edición: ${cur.updatedBy} · ${cur.updatedAt||''}</div>`:''}
-      <div class="btn-row">
+      <div class="btn-row" style="margin-top:14px;">
         <button class="btn btn-o" onclick="savePlan('${wKey}')">Guardar plan semanal</button>
-        <button class="btn btn-g" onclick="sugerirIA()">✦ Sugerir con IA</button>
       </div>
-      <div id="plan-ia" style="display:none;margin-top:12px;" class="ai-result"></div>
     </div>
-    ${hist.length?`<div class="card"><div style="font-size:14px;font-weight:600;margin-bottom:12px;">Historial de planes anteriores</div>${hist.map((pl,i)=>{
-      const isOpen = false;
-      return `<div class="hist-item" style="cursor:pointer;" onclick="toggleHistPlan(this)">
+
+    ${hist.length?`<div class="card"><div style="font-size:14px;font-weight:600;margin-bottom:12px;">Historial de planes anteriores</div>
+    ${hist.map((pl)=>`
+      <div class="hist-item" style="cursor:pointer;" onclick="toggleHistPlan(this)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
           <div>
             <div style="font-size:13px;font-weight:500;">${weekLabel(pl.week)}</div>
@@ -904,30 +944,75 @@ function renderPlan(p){
           </div>
           <span style="font-size:11px;color:var(--g3);">Ver más ▾</span>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;">${(pl.focos||[]).map(f=>`<span class="fpill ${FOCO_CLS[f]||''}" style="font-size:10px;padding:2px 8px;">${f}</span>`).join('')}</div>
-        <div class="hist-body" style="color:var(--g2);">${(pl.descripcion||'Sin descripción').slice(0,80)}${pl.descripcion&&pl.descripcion.length>80?'...':''}</div>
-        <div class="hist-detail" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-          ${pl.descripcion?`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Descripción general</div><div style="font-size:13px;line-height:1.6;">${pl.descripcion}</div></div>`:''}
-          ${pl.ejercicios?`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Ejercicios y drills</div><div style="font-size:13px;line-height:1.6;white-space:pre-line;">${pl.ejercicios}</div></div>`:''}
-          ${pl.observaciones?`<div><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Observaciones del equipo</div><div style="font-size:13px;line-height:1.6;font-style:italic;color:var(--g2);">${pl.observaciones}</div></div>`:''}
+        <div class="hist-detail" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+          ${DIAS.map(dia=>{
+            const dd=pl.dias&&pl.dias[dia];
+            if(!dd) return '';
+            return TURNOS.map(turno=>{
+              const td=dd[turno];
+              if(!td) return '';
+              const isD=td.tipo==='descanso';
+              return `<div style="margin-bottom:8px;">
+                <div style="font-size:11px;font-weight:600;color:var(--g3);">${dia} — ${turno}</div>
+                ${isD?'<div style="font-size:12px;color:var(--restd);">Descanso</div>':`
+                  <div style="display:flex;flex-wrap:wrap;gap:3px;margin:3px 0;">${(td.focos||[]).map(f=>`<span class="fpill ${FOCO_CLS[f]||''}" style="font-size:10px;padding:2px 8px;">${f}</span>`).join('')}</div>
+                  ${td.descripcion?`<div style="font-size:12px;color:var(--g2);">${td.descripcion}</div>`:''}`}
+              </div>`;
+            }).join('');
+          }).join('')}
         </div>
-      </div>`;}).join('')}</div>`:''}`;
+      </div>`).join('')}
+    </div>`:''}`;
+}
+
+function getTurnoData(wKey, dia, turno, p) {
+  const plans = p.weekPlans || [];
+  let cur = plans.find(pl => pl.week === wKey);
+  if (!cur) { cur = {week:wKey, dias:{}}; p.weekPlans = [...plans, cur]; }
+  if (!cur.dias) cur.dias = {};
+  if (!cur.dias[dia]) cur.dias[dia] = {};
+  if (!cur.dias[dia][turno]) cur.dias[dia][turno] = {tipo:'entrenamiento', focos:[], descripcion:''};
+  return cur.dias[dia][turno];
+}
+
+function setTurnoTipo(wKey, dia, turno, tipo) {
+  const p = data.players[pid];
+  const td = getTurnoData(wKey, dia, turno, p);
+  td.tipo = tipo;
+  scheduleSync();
+  const el = document.getElementById('dtab-content');
+  if(el) el.innerHTML = renderDtab();
+}
+
+function toggleTurnoFoco(wKey, dia, turno, foco) {
+  const p = data.players[pid];
+  const td = getTurnoData(wKey, dia, turno, p);
+  td.focos = td.focos || [];
+  if(td.focos.includes(foco)) td.focos = td.focos.filter(f=>f!==foco);
+  else td.focos.push(foco);
+  scheduleSync();
+  const el = document.getElementById('dtab-content');
+  if(el) el.innerHTML = renderDtab();
+}
+
+function setTurnoDesc(wKey, dia, turno, desc) {
+  const p = data.players[pid];
+  const td = getTurnoData(wKey, dia, turno, p);
+  td.descripcion = desc;
+  scheduleSync();
 }
 
 function toggleFoco(el,f){const cls=FOCO_CLS[f]||'fp-t';if(activeFocos.includes(f)){activeFocos=activeFocos.filter(x=>x!==f);el.className='fpill';}else{activeFocos.push(f);el.className='fpill '+cls;}}
 async function savePlan(wKey){
   const p=data.players[pid];p.weekPlans=p.weekPlans||[];
-  const plan={week:wKey,focos:[...activeFocos],descripcion:document.getElementById('plan-desc')?.value||'',ejercicios:document.getElementById('plan-ejercicios')?.value||'',observaciones:document.getElementById('plan-obs')?.value||'',updatedBy:user,updatedAt:new Date().toLocaleString('es-CL')};
-  const idx=p.weekPlans.findIndex(pl=>pl.week===wKey);if(idx>=0)p.weekPlans[idx]=plan;else p.weekPlans.unshift(plan);
+  const existing=p.weekPlans.find(pl=>pl.week===wKey)||{week:wKey,dias:{}};
+  existing.updatedBy=user;existing.updatedAt=new Date().toLocaleString('es-CL');
+  const idx=p.weekPlans.findIndex(pl=>pl.week===wKey);
+  if(idx>=0)p.weekPlans[idx]=existing;else p.weekPlans.unshift(existing);
   scheduleSync();const btn=event.target;btn.textContent='✓ Guardado';btn.style.background='#27ae60';setTimeout(()=>{btn.textContent='Guardar plan semanal';btn.style.background='';},1800);
 }
-async function sugerirIA(){
-  const p=data.players[pid],el=document.getElementById('plan-ia');
-  el.style.display='block';el.className='ai-result loading';el.textContent='Generando sugerencia...';
-  const focos=activeFocos.length?activeFocos.join(', '):'general';
-  const r=await callAI(`Sugiere un plan semanal de entrenamiento de tenis para: ${p.name}, ${p.age} años, Ranking ${p.ranking}. Estilo: ${p.style||'no definido'}. Objetivo: ${p.goal||'no definido'}. Focos: ${focos}. Incluye descripción general, 4-5 drills con duración y series, y observaciones clave.`);
-  el.className='ai-result';el.innerHTML=typeof marked!=='undefined'?marked.parse(r):r.replace(/\n/g,'<br>');
-}
+// sugerirIA removido
+
 
 // CALENDARIO MEJORADO
 function renderCal(p){
