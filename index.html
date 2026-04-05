@@ -1795,17 +1795,17 @@ async function leerStatsImagenes(input, pName) {
       const result = await res.json();
       if (!result.success || !result.data?.sets) continue;
 
-      // Combinar datos — los nuevos valores sobreescriben los vacíos
+      // Combinar datos — detectar set y hacer merge
       const extracted = result.data;
       if (extracted.formato) statsFormato = extracted.formato;
 
       Object.entries(extracted.sets).forEach(([setNum, sd]) => {
-        if (!setData[setNum]) setData[setNum] = {j:{},r:{}};
-        // Merge — solo sobreescribir si hay valor
+        const sn = String(setNum);
+        if (!setData[sn]) setData[sn] = {j:{},r:{}};
         ['j','r'].forEach(side => {
           Object.entries(sd[side]||{}).forEach(([key, val]) => {
-            if (val !== null && val !== undefined) {
-              setData[setNum][side][key] = val;
+            if (val !== null && val !== undefined && val !== '') {
+              setData[sn][side][key] = val;
             }
           });
         });
