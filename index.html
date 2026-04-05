@@ -1177,8 +1177,29 @@ function renderPerfil(p){
 
 function setStar(n){activeStars=n;document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n));}
 async function saveProfile(){
-  const p=data.players[pid];p.style=document.getElementById('f-style')?.value||'';p.goal=document.getElementById('f-goal')?.value||'';p.stars=activeStars;p.updatedBy=user;
-  scheduleSync();const btn=event.target;btn.textContent='✓ Guardado';btn.style.background='#27ae60';setTimeout(()=>{btn.textContent='Guardar perfil';btn.style.background='';},1800);
+  const p=data.players[pid];
+  p.style=document.getElementById('f-style')?.value||'';
+  p.goal=document.getElementById('f-goal')?.value||'';
+  p.stars=activeStars;
+  p.updatedBy=user;
+  p.equipamiento={
+    raqueta:document.getElementById('f-raqueta')?.value||'',
+    grip:document.getElementById('f-grip')?.value||'',
+    cuerdaPrincipal:document.getElementById('f-cuerda1')?.value||'',
+    cuerdaCruzada:document.getElementById('f-cuerda2')?.value||'',
+    tension:document.getElementById('f-tension')?.value||'',
+    balance:document.getElementById('f-balance')?.value||''
+  };
+  p.equipoTrabajo={
+    fisico:document.getElementById('f-fisico')?.value||'',
+    psicologo:document.getElementById('f-psicologo')?.value||'',
+    nutricionista:document.getElementById('f-nutricionista')?.value||'',
+    medico:document.getElementById('f-medico')?.value||''
+  };
+  scheduleSync();
+  const btn=event.target;
+  btn.textContent='✓ Guardado';btn.style.background='#27ae60';
+  setTimeout(()=>{btn.textContent='Guardar perfil';btn.style.background='';},1800);
 }
 async function addRanking(){
   const month=document.getElementById('rank-month').value,val=parseInt(document.getElementById('rank-val').value);if(!val||val<1)return;
