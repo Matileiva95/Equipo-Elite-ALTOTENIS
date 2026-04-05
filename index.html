@@ -2056,27 +2056,55 @@ function formatFecha(f) {
 
 
 // ── ESTADÍSTICAS POR SET ──────────────────────────────────
-const SET_FIELDS = [
-  {key:'aces', label:'Aces'},
+const SET_FIELDS_ITF = [
+  {key:'aces',         label:'Aces'},
   {key:'doblesFaltas', label:'Dobles faltas'},
-  {key:'pct1erSaque', label:'% 1er servicio', unit:'%'},
-  {key:'pts1erSaque', label:'1er servicios ganados'},
-  {key:'pct2doSaque', label:'% 2do servicio', unit:'%'},
-  {key:'pts2doSaque', label:'2dos servicios ganados'},
-  {key:'bpJugados', label:'Break points jugados'},
-  {key:'bpConvertidos', label:'Break points convertidos'},
-  {key:'ptsGanados', label:'Puntos ganados'},
+  {key:'pct1erSaque',  label:'% 1er servicio',           unit:'%'},
+  {key:'pts1erSaque',  label:'1er servicios ganados'},
+  {key:'pct2doSaque',  label:'% 2do servicio',            unit:'%'},
+  {key:'pts2doSaque',  label:'2dos servicios ganados'},
+  {key:'bpJugados',    label:'Break points jugados'},
+  {key:'bpConvertidos',label:'Break points convertidos'},
+  {key:'ptsGanados',   label:'Puntos ganados'},
 ];
+
+// Challenger/ATP: fracción num/den → calcula % automático
+const SET_FIELDS_ATP = {
+  servicio: [
+    {key:'valoracionSaque',  label:'Valoración de servicio', tipo:'num'},
+    {key:'aces',             label:'Aces',                   tipo:'num'},
+    {key:'doblesFaltas',     label:'Dobles faltas',          tipo:'num'},
+    {key:'primerSaque',      label:'1er saque',              tipo:'frac'},
+    {key:'pts1erSaque',      label:'Pts ganados con 1er saque', tipo:'frac'},
+    {key:'pts2doSaque',      label:'Pts ganados con 2do saque', tipo:'frac'},
+    {key:'roturasSalvadas',  label:'Puntos de rotura salvados', tipo:'frac'},
+    {key:'juegosServicio',   label:'Juegos de servicio jugados', tipo:'num'},
+  ],
+  resto: [
+    {key:'valoracionResto',  label:'Valoración de resto',    tipo:'num'},
+    {key:'ptsRestando1er',   label:'Pts ganados restando 1er saque', tipo:'frac'},
+    {key:'ptsRestando2do',   label:'Pts ganados restando 2do saque', tipo:'frac'},
+    {key:'roturasConvertidas',label:'Puntos de rotura convertidos', tipo:'frac'},
+    {key:'juegosResto',      label:'Juegos ganados al resto', tipo:'num'},
+  ],
+  puntos: [
+    {key:'ptsSaque',         label:'Puntos ganados al saque', tipo:'frac'},
+    {key:'ptsResto',         label:'Puntos ganados al resto', tipo:'frac'},
+    {key:'ptsTotales',       label:'Puntos totales ganados',  tipo:'frac'},
+  ]
+};
 
 let activeSet = 1;
 let setData = {1:{j:{},r:{}}, 2:{j:{},r:{}}, 3:{j:{},r:{}}};
 let editingStatsIdx = null;
+let statsFormato = 'itf'; // 'itf' | 'atp'
 
 function renderStats(p, editIdx) {
   const stats = p.matchStats || [];
   activeSet = 1;
   editingStatsIdx = editIdx !== undefined ? editIdx : null;
   const editData = editingStatsIdx !== null ? stats[editingStatsIdx] : null;
+  if(editData) statsFormato = editData.formato || 'itf';
   setData = editData ? JSON.parse(JSON.stringify(editData.sets || {1:{j:{},r:{}},2:{j:{},r:{}},3:{j:{},r:{}}})) : {1:{j:{},r:{}}, 2:{j:{},r:{}}, 3:{j:{},r:{}}};
 
   const histHtml = stats.length === 0
@@ -2130,10 +2158,15 @@ function renderStatsForm(p, editIdx) {
 
 function renderSetForm(pName, setNum) {
   const sd = setData[setNum] || {j:{},r:{}};
+  if(statsFormato === 'atp') return renderSetFormATP(pName, setNum, sd);
+  return renderSetFormITF(pName, setNum, sd);
+}
+
+function renderSetFormITF(pName, setNum, sd) {
   return `<div class="set-grid">
     <div>
       <div class="set-col-head" style="background:var(--ol);color:var(--od);">${pName}</div>
-      ${SET_FIELDS.map(f => `
+      ${SET_FIELDS_ITF.map(f => `
         <div style="margin-bottom:8px;">
           <div style="font-size:11px;color:var(--g3);margin-bottom:3px;">${f.label}${f.unit?' ('+f.unit+')':''}</div>
           <input type="number" class="sf-inp" id="sf-${setNum}-j-${f.key}"
@@ -2143,7 +2176,7 @@ function renderSetForm(pName, setNum) {
     </div>
     <div>
       <div class="set-col-head" style="background:var(--bl);color:var(--bd);">Rival</div>
-      ${SET_FIELDS.map(f => `
+      ${SET_FIELDS_ITF.map(f => `
         <div style="margin-bottom:8px;">
           <div style="font-size:11px;color:var(--g3);margin-bottom:3px;">${f.label}${f.unit?' ('+f.unit+')':''}</div>
           <input type="number" class="sf-inp" id="sf-${setNum}-r-${f.key}"
@@ -2152,6 +2185,58 @@ function renderSetForm(pName, setNum) {
         </div>`).join('')}
     </div>
   </div>`;
+}
+
+function renderSetFormATP(pName, setNum, sd) {
+  const bloques = [
+    {titulo:'Estadísticas de servicio', campos: SET_FIELDS_ATP.servicio},
+    {titulo:'Estadísticas de resto',    campos: SET_FIELDS_ATP.resto},
+    {titulo:'Estadísticas de puntos',   campos: SET_FIELDS_ATP.puntos},
+  ];
+  return `<div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+      <div class="set-col-head" style="background:var(--ol);color:var(--od);">${pName}</div>
+      <div class="set-col-head" style="background:var(--bl);color:var(--bd);">Rival</div>
+    </div>
+    ${bloques.map(b => `
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding:5px 8px;background:var(--g5);border-radius:var(--rsm);">${b.titulo}</div>
+        ${b.campos.map(f => `
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;color:var(--g3);margin-bottom:5px;">${f.label}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              ${['j','r'].map(side => {
+                if(f.tipo==='frac'){
+                  const num = sd[side][f.key+'_num']??'';
+                  const den = sd[side][f.key+'_den']??'';
+                  const pct = (num!==''&&den!==''&&den>0)?Math.round(num/den*100):'';
+                  return `<div style="display:flex;gap:4px;align-items:center;">
+                    <input type="number" style="width:42px;padding:6px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;text-align:center;outline:none;background:#fff;"
+                      value="${num}" placeholder="0"
+                      oninput="saveSetField(${setNum},'${side}','${f.key}_num',this.value);updatePct(${setNum},'${side}','${f.key}')" />
+                    <span style="color:var(--g3);font-size:13px;">/</span>
+                    <input type="number" style="width:42px;padding:6px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;text-align:center;outline:none;background:#fff;"
+                      value="${den}" placeholder="0"
+                      oninput="saveSetField(${setNum},'${side}','${f.key}_den',this.value);updatePct(${setNum},'${side}','${f.key}')" />
+                    <span id="pct-${setNum}-${side}-${f.key}" style="font-size:11px;font-weight:600;color:${side==='j'?'var(--od)':'var(--bd)'};min-width:32px;">${pct!==''?pct+'%':''}</span>
+                  </div>`;
+                } else {
+                  return `<input type="number" style="padding:7px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;text-align:center;outline:none;background:#fff;"
+                    value="${sd[side][f.key]??''}" placeholder="#"
+                    oninput="saveSetField(${setNum},'${side}','${f.key}',this.value)" />`;
+                }
+              }).join('')}
+            </div>
+          </div>`).join('')}
+      </div>`).join('')}
+  </div>`;
+}
+
+function updatePct(setNum, side, key) {
+  const num = parseFloat(document.querySelector(`#sf-${setNum}-${side}-${key}_num`)?.value??setData[setNum]?.[side]?.[key+'_num']??0)||0;
+  const den = parseFloat(document.querySelector(`#sf-${setNum}-${side}-${key}_den`)?.value??setData[setNum]?.[side]?.[key+'_den']??0)||0;
+  const el = document.getElementById(`pct-${setNum}-${side}-${key}`);
+  if(el) el.textContent = den>0 ? Math.round(num/den*100)+'%' : '';
 }
 
 function saveSetField(setNum, side, key, val) {
@@ -2177,13 +2262,32 @@ async function saveStats() {
 
   // Leer campos del set activo antes de guardar
   [1,2,3].forEach(setNum => {
-    SET_FIELDS.forEach(f => {
-      const jEl = document.getElementById(`sf-${setNum}-j-${f.key}`);
-      const rEl = document.getElementById(`sf-${setNum}-r-${f.key}`);
-      if (!setData[setNum]) setData[setNum] = {j:{},r:{}};
-      if (jEl && jEl.value !== '') setData[setNum].j[f.key] = parseFloat(jEl.value);
-      if (rEl && rEl.value !== '') setData[setNum].r[f.key] = parseFloat(rEl.value);
-    });
+    if (!setData[setNum]) setData[setNum] = {j:{},r:{}};
+    if(statsFormato === 'atp') {
+      const allATPFields = [...SET_FIELDS_ATP.servicio,...SET_FIELDS_ATP.resto,...SET_FIELDS_ATP.puntos];
+      allATPFields.forEach(f => {
+        if(f.tipo==='frac'){
+          ['j','r'].forEach(side => {
+            ['_num','_den'].forEach(suffix => {
+              const el = document.querySelector(`[oninput*="${setNum},'${side}','${f.key}${suffix}"]`);
+              if(el && el.value !== '') setData[setNum][side][f.key+suffix] = parseFloat(el.value);
+            });
+          });
+        } else {
+          ['j','r'].forEach(side => {
+            const els = document.querySelectorAll(`input[oninput*="${setNum},'${side}','${f.key}'"]`);
+            els.forEach(el => { if(el && el.value !== '') setData[setNum][side][f.key] = parseFloat(el.value); });
+          });
+        }
+      });
+    } else {
+      SET_FIELDS_ITF.forEach(f => {
+        const jEl = document.getElementById(`sf-${setNum}-j-${f.key}`);
+        const rEl = document.getElementById(`sf-${setNum}-r-${f.key}`);
+        if (jEl && jEl.value !== '') setData[setNum].j[f.key] = parseFloat(jEl.value);
+        if (rEl && rEl.value !== '') setData[setNum].r[f.key] = parseFloat(rEl.value);
+      });
+    }
   });
 
   const s = {
@@ -2192,6 +2296,7 @@ async function saveStats() {
     torneo: document.getElementById('sf-torneo')?.value || '',
     resultado: document.getElementById('sf-resultado')?.value || 'G',
     marcador: document.getElementById('sf-marcador')?.value || '',
+    formato: statsFormato,
     sets: JSON.parse(JSON.stringify(setData)),
     observaciones: document.getElementById('sf-obs')?.value || '',
     addedBy: user,
@@ -2238,7 +2343,8 @@ function renderStatHistCard(s, idx) {
   const sets = s.sets || {};
   const setsConDatos = Object.keys(sets).filter(k => {
     const sd = sets[k];
-    return sd && (Object.values(sd.j||{}).some(v=>v!=null) || Object.values(sd.r||{}).some(v=>v!=null));
+    if(!sd) return false;
+    return Object.values(sd.j||{}).some(v=>v!=null) || Object.values(sd.r||{}).some(v=>v!=null);
   });
 
   return `<div class="stat-hist-card" style="cursor:pointer;" onclick="toggleStatDetail(this)">
@@ -2256,10 +2362,15 @@ function renderStatHistCard(s, idx) {
     ${setsConDatos.map(setNum => {
       const sd = sets[setNum];
       const j = sd.j || {}, r = sd.r || {};
-      const tieneData = SET_FIELDS.some(f => j[f.key]!=null || r[f.key]!=null);
+      const isATP = s.formato === 'atp';
+      const fields = isATP ? [...SET_FIELDS_ATP.servicio,...SET_FIELDS_ATP.resto,...SET_FIELDS_ATP.puntos] : SET_FIELDS_ITF;
+      const tieneData = fields.some(f => {
+        if(isATP && f.tipo==='frac') return j[f.key+'_num']!=null||r[f.key+'_num']!=null;
+        return j[f.key]!=null||r[f.key]!=null;
+      });
       if (!tieneData) return '';
       return `<div style="margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Set ${setNum}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Set ${setNum} ${isATP?'<span style="background:var(--bl);color:var(--bd);padding:1px 6px;border-radius:4px;font-size:10px;">ATP</span>':''}</div>
         <table class="stat-set-table">
           <thead>
             <tr>
@@ -2269,15 +2380,18 @@ function renderStatHistCard(s, idx) {
             </tr>
           </thead>
           <tbody>
-            ${SET_FIELDS.map(f => {
-              if (j[f.key]==null && r[f.key]==null) return '';
-              const vj = j[f.key]!=null ? j[f.key]+(f.unit||'') : '—';
-              const vr = r[f.key]!=null ? r[f.key]+(f.unit||'') : '—';
-              return `<tr>
-                <td class="lbl-col">${f.label}</td>
-                <td class="val-j">${vj}</td>
-                <td class="val-r">${vr}</td>
-              </tr>`;
+            ${fields.map(f => {
+              if(isATP && f.tipo==='frac'){
+                const jn=j[f.key+'_num'],jd=j[f.key+'_den'],rn=r[f.key+'_num'],rd=r[f.key+'_den'];
+                if(jn==null&&rn==null) return '';
+                const vj=jn!=null?(jd!=null?jn+'/'+jd+' ('+Math.round(jn/jd*100)+'%)':jn):'—';
+                const vr=rn!=null?(rd!=null?rn+'/'+rd+' ('+Math.round(rn/rd*100)+'%)':rn):'—';
+                return `<tr><td class="lbl-col">${f.label}</td><td class="val-j">${vj}</td><td class="val-r">${vr}</td></tr>`;
+              }
+              if(j[f.key]==null&&r[f.key]==null) return '';
+              const vj=j[f.key]!=null?j[f.key]+(f.unit||''):'—';
+              const vr=r[f.key]!=null?r[f.key]+(f.unit||''):'—';
+              return `<tr><td class="lbl-col">${f.label}</td><td class="val-j">${vj}</td><td class="val-r">${vr}</td></tr>`;
             }).join('')}
           </tbody>
         </table>
