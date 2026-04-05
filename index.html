@@ -1759,25 +1759,18 @@ async function deleteBib(customIdx) {
 
 
 function renderSetImportButtons(pName, setNum) {
-  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
-    <label style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--ol);color:var(--od);border:1px solid var(--orange);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">
-      📷 Foto
-      <input type="file" accept="image/*" multiple style="display:none;" onchange="leerStatsImagenesSet(this,'${pName}',${setNum})" />
-    </label>
-    <button onclick="togglePegarTextoSet(${setNum})"
-      style="padding:5px 12px;background:var(--bl);color:var(--bd);border:1px solid var(--blue);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">
-      📋 Pegar texto
-    </button>
-    <button onclick="intercambiarLados(${setNum},'${pName}')"
-      style="padding:5px 12px;background:var(--g5);color:var(--g2);border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">
-      ⇄ Intercambiar lados
-    </button>
-    <div id="pegar-panel-${setNum}" style="display:none;width:100%;margin-top:6px;">
-      <textarea id="texto-raw-${setNum}" placeholder="Pega aquí las estadísticas del Set ${setNum} copiadas de atptour.com o itftennis.com..."
-        style="width:100%;min-height:100px;padding:8px 10px;border:1px solid var(--blue);border-radius:var(--rsm);font-size:11px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;"></textarea>
-      <button onclick="leerStatsTextoSet('${pName}',${setNum})" class="btn btn-b btn-sm" style="margin-top:5px;">Interpretar Set ${setNum}</button>
-    </div>
-  </div>`;
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">' +
+    '<label style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--ol);color:var(--od);border:1px solid var(--orange);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">' +
+      '📷 Foto' +
+      '<input type="file" accept="image/*" multiple style="display:none;" onchange="leerStatsImagenesSet(this,'' + pName + '',' + setNum + ')" />' +
+    '</label>' +
+    '<button onclick="togglePegarTextoSet(' + setNum + ')" style="padding:5px 12px;background:var(--bl);color:var(--bd);border:1px solid var(--blue);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">📋 Pegar texto</button>' +
+    '<button onclick="intercambiarLados(' + setNum + ','' + pName + '')" style="padding:5px 12px;background:var(--g5);color:var(--g2);border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">⇄ Intercambiar lados</button>' +
+    '<div id="pegar-panel-' + setNum + '" style="display:none;width:100%;margin-top:6px;">' +
+      '<textarea id="texto-raw-' + setNum + '" placeholder="Pega aquí las estadísticas del Set ' + setNum + ' copiadas de atptour.com o itftennis.com..." style="width:100%;min-height:100px;padding:8px 10px;border:1px solid var(--blue);border-radius:var(--rsm);font-size:11px;outline:none;background:var(--g5);resize:vertical;font-family:DM Sans,sans-serif;"></textarea>' +
+      '<button onclick="leerStatsTextoSet('' + pName + '',' + setNum + ')" class="btn btn-b btn-sm" style="margin-top:5px;">Interpretar Set ' + setNum + '</button>' +
+    '</div>' +
+  '</div>';
 }
 
 function togglePegarTextoSet(setNum) {
