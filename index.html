@@ -999,6 +999,100 @@ function cambiarMes(delta) {
   renderMain();
 }
 
+
+function renderSetImportButtons(pName, setNum) {
+  var h = "";
+  h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">';
+  h += '<label style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--ol);color:var(--od);border:1px solid var(--orange);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">';
+  h += "📷 Foto";
+  h += '<input type="file" accept="image/*" multiple style="display:none;" onchange="leerStatsImagenesSet(this,&apos;" + pName + "&apos;,' + setNum + ')" />';
+  h += '</label>';
+  h += '<button onclick="togglePegarTextoSet(' + setNum + ')" style="padding:5px 12px;background:var(--bl);color:var(--bd);border:1px solid var(--blue);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">📋 Pegar texto</button>';
+  h += '<button onclick="intercambiarLados(' + setNum + ', this)" style="padding:5px 12px;background:var(--g5);color:var(--g2);border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">⇄ Intercambiar lados</button>';
+  h += '<div id="pegar-panel-' + setNum + '" style="display:none;width:100%;margin-top:6px;">';
+  h += '<textarea id="texto-raw-' + setNum + '" placeholder="Pega aquí las estadísticas del Set ' + setNum + '..." style="width:100%;min-height:100px;padding:8px 10px;border:1px solid var(--blue);border-radius:var(--rsm);font-size:11px;outline:none;background:var(--g5);resize:vertical;"></textarea>';
+  h += '<button onclick="leerStatsTextoSet(' + setNum + ')" class="btn btn-b btn-sm" style="margin-top:5px;">Interpretar Set ' + setNum + '</button>';
+  h += '</div></div>';
+  return h;
+}
+
+function togglePegarTextoSet(setNum) {
+  var panel = document.getElementById('pegar-panel-' + setNum);
+  if(panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function intercambiarLados(setNum, btn) {
+  var p = data.players[pid];
+  var pName = p ? p.name.split(' ')[0] : 'Jugador';
+  if(!setData[setNum]) return;
+  var temp = setData[setNum].j;
+  setData[setNum].j = setData[setNum].r;
+  setData[setNum].r = temp;
+  var el = document.getElementById('set-form-content');
+  if(el) el.innerHTML = renderSetForm(pName, setNum);
+}
+
+async function leerStatsTextoSet(setNum) {
+  var p = data.players[pid];
+  var pName = p ? p.name.split(' ')[0] : 'Jugador';
+  var texto = document.getElementById('texto-raw-' + setNum) ? document.getElementById('texto-raw-' + setNum).value.trim() : '';
+  if(!texto) { alert('Pega el texto primero'); return; }
+  var status = document.getElementById('vision-status');
+  if(status) { status.style.display='block'; status.style.background='var(--bl)'; status.style.color='var(--bd)'; status.textContent='Interpretando Set ' + setNum + '...'; }
+  try {
+    var esATP = statsFormato === 'atp';
+    var sysMsg = 'Extraes estadísticas de tenis. Respondes SOLO con JSON válido sin texto adicional.';
+    var userMsg = esATP
+      ? 'Interpreta este texto de estadísticas ATP copiado de atptour.com. Formato: valor_izq / etiqueta / valor_der. Responde SOLO JSON: {"j":{},"r":{}} con keys: valoracionSaque,aces,doblesFaltas,primerSaque_num,primerSaque_den,pts1erSaque_num,pts1erSaque_den,pts2doSaque_num,pts2doSaque_den,roturasSalvadas_num,roturasSalvadas_den,juegosServicio,valoracionResto,ptsRestando1er_num,ptsRestando1er_den,ptsRestando2do_num,ptsRestando2do_den,roturasConvertidas_num,roturasConvertidas_den,juegosResto,ptsSaque_num,ptsSaque_den,ptsResto_num,ptsResto_den,ptsTotales_num,ptsTotales_den. Para "14/29 (48%)" usa _num=14 _den=29. SOLO JSON.\n\nTEXTO:\n' + texto
+      : 'Interpreta este texto de estadísticas ITF. Formato: valor_jugador / etiqueta / valor_rival. Responde SOLO JSON: {"j":{},"r":{}} con keys: aces,doblesFaltas,pct1erSaque,pts1erSaque,pct2doSaque,pts2doSaque,bpJugados,bpConvertidos,ptsGanados. Para "60.4%" usa 60.4. SOLO JSON.\n\nTEXTO:\n' + texto;
+    var res = await fetch(AI_SERVER + '/ai', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: sysMsg, messages: [{role:'user', content: userMsg}] })
+    });
+    var d = await res.json();
+    var txt = d.content && d.content[0] ? d.content[0].text : '';
+    var clean = txt.replace(/```json|```/g,'').trim();
+    var parsed = JSON.parse(clean);
+    if(!setData[setNum]) setData[setNum] = {j:{},r:{}};
+    if(parsed.j) Object.entries(parsed.j).forEach(function(e){ if(e[1]!=null) setData[setNum].j[e[0]]=e[1]; });
+    if(parsed.r) Object.entries(parsed.r).forEach(function(e){ if(e[1]!=null) setData[setNum].r[e[0]]=e[1]; });
+    var panel = document.getElementById('pegar-panel-' + setNum);
+    if(panel) panel.style.display = 'none';
+    var content = document.getElementById('set-form-content');
+    if(content) content.innerHTML = renderSetForm(pName, setNum);
+    if(status) { status.style.background='#eafaf1'; status.style.color='#27ae60'; status.textContent='✓ Set ' + setNum + ' interpretado. Revisa los datos.'; setTimeout(function(){ if(status) status.style.display='none'; }, 3000); }
+  } catch(e) {
+    if(status) { status.style.background='#fdeaea'; status.style.color='#c0392b'; status.textContent='Error al interpretar.'; }
+  }
+}
+
+async function leerStatsImagenesSet(input, pName, setNum) {
+  var files = Array.from(input.files);
+  if(!files.length) return;
+  var status = document.getElementById('vision-status');
+  if(status) { status.style.display='block'; status.style.background='var(--bl)'; status.style.color='var(--bd)'; status.textContent='Leyendo imagen(es) para Set ' + setNum + '...'; }
+  try {
+    if(!setData[setNum]) setData[setNum] = {j:{},r:{}};
+    for(var i=0; i<files.length; i++) {
+      var file = files[i];
+      var base64 = await new Promise(function(resolve,reject){ var r=new FileReader(); r.onload=function(){ resolve(r.result.split(',')[1]); }; r.onerror=reject; r.readAsDataURL(file); });
+      var res = await fetch(AI_SERVER + '/ai-vision', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({imageBase64:base64, mediaType:file.type||'image/jpeg', formato:statsFormato}) });
+      var result = await res.json();
+      if(!result.success||!result.data) continue;
+      var sd = result.data.sets && (result.data.sets['1'] || result.data.sets[setNum]) || {};
+      if(sd.j) Object.entries(sd.j).forEach(function(e){ if(e[1]!=null) setData[setNum].j[e[0]]=e[1]; });
+      if(sd.r) Object.entries(sd.r).forEach(function(e){ if(e[1]!=null) setData[setNum].r[e[0]]=e[1]; });
+    }
+    var p = data.players[pid];
+    var pName2 = p ? p.name.split(' ')[0] : pName;
+    var content = document.getElementById('set-form-content');
+    if(content) content.innerHTML = renderSetForm(pName2, setNum);
+    if(status) { status.style.background='#eafaf1'; status.style.color='#27ae60'; status.textContent='✓ Listo Set ' + setNum; setTimeout(function(){ if(status) status.style.display='none'; },3000); }
+  } catch(e) {
+    if(status) { status.style.background='#fdeaea'; status.style.color='#c0392b'; status.textContent='Error de conexión.'; }
+  }
+}
+
 function buildAlerts(today, wKey) {
   const alerts = [];
 
@@ -1130,8 +1224,13 @@ function renderPerfil(p){
       <div class="fg"><label>Encordado principal</label><input id="f-cuerda1" value="${eq.cuerdaPrincipal||''}" placeholder="Ej: Poly Tour Pro 1.25mm" /></div>
       <div class="fg"><label>Encordado cruzado</label><input id="f-cuerda2" value="${eq.cuerdaCruzada||''}" placeholder="Ej: Poly Tour Spin 1.25mm" /></div>
       <div class="fg"><label>Tensión habitual</label><input id="f-tension" value="${eq.tension||''}" placeholder="Ej: 20 kg / 44 lbs" /></div>
-      <div class="fg"><label>Balance de raqueta (mm)</label>
-        <input type="text" id="f-balance" value="${eq.balance||''}" placeholder="Ej: 31.3 mm o Cabeza pesada" />
+      <div class="fg"><label>Balance de raqueta</label>
+        <select id="f-balance">
+          <option value="" ${!eq.balance?'selected':''}>Sin definir</option>
+          <option value="Cabeza pesada" ${eq.balance==='Cabeza pesada'?'selected':''}>Cabeza pesada</option>
+          <option value="Equilibrada" ${eq.balance==='Equilibrada'?'selected':''}>Equilibrada</option>
+          <option value="Mango pesado" ${eq.balance==='Mango pesado'?'selected':''}>Mango pesado</option>
+        </select>
       </div>
     </div>
 
@@ -1757,189 +1856,66 @@ async function deleteBib(customIdx) {
 }
 
 
-
-function renderSetImportButtons(pName, setNum) {
-  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">' +
-    '<label style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--ol);color:var(--od);border:1px solid var(--orange);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">' +
-      '📷 Foto' +
-      '<input type="file" accept="image/*" multiple style="display:none;" onchange="leerStatsImagenesSet(this,'' + pName + '',' + setNum + ')" />' +
-    '</label>' +
-    '<button onclick="togglePegarTextoSet(' + setNum + ')" style="padding:5px 12px;background:var(--bl);color:var(--bd);border:1px solid var(--blue);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">📋 Pegar texto</button>' +
-    '<button onclick="intercambiarLados(' + setNum + ','' + pName + '')" style="padding:5px 12px;background:var(--g5);color:var(--g2);border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">⇄ Intercambiar lados</button>' +
-    '<div id="pegar-panel-' + setNum + '" style="display:none;width:100%;margin-top:6px;">' +
-      '<textarea id="texto-raw-' + setNum + '" placeholder="Pega aquí las estadísticas del Set ' + setNum + ' copiadas de atptour.com o itftennis.com..." style="width:100%;min-height:100px;padding:8px 10px;border:1px solid var(--blue);border-radius:var(--rsm);font-size:11px;outline:none;background:var(--g5);resize:vertical;font-family:DM Sans,sans-serif;"></textarea>' +
-      '<button onclick="leerStatsTextoSet('' + pName + '',' + setNum + ')" class="btn btn-b btn-sm" style="margin-top:5px;">Interpretar Set ' + setNum + '</button>' +
-    '</div>' +
-  '</div>';
-}
-
-function togglePegarTextoSet(setNum) {
-  const panel = document.getElementById('pegar-panel-' + setNum);
-  if(panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-}
-
-function intercambiarLados(setNum, pName) {
-  if(!setData[setNum]) return;
-  const temp = setData[setNum].j;
-  setData[setNum].j = setData[setNum].r;
-  setData[setNum].r = temp;
-  const el = document.getElementById('set-form-content');
-  if(el) el.innerHTML = renderSetForm(pName, setNum);
-}
-
-async function leerStatsTextoSet(pName, setNum) {
-  const texto = document.getElementById('texto-raw-' + setNum)?.value?.trim();
-  if(!texto) { alert('Pega el texto primero'); return; }
+// ── LECTURA DE ESTADÍSTICAS POR IMAGEN ───────────────────
+async function leerStatsImagen(input, pName) {
+  const file = input.files[0];
+  if (!file) return;
 
   const status = document.getElementById('vision-status');
-  if(status) { status.style.display='block'; status.style.background='var(--bl)'; status.style.color='var(--bd)'; status.textContent='Interpretando Set ' + setNum + '...'; }
+  if (status) { status.style.display = 'block'; status.textContent = '📷 Leyendo estadísticas con IA...'; }
 
   try {
-    const prompt = statsFormato === 'atp'
-      ? 'Eres un extractor de estadísticas de tenis ATP. Interpreta este texto copiado de atptour.com. El formato es: valor_izquierda / etiqueta / valor_derecha. Responde SOLO con JSON: {"j":{},"r":{}} usando estos keys: valoracionSaque, aces, doblesFaltas, primerSaque_num, primerSaque_den, pts1erSaque_num, pts1erSaque_den, pts2doSaque_num, pts2doSaque_den, roturasSalvadas_num, roturasSalvadas_den, juegosServicio, valoracionResto, ptsRestando1er_num, ptsRestando1er_den, ptsRestando2do_num, ptsRestando2do_den, roturasConvertidas_num, roturasConvertidas_den, juegosResto, ptsSaque_num, ptsSaque_den, ptsResto_num, ptsResto_den, ptsTotales_num, ptsTotales_den. Para "14/29 (48%)" usa _num=14 y _den=29. SOLO el JSON.
-
-TEXTO:
-' + texto
-      : 'Eres un extractor de estadísticas de tenis ITF. Interpreta este texto copiado de itftennis.com. El formato es: valor_jugador / etiqueta / valor_rival. Responde SOLO con JSON: {"j":{},"r":{}} usando: aces, doblesFaltas, pct1erSaque, pts1erSaque, pct2doSaque, pts2doSaque, bpJugados, bpConvertidos, ptsGanados. Para porcentajes como "60.4%" usa solo 60.4. SOLO el JSON.
-
-TEXTO:
-' + texto;
-
-    const res = await fetch(AI_SERVER + '/ai', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: 'Extraes estadísticas de tenis y respondes SOLO con JSON válido, sin texto adicional.',
-        messages: [{ role: 'user', content: prompt }]
-      })
+    // Convertir imagen a base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
 
-    const data = await res.json();
-    const text = data.content?.[0]?.text || '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    const mediaType = file.type || 'image/jpeg';
 
-    if(!setData[setNum]) setData[setNum] = {j:{},r:{}};
-    if(parsed.j) Object.entries(parsed.j).forEach(([k,v]) => { if(v!=null) setData[setNum].j[k]=v; });
-    if(parsed.r) Object.entries(parsed.r).forEach(([k,v]) => { if(v!=null) setData[setNum].r[k]=v; });
+    const res = await fetch(`${AI_SERVER}/ai-vision`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64, mediaType, formato: statsFormato })
+    });
 
-    const panel = document.getElementById('pegar-panel-' + setNum);
-    if(panel) panel.style.display = 'none';
+    const result = await res.json();
 
-    const content = document.getElementById('set-form-content');
-    if(content) content.innerHTML = renderSetForm(pName, setNum);
-
-    if(status) {
-      status.style.background='#eafaf1'; status.style.color='#27ae60';
-      status.textContent = '✓ Set ' + setNum + ' interpretado. Revisa los datos.';
-      setTimeout(() => { if(status) status.style.display='none'; }, 3000);
+    if (!result.success) {
+      if (status) { status.style.display = 'block'; status.style.background = '#fdeaea'; status.style.color = '#c0392b'; status.textContent = 'No se pudieron leer las estadísticas. Intenta con una imagen más clara.'; }
+      return;
     }
-  } catch(e) {
-    if(status) { status.style.background='#fdeaea'; status.style.color='#c0392b'; status.textContent='Error al interpretar. Verifica tu conexión.'; }
-  }
-}
 
-async function leerStatsImagenesSet(input, pName, setNum) {
-  const files = Array.from(input.files);
-  if(!files.length) return;
-  const status = document.getElementById('vision-status');
-  if(status) { status.style.display='block'; status.style.background='var(--bl)'; status.style.color='var(--bd)'; status.textContent='Leyendo ' + files.length + ' imagen(es) para Set ' + setNum + '...'; }
-  try {
-    if(!setData[setNum]) setData[setNum] = {j:{},r:{}};
-    for(let i=0; i<files.length; i++) {
-      const file = files[i];
-      if(status) status.textContent = 'Procesando imagen ' + (i+1) + ' de ' + files.length + '...';
-      const base64 = await new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve(r.result.split(',')[1]); r.onerror=reject; r.readAsDataURL(file); });
-      const res = await fetch(AI_SERVER + '/ai-vision', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({imageBase64:base64, mediaType:file.type||'image/jpeg', formato:statsFormato}) });
-      const result = await res.json();
-      if(!result.success||!result.data) continue;
-      const extracted = result.data;
-      const sd = extracted.sets?.['1'] || extracted.sets?.[setNum] || {};
-      if(sd.j) Object.entries(sd.j).forEach(([k,v])=>{ if(v!=null) setData[setNum].j[k]=v; });
-      if(sd.r) Object.entries(sd.r).forEach(([k,v])=>{ if(v!=null) setData[setNum].r[k]=v; });
-    }
-    const content = document.getElementById('set-form-content');
-    if(content) content.innerHTML = renderSetForm(pName, setNum);
-    if(status) { status.style.background='#eafaf1'; status.style.color='#27ae60'; status.textContent='✓ Imágenes procesadas para Set ' + setNum; setTimeout(()=>{ if(status) status.style.display='none'; },3000); }
-  } catch(e) {
-    if(status) { status.style.background='#fdeaea'; status.style.color='#c0392b'; status.textContent='Error de conexión.'; }
-  }
-}
-
-// ── LECTURA DE ESTADÍSTICAS POR IMAGEN (múltiple) ────────
-async function leerStatsImagenes(input, pName) {
-  const files = Array.from(input.files);
-  if (!files.length) return;
-
-  const status = document.getElementById('vision-status');
-  if (status) {
-    status.style.display = 'block';
-    status.style.background = 'var(--bl)';
-    status.style.color = 'var(--bd)';
-    status.textContent = `📷 Leyendo ${files.length} imagen${files.length>1?'es':''} con IA...`;
-  }
-
-  try {
-    // Inicializar setData limpio
-    setData = { 1:{j:{},r:{}}, 2:{j:{},r:{}}, 3:{j:{},r:{}} };
-
-    // Procesar cada imagen en secuencia y combinar resultados
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (status) status.textContent = `📷 Procesando imagen ${i+1} de ${files.length}...`;
-
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      const res = await fetch(`${AI_SERVER}/ai-vision`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mediaType: file.type || 'image/jpeg', formato: statsFormato })
-      });
-
-      const result = await res.json();
-      if (!result.success || !result.data?.sets) continue;
-
-      // Combinar datos — detectar set y hacer merge
-      const extracted = result.data;
-      if (extracted.formato) statsFormato = extracted.formato;
-
+    // Cargar datos extraídos en setData
+    const extracted = result.data;
+    if (extracted.sets) {
+      setData = { 1:{j:{},r:{}}, 2:{j:{},r:{}}, 3:{j:{},r:{}} };
       Object.entries(extracted.sets).forEach(([setNum, sd]) => {
-        const sn = String(setNum);
-        if (!setData[sn]) setData[sn] = {j:{},r:{}};
-        ['j','r'].forEach(side => {
-          Object.entries(sd[side]||{}).forEach(([key, val]) => {
-            if (val !== null && val !== undefined && val !== '') {
-              setData[sn][side][key] = val;
-            }
-          });
-        });
+        if (setData[setNum]) {
+          setData[setNum].j = sd.j || {};
+          setData[setNum].r = sd.r || {};
+        }
       });
     }
 
-    // Re-renderizar formulario con datos combinados
+    // Actualizar formato si viene en la respuesta
+    if (extracted.formato) statsFormato = extracted.formato;
+
+    // Re-renderizar formulario con datos
     const content = document.getElementById('set-form-content');
     if (content) content.innerHTML = renderSetForm(pName, activeSet);
 
     if (status) {
       status.style.background = '#eafaf1';
       status.style.color = '#27ae60';
-      status.textContent = `✓ ${files.length} imagen${files.length>1?'es':''} procesada${files.length>1?'s':''}. Revisa los datos antes de guardar.`;
-      setTimeout(() => { if(status) status.style.display = 'none'; }, 5000);
+      status.textContent = '✓ Estadísticas leídas correctamente. Revisa los datos antes de guardar.';
+      setTimeout(() => { if(status) status.style.display = 'none'; }, 4000);
     }
 
   } catch (e) {
-    if (status) {
-      status.style.background = '#fdeaea';
-      status.style.color = '#c0392b';
-      status.textContent = 'Error al conectar con el servidor. Verifica tu conexión.';
-    }
+    if (status) { status.style.display = 'block'; status.style.background = '#fdeaea'; status.style.color = '#c0392b'; status.textContent = 'Error al conectar con el servidor. Verifica tu conexión.'; }
   }
 }
 
@@ -2357,7 +2333,13 @@ function renderStatsForm(p, editIdx) {
       <div class="fg"><label>Marcador</label><input type="text" id="sf-marcador" value="${s?s.marcador:''}" placeholder="Ej: 6-3 4-6 6-2" /></div>
     </div>
 
-    <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Estadísticas por set</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;">Estadísticas por set</div>
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--ol);color:var(--od);border:1px solid var(--orange);border-radius:var(--rsm);font-size:12px;font-weight:500;cursor:pointer;">
+        📷 Subir foto de stats
+        <input type="file" accept="image/*" style="display:none;" onchange="leerStatsImagen(this,'\${pName}')" />
+      </label>
+    </div>
     <div id="vision-status" style="display:none;padding:8px 12px;background:var(--bl);color:var(--bd);border-radius:var(--rsm);font-size:12px;margin-bottom:8px;">Leyendo estadísticas...</div>
     <div class="set-tabs">
       <button class="set-tab active" onclick="switchSet(1,this)">Set 1</button>
@@ -2385,9 +2367,7 @@ function renderSetForm(pName, setNum) {
 }
 
 function renderSetFormITF(pName, setNum, sd) {
-  return `<div>
-    ${renderSetImportButtons(pName, setNum)}
-    <div class="set-grid">
+  return renderSetImportButtons(pName, setNum) + `<div class="set-grid">
     <div>
       <div class="set-col-head" style="background:var(--ol);color:var(--od);">${pName}</div>
       ${SET_FIELDS_ITF.map(f => `
@@ -2408,7 +2388,6 @@ function renderSetFormITF(pName, setNum, sd) {
             oninput="saveSetField(${setNum},'r','${f.key}',this.value)" />
         </div>`).join('')}
     </div>
-  </div>
   </div>`;
 }
 
@@ -2418,8 +2397,7 @@ function renderSetFormATP(pName, setNum, sd) {
     {titulo:'Estadísticas de resto',    campos: SET_FIELDS_ATP.resto},
     {titulo:'Estadísticas de puntos',   campos: SET_FIELDS_ATP.puntos},
   ];
-  return `<div>
-    ${renderSetImportButtons(pName, setNum)}
+  return renderSetImportButtons(pName, setNum) + `<div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
       <div class="set-col-head" style="background:var(--ol);color:var(--od);">${pName}</div>
       <div class="set-col-head" style="background:var(--bl);color:var(--bd);">Rival</div>
