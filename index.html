@@ -274,6 +274,45 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 .bib-detail-modal{background:var(--white);border-radius:14px;padding:24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}
 .bib-form-section{font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px;}
 @media(max-width:700px){.bib-grid{grid-template-columns:1fr!important;}}
+
+/* ASISTENCIA */
+.asist-estados{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.asist-legend{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--g2);}
+.asist-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.e-p{background:#27ae60;}
+.e-l{background:#f39c12;}
+.e-t{background:#1DA1D6;}
+.e-d{background:#8e44ad;}
+.e-s{background:#e74c3c;}
+.e-vacio{background:var(--border);}
+.asist-table{width:100%;border-collapse:collapse;}
+.asist-table th{padding:8px 6px;font-size:11px;font-weight:600;color:var(--g3);text-align:center;border-bottom:1px solid var(--border);background:var(--g5);}
+.asist-table th.name-col{text-align:left;min-width:120px;}
+.asist-table td{padding:6px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle;}
+.asist-table td.name-td{text-align:left;padding:6px 10px;}
+.asist-cell{width:32px;height:28px;border-radius:5px;cursor:pointer;border:1.5px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;transition:all .13s;user-select:none;}
+.asist-cell:hover{opacity:.8;transform:scale(1.05);}
+.asist-cell.e-p{background:#27ae60;border-color:#27ae60;}
+.asist-cell.e-l{background:#f39c12;border-color:#f39c12;}
+.asist-cell.e-t{background:#1DA1D6;border-color:#1DA1D6;}
+.asist-cell.e-d{background:#8e44ad;border-color:#8e44ad;}
+.asist-cell.e-s{background:#e74c3c;border-color:#e74c3c;}
+.asist-cell.e-vacio{background:transparent;border-color:var(--border);color:var(--g4);}
+.asist-nav{display:flex;align-items:center;gap:10px;}
+.asist-nav-btn{padding:5px 12px;border:1px solid var(--border);border-radius:var(--rsm);background:transparent;cursor:pointer;font-size:13px;color:var(--g2);}
+.asist-nav-btn:hover{background:var(--g5);}
+.asist-date-lbl{font-size:14px;font-weight:600;color:var(--gray);}
+.mes-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:14px;}
+.mes-dh{text-align:center;font-size:10px;font-weight:600;color:var(--g3);padding:4px 0;}
+.mes-day{border-radius:var(--rsm);border:1px solid var(--border);padding:4px;min-height:52px;background:var(--white);}
+.mes-day-num{font-size:11px;font-weight:600;color:var(--gray);margin-bottom:3px;text-align:center;}
+.mes-turnos{display:flex;flex-direction:column;gap:2px;}
+.mes-turno-chip{border-radius:3px;font-size:8px;font-weight:700;color:#fff;padding:1px 4px;text-align:center;}
+.asist-resumen{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.asist-stat{text-align:center;padding:10px;background:var(--g5);border-radius:var(--rsm);}
+.asist-stat-num{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;}
+.asist-stat-lbl{font-size:11px;color:var(--g3);margin-top:2px;}
+@media(max-width:700px){.asist-resumen{grid-template-columns:1fr 1fr!important;}.asist-table{font-size:11px;}}
 </style>
 </head>
 <body>
@@ -309,6 +348,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <button class="nav-btn active" onclick="navTo('dashboard')">◈ &nbsp;Dashboard</button>
       <button class="nav-btn" onclick="navTo('coaching')">★ &nbsp;Coaching</button>
       <button class="nav-btn" onclick="navTo('scouting')">◎ &nbsp;Scouting</button>
+      <button class="nav-btn" onclick="navTo('asistencia')">✓ &nbsp;Asistencia</button>
       <div class="nav-lbl" style="margin-top:14px;">Jugadores</div>
       <div id="player-nav"></div>
       <button class="nav-btn" style="margin-top:8px;color:var(--orange);" onclick="openAddPlayer()">+ Agregar jugador</button>
@@ -327,6 +367,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <button class="mnav-btn" id="mnav-coaching" onclick="navTo('coaching')"><span class="mnav-icon">★</span>Coaching</button>
       <button class="mnav-btn" id="mnav-players" onclick="toggleDrawer()"><span class="mnav-icon">👥</span>Jugadores</button>
       <button class="mnav-btn" id="mnav-scouting" onclick="navTo('scouting')"><span class="mnav-icon">◎</span>Scouting</button>
+      <button class="mnav-btn" id="mnav-asistencia" onclick="navTo('asistencia')"><span class="mnav-icon">✓</span>Asist.</button>
     </div>
   </nav>
 
@@ -467,19 +508,19 @@ function renderAll(){renderPlayerNav();renderDrawerList();renderMain();updateMob
 function renderPlayerNav(){
   const nav=document.getElementById('player-nav');if(!nav)return;
   nav.innerHTML=data.players.map((p,i)=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name.split(' ')[0]}</span></button>`).join('');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting'][i]===page));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia'][i]===page));
 }
 function renderDrawerList(){
   const dl=document.getElementById('drawer-list');if(!dl)return;
   dl.innerHTML=data.players.map((p,i)=>`<div class="drawer-item${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};width:36px;height:36px;font-size:12px;">${ini(p.name)}</div><div><div class="drawer-name">${p.name}</div><div class="drawer-rank">${p.ranking}</div></div></div>`).join('');
 }
 function updateMobileNav(){
-  ['dashboard','coaching','scouting'].forEach(p=>{const b=document.getElementById('mnav-'+p);if(b)b.classList.toggle('active',page===p);});
+  ['dashboard','coaching','scouting','asistencia'].forEach(p=>{const b=document.getElementById('mnav-'+p);if(b)b.classList.toggle('active',page===p);});
   const pb=document.getElementById('mnav-players');if(pb)pb.classList.toggle('active',page==='player');
 }
 function toggleDrawer(){const dr=document.getElementById('player-drawer'),ov=document.getElementById('drawer-overlay');dr.classList.toggle('open');ov.classList.toggle('open');}
 function closeDrawer(){document.getElementById('player-drawer').classList.remove('open');document.getElementById('drawer-overlay').classList.remove('open');}
-function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='player')m.innerHTML=renderPlayer();}
+function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='player')m.innerHTML=renderPlayer();}
 
 // ── DASHBOARD ─────────────────────────────────────────────
 function renderDashboard(){
@@ -671,6 +712,204 @@ function renderDashboard(){
         }).join('')}
       </div>
     </div>`;
+}
+
+
+// ── ASISTENCIA ────────────────────────────────────────────
+const ESTADOS = [
+  {id:'p', label:'P', nombre:'Presente',      color:'#27ae60', bg:'#eafaf1'},
+  {id:'l', label:'L', nombre:'Lesión',         color:'#f39c12', bg:'#fef9e7'},
+  {id:'t', label:'T', nombre:'Torneo',         color:'#1DA1D6', bg:'#eef7fc'},
+  {id:'d', label:'D', nombre:'Descanso',       color:'#8e44ad', bg:'#f4eafb'},
+  {id:'s', label:'S', nombre:'Sin justificar', color:'#e74c3c', bg:'#fdf0f0'},
+];
+const ESTADO_IDS = ['p','l','t','d','s'];
+const DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+let asistFecha = new Date();
+asistFecha.setHours(0,0,0,0);
+let asistVista = 'dia'; // 'dia' | 'mes'
+let asistPlayerIdx = 0;
+let asistMes = new Date();
+asistMes.setDate(1);asistMes.setHours(0,0,0,0);
+
+function renderAsistencia() {
+  return `
+    <div class="page-header">
+      <div><div class="page-title">Asistencia</div>
+      <div class="page-sub">Registro diario por jugador y turno</div></div>
+    </div>
+
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <button class="bib-filter-btn${asistVista==='dia'?' active':''}" onclick="asistVista='dia';renderMain();">Vista diaria</button>
+      <button class="bib-filter-btn${asistVista==='mes'?' active':''}" onclick="asistVista='mes';renderMain();">Vista mensual</button>
+    </div>
+
+    ${asistVista==='dia' ? renderAsistDia() : renderAsistMes()}
+  `;
+}
+
+function renderAsistDia() {
+  const dateKey = asistFecha.toISOString().slice(0,10);
+  const isToday = dateKey === new Date().toISOString().slice(0,10);
+  const dayName = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][asistFecha.getDay()];
+  const dateLabel = dayName + ' ' + asistFecha.getDate() + ' de ' + ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][asistFecha.getMonth()] + ' ' + asistFecha.getFullYear();
+
+  return `
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+        <div class="asist-nav">
+          <button class="asist-nav-btn" onclick="cambiarDia(-1)">←</button>
+          <div class="asist-date-lbl">${dateLabel}</div>
+          <button class="asist-nav-btn" onclick="cambiarDia(1)">→</button>
+        </div>
+        ${!isToday?`<button class="btn btn-g btn-sm" onclick="irHoy()">Hoy</button>`:''}
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+        ${ESTADOS.map(e=>`<div class="asist-legend"><div class="asist-dot e-${e.id}"></div>${e.nombre}</div>`).join('')}
+        <div class="asist-legend"><div class="asist-dot e-vacio"></div>Sin marcar</div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="asist-table">
+          <thead>
+            <tr>
+              <th class="name-col">Jugador</th>
+              <th>1er turno</th>
+              <th>2do turno</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.players.map((p,i) => {
+              const asist = p.asistencia || {};
+              const dayData = asist[dateKey] || {};
+              const t1 = dayData['t1'] || '';
+              const t2 = dayData['t2'] || '';
+              return `<tr>
+                <td class="name-td">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="pav" style="background:${COLORS[i%COLORS.length]};width:24px;height:24px;font-size:9px;">${ini(p.name)}</div>
+                    <span style="font-size:13px;font-weight:500;">${p.name.split(' ')[0]}</span>
+                  </div>
+                </td>
+                <td><div class="asist-cell e-${t1||'vacio'}" onclick="ciclarEstado(${i},'${dateKey}','t1')">${t1?ESTADOS.find(e=>e.id===t1)?.label||'':'+'}</div></td>
+                <td><div class="asist-cell e-${t2||'vacio'}" onclick="ciclarEstado(${i},'${dateKey}','t2')">${t2?ESTADOS.find(e=>e.id===t2)?.label||'':'+'}</div></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="font-size:11px;color:var(--g3);margin-top:10px;text-align:center;">Toca una celda para cambiar el estado</div>
+    </div>`;
+}
+
+function renderAsistMes() {
+  const mesNombre = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][asistMes.getMonth()];
+  const año = asistMes.getFullYear();
+  const p = data.players[asistPlayerIdx];
+  if(!p) return '<div class="card"><div class="empty">Sin jugadores</div></div>';
+
+  const asist = p.asistencia || {};
+  const diasEnMes = new Date(año, asistMes.getMonth()+1, 0).getDate();
+  const primerDia = new Date(año, asistMes.getMonth(), 1).getDay();
+
+  // Calcular estadísticas del mes
+  let totalSesiones=0, presentes=0, lesiones=0, torneos=0, descansos=0, sinJustificar=0;
+  for(let d=1; d<=diasEnMes; d++){
+    const key = `${año}-${String(asistMes.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dd = asist[key]||{};
+    ['t1','t2'].forEach(t=>{
+      if(dd[t]){
+        totalSesiones++;
+        if(dd[t]==='p') presentes++;
+        else if(dd[t]==='l') lesiones++;
+        else if(dd[t]==='t') torneos++;
+        else if(dd[t]==='d') descansos++;
+        else if(dd[t]==='s') sinJustificar++;
+      }
+    });
+  }
+  const pctAsist = totalSesiones>0?Math.round((presentes/totalSesiones)*100):0;
+
+  return `
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div class="asist-nav">
+          <button class="asist-nav-btn" onclick="cambiarMes(-1)">←</button>
+          <div class="asist-date-lbl">${mesNombre} ${año}</div>
+          <button class="asist-nav-btn" onclick="cambiarMes(1)">→</button>
+        </div>
+        <select onchange="asistPlayerIdx=parseInt(this.value);renderMain();"
+          style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;">
+          ${data.players.map((pl,i)=>`<option value="${i}" ${i===asistPlayerIdx?'selected':''}>${pl.name}</option>`).join('')}
+        </select>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        ${ESTADOS.map(e=>`<div class="asist-legend"><div class="asist-dot e-${e.id}"></div>${e.nombre}</div>`).join('')}
+      </div>
+
+      <div class="mes-grid">
+        ${DIAS_SEMANA.map(d=>`<div class="mes-dh">${d}</div>`).join('')}
+        ${Array(primerDia).fill('<div></div>').join('')}
+        ${Array.from({length:diasEnMes},(_,i)=>{
+          const d=i+1;
+          const key=`${año}-${String(asistMes.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          const dd=asist[key]||{};
+          const t1=dd.t1||'';const t2=dd.t2||'';
+          const isToday=key===new Date().toISOString().slice(0,10);
+          return `<div class="mes-day" style="${isToday?'border-color:var(--orange);border-width:2px;':''}">
+            <div class="mes-day-num" style="${isToday?'color:var(--orange);':''}">${d}</div>
+            <div class="mes-turnos">
+              ${t1?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===t1)?.color||'#ccc'};">T1</div>`:''}
+              ${t2?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===t2)?.color||'#ccc'};">T2</div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="asist-resumen">
+        <div class="asist-stat"><div class="asist-stat-num" style="color:#27ae60;">${pctAsist}%</div><div class="asist-stat-lbl">Asistencia</div></div>
+        <div class="asist-stat"><div class="asist-stat-num">${presentes}</div><div class="asist-stat-lbl">Presentes</div></div>
+        <div class="asist-stat"><div class="asist-stat-num" style="color:#e74c3c;">${sinJustificar}</div><div class="asist-stat-lbl">Sin justificar</div></div>
+        <div class="asist-stat"><div class="asist-stat-num" style="color:#f39c12;">${lesiones}</div><div class="asist-stat-lbl">Lesión</div></div>
+        <div class="asist-stat"><div class="asist-stat-num" style="color:#1DA1D6;">${torneos}</div><div class="asist-stat-lbl">Torneo</div></div>
+        <div class="asist-stat"><div class="asist-stat-num" style="color:#8e44ad;">${descansos}</div><div class="asist-stat-lbl">Descanso</div></div>
+      </div>
+    </div>`;
+}
+
+function ciclarEstado(playerIdx, dateKey, turno) {
+  const p = data.players[playerIdx];
+  if(!p.asistencia) p.asistencia = {};
+  if(!p.asistencia[dateKey]) p.asistencia[dateKey] = {};
+  const cur = p.asistencia[dateKey][turno] || '';
+  const curIdx = ESTADO_IDS.indexOf(cur);
+  const next = curIdx >= ESTADO_IDS.length-1 ? '' : ESTADO_IDS[curIdx+1];
+  if(next) p.asistencia[dateKey][turno] = next;
+  else delete p.asistencia[dateKey][turno];
+  scheduleSync();
+  renderMain();
+}
+
+function cambiarDia(delta) {
+  asistFecha = new Date(asistFecha);
+  asistFecha.setDate(asistFecha.getDate()+delta);
+  renderMain();
+}
+
+function irHoy() {
+  asistFecha = new Date();
+  asistFecha.setHours(0,0,0,0);
+  renderMain();
+}
+
+function cambiarMes(delta) {
+  asistMes = new Date(asistMes);
+  asistMes.setMonth(asistMes.getMonth()+delta);
+  renderMain();
 }
 
 function buildAlerts(today, wKey) {
