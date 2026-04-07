@@ -348,16 +348,23 @@ let selMode=false,selectedDays=new Set();
 async function doLogin(){
   const u=document.getElementById('li-user').value.trim();
   const p=document.getElementById('li-pass').value;
-  if(!u){document.getElementById('li-err').textContent='Ingresa tu email';return;}
-  if(!p){document.getElementById('li-err').textContent='Ingresa tu contraseña';return;}
-  document.getElementById('li-err').textContent='Iniciando sesión...';
+  const errEl=document.getElementById('li-err');
+  const btn=document.querySelector('.login-btn');
+  if(!u){errEl.textContent='Ingresa tu email';return;}
+  if(!p){errEl.textContent='Ingresa tu contraseña';return;}
+  btn.disabled=true;
+  errEl.textContent='Conectando...';
+  // Despertar el servidor si está hibernado (Render free tier)
+  try{await fetch(`${BACKEND_URL}/health`,{signal:AbortSignal.timeout(25000)});}catch(_){}
+  errEl.textContent='Iniciando sesión...';
   try{
     const res=await fetch(`${BACKEND_URL}/api/v1/auth/login`,{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email:u,password:p})
+      body:JSON.stringify({email:u,password:p}),
+      signal:AbortSignal.timeout(15000)
     });
     const d=await res.json();
-    if(!res.ok){document.getElementById('li-err').textContent=d.error||'Credenciales incorrectas';return;}
+    if(!res.ok){errEl.textContent=d.error||'Credenciales incorrectas';btn.disabled=false;return;}
     sessionStorage.setItem('ciq_token',d.session.access_token);
     sessionStorage.setItem('ciq_refresh',d.session.refresh_token);
     user=d.user.user_metadata?.full_name||u;
@@ -366,7 +373,10 @@ async function doLogin(){
     document.getElementById('user-lbl').textContent=user;
     if(history.pushState) history.pushState({page:'dashboard'}, '', '');
     loadData();
-  }catch(e){document.getElementById('li-err').textContent='Error de conexión';}
+  }catch(e){
+    errEl.textContent=e.name==='TimeoutError'?'El servidor tardó demasiado. Intenta de nuevo.':'Error de conexión';
+    btn.disabled=false;
+  }
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none')doLogin();});
 
