@@ -230,89 +230,6 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 .scout-search:focus{border-color:var(--blue);background:#fff;}
 .scout-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
 @media(max-width:700px){.scout-form-grid{grid-template-columns:1fr!important;}}
-
-/* LOGIN GRUPOS */
-.group-btn{width:100%;padding:13px 16px;border:2px solid var(--border);border-radius:var(--r);background:var(--white);cursor:pointer;text-align:left;transition:all .15s;margin-bottom:8px;}
-.group-btn:hover{border-color:var(--g4);}
-.group-btn.selected{background:#fff8f5;}
-.group-btn-inner{display:flex;align-items:center;gap:10px;}
-.group-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
-.group-name{font-size:14px;font-weight:600;color:var(--gray);}
-.group-desc{font-size:11px;color:var(--g3);}
-.step-back{width:100%;margin-top:8px;padding:10px;background:none;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;cursor:pointer;color:var(--g3);}
-.step-back:hover{background:var(--g5);}
-
-/* LOGIN GRUPOS */
-.group-btn{width:100%;padding:13px 16px;border:2px solid var(--border);border-radius:var(--r);background:var(--white);cursor:pointer;text-align:left;transition:all .15s;margin-bottom:8px;}
-.group-btn:hover{border-color:var(--g4);}
-.group-btn.selected{background:#fff8f5;}
-.group-btn-inner{display:flex;align-items:center;gap:10px;}
-.group-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
-.group-name{font-size:14px;font-weight:600;color:var(--gray);}
-.group-desc{font-size:11px;color:var(--g3);}
-.step-back{width:100%;margin-top:8px;padding:10px;background:none;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;cursor:pointer;color:var(--g3);}
-.step-back:hover{background:var(--g5);}
-
-/* BIBLIOTECA DE EJERCICIOS */
-.bib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:14px;}
-.bib-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .15s;}
-.bib-card:hover{border-color:var(--g4);box-shadow:0 2px 8px rgba(0,0,0,.06);}
-.bib-card-type{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:8px;}
-.bib-type-tecnico{background:#fff3e0;color:#e65100;}
-.bib-type-canasto{background:#e8f5e9;color:#2e7d32;}
-.bib-type-tactico{background:#e3f2fd;color:#1565c0;}
-.bib-card-title{font-size:14px;font-weight:600;color:var(--gray);margin-bottom:5px;}
-.bib-card-desc{font-size:12px;color:var(--g2);line-height:1.5;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.bib-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.bib-tag{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;background:var(--g5);color:var(--g3);border:1px solid var(--border);}
-.bib-shared{background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;}
-.bib-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
-.bib-filter-btn{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--g3);transition:all .13s;}
-.bib-filter-btn.active{border-color:var(--orange);background:var(--ol);color:var(--od);}
-.bib-detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center;padding:20px;}
-.bib-detail-overlay.open{display:flex;}
-.bib-detail-modal{background:var(--white);border-radius:14px;padding:24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}
-.bib-form-section{font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px;}
-@media(max-width:700px){.bib-grid{grid-template-columns:1fr!important;}}
-
-/* ASISTENCIA */
-.asist-estados{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
-.asist-legend{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--g2);}
-.asist-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
-.e-p{background:#27ae60;}
-.e-l{background:#f39c12;}
-.e-t{background:#1DA1D6;}
-.e-d{background:#8e44ad;}
-.e-s{background:#e74c3c;}
-.e-vacio{background:var(--border);}
-.asist-table{width:100%;border-collapse:collapse;}
-.asist-table th{padding:8px 6px;font-size:11px;font-weight:600;color:var(--g3);text-align:center;border-bottom:1px solid var(--border);background:var(--g5);}
-.asist-table th.name-col{text-align:left;min-width:120px;}
-.asist-table td{padding:6px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle;}
-.asist-table td.name-td{text-align:left;padding:6px 10px;}
-.asist-cell{width:32px;height:28px;border-radius:5px;cursor:pointer;border:1.5px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;transition:all .13s;user-select:none;}
-.asist-cell:hover{opacity:.8;transform:scale(1.05);}
-.asist-cell.e-p{background:#27ae60;border-color:#27ae60;}
-.asist-cell.e-l{background:#f39c12;border-color:#f39c12;}
-.asist-cell.e-t{background:#1DA1D6;border-color:#1DA1D6;}
-.asist-cell.e-d{background:#8e44ad;border-color:#8e44ad;}
-.asist-cell.e-s{background:#e74c3c;border-color:#e74c3c;}
-.asist-cell.e-vacio{background:transparent;border-color:var(--border);color:var(--g4);}
-.asist-nav{display:flex;align-items:center;gap:10px;}
-.asist-nav-btn{padding:5px 12px;border:1px solid var(--border);border-radius:var(--rsm);background:transparent;cursor:pointer;font-size:13px;color:var(--g2);}
-.asist-nav-btn:hover{background:var(--g5);}
-.asist-date-lbl{font-size:14px;font-weight:600;color:var(--gray);}
-.mes-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:14px;}
-.mes-dh{text-align:center;font-size:10px;font-weight:600;color:var(--g3);padding:4px 0;}
-.mes-day{border-radius:var(--rsm);border:1px solid var(--border);padding:4px;min-height:52px;background:var(--white);}
-.mes-day-num{font-size:11px;font-weight:600;color:var(--gray);margin-bottom:3px;text-align:center;}
-.mes-turnos{display:flex;flex-direction:column;gap:2px;}
-.mes-turno-chip{border-radius:3px;font-size:8px;font-weight:700;color:#fff;padding:1px 4px;text-align:center;}
-.asist-resumen{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
-.asist-stat{text-align:center;padding:10px;background:var(--g5);border-radius:var(--rsm);}
-.asist-stat-num{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;}
-.asist-stat-lbl{font-size:11px;color:var(--g3);margin-top:2px;}
-@media(max-width:700px){.asist-resumen{grid-template-columns:1fr 1fr!important;}.asist-table{font-size:11px;}}
 </style>
 </head>
 <body>
@@ -324,7 +241,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <span class="brand-name">ALTO<span>TENIS</span></span>
     </div>
     <div class="login-sub">Hub de entrenadores<br>Club de Tenis Providencia</div>
-    <input type="text" id="li-user" placeholder="Tu nombre" autocomplete="off" />
+    <input type="email" id="li-user" placeholder="Tu email" autocomplete="email" />
     <input type="password" id="li-pass" placeholder="Contraseña" />
     <button class="login-btn" onclick="doLogin()">Ingresar</button>
     <div class="login-err" id="li-err"></div>
@@ -341,14 +258,12 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
         <span class="sb-brand-text">ALTO<span>TENIS</span></span>
       </div>
       <div class="sb-sub">Hub de entrenadores</div>
-
     </div>
     <div class="sb-nav">
       <div class="nav-lbl">General</div>
       <button class="nav-btn active" onclick="navTo('dashboard')">◈ &nbsp;Dashboard</button>
       <button class="nav-btn" onclick="navTo('coaching')">★ &nbsp;Coaching</button>
       <button class="nav-btn" onclick="navTo('scouting')">◎ &nbsp;Scouting</button>
-      <button class="nav-btn" onclick="navTo('asistencia')">✓ &nbsp;Asistencia</button>
       <div class="nav-lbl" style="margin-top:14px;">Jugadores</div>
       <div id="player-nav"></div>
       <button class="nav-btn" style="margin-top:8px;color:var(--orange);" onclick="openAddPlayer()">+ Agregar jugador</button>
@@ -367,7 +282,6 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <button class="mnav-btn" id="mnav-coaching" onclick="navTo('coaching')"><span class="mnav-icon">★</span>Coaching</button>
       <button class="mnav-btn" id="mnav-players" onclick="toggleDrawer()"><span class="mnav-icon">👥</span>Jugadores</button>
       <button class="mnav-btn" id="mnav-scouting" onclick="navTo('scouting')"><span class="mnav-icon">◎</span>Scouting</button>
-      <button class="mnav-btn" id="mnav-asistencia" onclick="navTo('asistencia')"><span class="mnav-icon">✓</span>Asist.</button>
     </div>
   </nav>
 
@@ -384,7 +298,14 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <div class="modal-title" id="modal-title">Nuevo jugador</div>
       <button class="modal-close" onclick="closePlayerModal()">×</button>
     </div>
-    <div class="form-grid" id="modal-form-fields"></div>
+    <div class="form-grid">
+      <div class="fg fg-full"><label>Nombre completo</label><input id="m-name" placeholder="Ej: Martina López" /></div>
+      <div class="fg"><label>Edad</label><input id="m-age" type="number" placeholder="18" /></div>
+      <div class="fg"><label>Ranking actual</label><input id="m-ranking" placeholder="Ej: 450 WTA" /></div>
+      <div class="fg"><label>Circuito</label><select id="m-circuit"><option value="atp">ATP</option><option value="wta">WTA</option><option value="itf">ITF Junior</option></select></div>
+      <div class="fg"><label>Género</label><select id="m-gender"><option value="M">Masculino</option><option value="F">Femenino</option></select></div>
+      <div class="fg"><label>Mano dominante</label><select id="m-hand"><option value="Diestro">Diestro</option><option value="Zurdo">Zurdo</option></select></div>
+    </div>
     <div class="btn-row">
       <button class="btn btn-o" onclick="savePlayerModal()">Guardar</button>
       <button class="btn btn-g" onclick="closePlayerModal()">Cancelar</button>
@@ -395,11 +316,8 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
-const PASSWORD = "altotenis2025";
-const BIN_ELITE = "69cc4157856a682189e92f38";
-const JSONBIN_KEY="$2a$10$xvA/D4WX5A21q/U6sqDkGOSiKz6eKtuB7KqPXOljXnGfcxZCwEozi";
-const BIN_API="https://api.jsonbin.io/v3/b";
-let BIN_ID = BIN_ELITE;
+const BACKEND_URL="https://courtiq-backend-hrdc.onrender.com";
+const ACADEMY_ID="2d20c092-bfb8-41ca-8342-c2b5d34fde8c";
 const COLORS=['#FF6B00','#1DA1D6','#2ecc71','#9b59b6','#e74c3c','#f39c12','#1abc9c','#e67e22','#3498db'];
 const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MONTHS_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -427,22 +345,30 @@ let saveTimer=null,editingPlayerId=null;
 let selMode=false,selectedDays=new Set();
 
 // ── AUTH ──────────────────────────────────────────────────
-function doLogin() {
-  const u = document.getElementById('li-user').value.trim();
-  const p = document.getElementById('li-pass').value;
-  if (!u) { document.getElementById('li-err').textContent = 'Ingresa tu nombre'; return; }
-  if (p !== PASSWORD) { document.getElementById('li-err').textContent = 'Contraseña incorrecta'; return; }
-  user = u;
-  BIN_ID = BIN_ELITE;
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('user-lbl').textContent = user;
-  if (history.pushState) history.pushState({page: 'dashboard'}, '', '');
-  loadData();
+async function doLogin(){
+  const u=document.getElementById('li-user').value.trim();
+  const p=document.getElementById('li-pass').value;
+  if(!u){document.getElementById('li-err').textContent='Ingresa tu email';return;}
+  if(!p){document.getElementById('li-err').textContent='Ingresa tu contraseña';return;}
+  document.getElementById('li-err').textContent='Iniciando sesión...';
+  try{
+    const res=await fetch(`${BACKEND_URL}/api/v1/auth/login`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:u,password:p})
+    });
+    const d=await res.json();
+    if(!res.ok){document.getElementById('li-err').textContent=d.error||'Credenciales incorrectas';return;}
+    sessionStorage.setItem('ciq_token',d.session.access_token);
+    sessionStorage.setItem('ciq_refresh',d.session.refresh_token);
+    user=d.user.user_metadata?.full_name||u;
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('user-lbl').textContent=user;
+    if(history.pushState) history.pushState({page:'dashboard'}, '', '');
+    loadData();
+  }catch(e){document.getElementById('li-err').textContent='Error de conexión';}
 }
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
-});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none')doLogin();});
 
 // Botón atrás del celular → ir al dashboard
 window.addEventListener('popstate', function(e) {
@@ -458,44 +384,51 @@ window.addEventListener('popstate', function(e) {
     if(history.pushState) history.pushState({page:'dashboard'}, '', '');
   }
 });
-function doLogout() {
-  user = ""; BIN_ID = BIN_ELITE;
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('li-pass').value = '';
-  document.getElementById('li-err').textContent = '';
+function doLogout(){
+  sessionStorage.removeItem('ciq_token');sessionStorage.removeItem('ciq_refresh');
+  user="";document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('li-pass').value='';document.getElementById('li-err').textContent='';
 }
 
 // ── SYNC ──────────────────────────────────────────────────
 function setSS(s,l){const d=document.getElementById('sync-dot'),lb=document.getElementById('sync-lbl');if(d)d.className='sync-dot '+s;if(lb)lb.textContent=l;}
 async function loadData(){
   setSS('syncing','Cargando...');
-  data = {players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)), reflections: [], scouting: []};
   try{
-    const res=await fetch(`${BIN_API}/${BIN_ID}/latest`,{headers:{'X-Master-Key':JSONBIN_KEY}});
+    const token=sessionStorage.getItem('ciq_token');
+    const res=await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`,{
+      headers:{'Authorization':`Bearer ${token}`}
+    });
     const d=await res.json();
-    if(d.record){data=d.record;data.players=data.players.map(p=>({rankingHistory:[],...p}));}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));}
     setSS('synced','Sincronizado · '+now());
-  }catch(e){
-    const l=localStorage.getItem('at_data_elite');
-    if(l)try{data=JSON.parse(l);}catch(e){}
-    setSS('error','Sin conexión — datos locales');
-  }
+  }catch(e){const l=localStorage.getItem('at_data_v4');if(l)try{data=JSON.parse(l);}catch(e){}setSS('error','Sin conexión — datos locales');}
   renderAll();setInterval(refreshData,30000);
 }
 async function refreshData(){
-  if(!BIN_ID)return;
-  try{const res=await fetch(`${BIN_API}/${BIN_ID}/latest`,{headers:{'X-Master-Key':JSONBIN_KEY}});const d=await res.json();if(d.record){data=d.record;data.players=data.players.map(p=>({rankingHistory:[],...p}));}setSS('synced','Sincronizado · '+now());renderPlayerNav();renderDrawerList();}
-  catch(e){setSS('error','Sin conexión');}
+  try{
+    const token=sessionStorage.getItem('ciq_token');
+    const res=await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`,{
+      headers:{'Authorization':`Bearer ${token}`}
+    });
+    const d=await res.json();
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));}
+    setSS('synced','Sincronizado · '+now());renderPlayerNav();renderDrawerList();
+  }catch(e){setSS('error','Sin conexión');}
 }
 async function saveData(){
-  localStorage.setItem('at_data_elite',JSON.stringify(data));
-  if(!BIN_ID){setSS('synced','Guardado local');return;}
+  localStorage.setItem('at_data_v4',JSON.stringify(data));
   setSS('syncing','Guardando...');
-  try{await fetch(`${BIN_API}/${BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_KEY},body:JSON.stringify(data)});setSS('synced','Guardado · '+now());}
-  catch(e){setSS('error','Error al guardar');}
+  try{
+    const token=sessionStorage.getItem('ciq_token');
+    await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body:JSON.stringify(data)
+    });
+    setSS('synced','Guardado · '+now());
+  }catch(e){setSS('error','Error al guardar');}
 }
-function scheduleSync(){localStorage.setItem('at_data_elite',JSON.stringify(data));if(saveTimer)clearTimeout(saveTimer);setSS('syncing','Guardando...');saveTimer=setTimeout(saveData,1200);}
+function scheduleSync(){localStorage.setItem('at_data_v4',JSON.stringify(data));if(saveTimer)clearTimeout(saveTimer);setSS('syncing','Guardando...');saveTimer=setTimeout(saveData,1200);}
 function now(){return new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});}
 
 // ── NAV ───────────────────────────────────────────────────
@@ -508,19 +441,19 @@ function renderAll(){renderPlayerNav();renderDrawerList();renderMain();updateMob
 function renderPlayerNav(){
   const nav=document.getElementById('player-nav');if(!nav)return;
   nav.innerHTML=data.players.map((p,i)=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name.split(' ')[0]}</span></button>`).join('');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia'][i]===page));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting'][i]===page));
 }
 function renderDrawerList(){
   const dl=document.getElementById('drawer-list');if(!dl)return;
   dl.innerHTML=data.players.map((p,i)=>`<div class="drawer-item${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};width:36px;height:36px;font-size:12px;">${ini(p.name)}</div><div><div class="drawer-name">${p.name}</div><div class="drawer-rank">${p.ranking}</div></div></div>`).join('');
 }
 function updateMobileNav(){
-  ['dashboard','coaching','scouting','asistencia'].forEach(p=>{const b=document.getElementById('mnav-'+p);if(b)b.classList.toggle('active',page===p);});
+  ['dashboard','coaching','scouting'].forEach(p=>{const b=document.getElementById('mnav-'+p);if(b)b.classList.toggle('active',page===p);});
   const pb=document.getElementById('mnav-players');if(pb)pb.classList.toggle('active',page==='player');
 }
 function toggleDrawer(){const dr=document.getElementById('player-drawer'),ov=document.getElementById('drawer-overlay');dr.classList.toggle('open');ov.classList.toggle('open');}
 function closeDrawer(){document.getElementById('player-drawer').classList.remove('open');document.getElementById('drawer-overlay').classList.remove('open');}
-function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='player')m.innerHTML=renderPlayer();}
+function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='player')m.innerHTML=renderPlayer();}
 
 // ── DASHBOARD ─────────────────────────────────────────────
 function renderDashboard(){
@@ -546,7 +479,7 @@ function renderDashboard(){
 
   return `
     <div class="page-header">
-      <div><div class="page-title">Dashboard</div><div class="page-sub">${wLabel_str} · Hola, ${user} </div></div>
+      <div><div class="page-title">Dashboard</div><div class="page-sub">${wLabel_str} · Hola, ${user}</div></div>
       <button class="btn btn-g btn-sm" onclick="refreshData().then(()=>renderMain())">↺ Actualizar</button>
     </div>
 
@@ -712,385 +645,6 @@ function renderDashboard(){
         }).join('')}
       </div>
     </div>`;
-}
-
-
-// ── ASISTENCIA ────────────────────────────────────────────
-const ESTADOS = [
-  {id:'p', label:'P', nombre:'Presente',      color:'#27ae60', bg:'#eafaf1'},
-  {id:'l', label:'L', nombre:'Lesión',         color:'#f39c12', bg:'#fef9e7'},
-  {id:'t', label:'T', nombre:'Torneo',         color:'#1DA1D6', bg:'#eef7fc'},
-  {id:'d', label:'D', nombre:'Descanso',       color:'#8e44ad', bg:'#f4eafb'},
-  {id:'s', label:'S', nombre:'Sin justificar', color:'#e74c3c', bg:'#fdf0f0'},
-];
-const ESTADO_IDS = ['p','l','t','d','s'];
-const DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-
-let asistFecha = new Date();
-asistFecha.setHours(0,0,0,0);
-let asistVista = 'dia'; // 'dia' | 'mes'
-let asistPlayerIdx = 0;
-let asistMes = new Date();
-asistMes.setDate(1);asistMes.setHours(0,0,0,0);
-
-function renderAsistencia() {
-  return `
-    <div class="page-header">
-      <div><div class="page-title">Asistencia</div>
-      <div class="page-sub">Registro diario por jugador y turno</div></div>
-    </div>
-
-    <div style="display:flex;gap:6px;margin-bottom:16px;">
-      <button class="bib-filter-btn${asistVista==='dia'?' active':''}" onclick="asistVista='dia';renderMain();">Vista diaria</button>
-      <button class="bib-filter-btn${asistVista==='mes'?' active':''}" onclick="asistVista='mes';renderMain();">Vista mensual</button>
-    </div>
-
-    ${asistVista==='dia' ? renderAsistDia() : renderAsistMes()}
-  `;
-}
-
-let asistModalIdx = null;
-
-function renderAsistDia() {
-  const dateKey = asistFecha.toISOString().slice(0,10);
-  const isToday = dateKey === new Date().toISOString().slice(0,10);
-  const dayName = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][asistFecha.getDay()];
-  const dateLabel = dayName + ' ' + asistFecha.getDate() + ' de ' + ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][asistFecha.getMonth()] + ' ' + asistFecha.getFullYear();
-
-  const presentes = data.players.filter(p => (p.asistencia||{})[dateKey]?.t1 === 'p' && (p.asistencia||{})[dateKey]?.t2 === 'p').length;
-
-  return `
-    <div class="card" style="margin-bottom:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-        <div class="asist-nav">
-          <button class="asist-nav-btn" onclick="cambiarDia(-1)">←</button>
-          <div class="asist-date-lbl">${dateLabel}</div>
-          <button class="asist-nav-btn" onclick="cambiarDia(1)">→</button>
-        </div>
-        ${!isToday?`<button class="btn btn-g btn-sm" onclick="irHoy()">Hoy</button>`:''}
-      </div>
-
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-        <button class="btn btn-sm" style="background:#e8f8f0;color:#27ae60;border:1px solid #a9dfbf;" onclick="todosPresentes('${dateKey}')">✓ Todos presentes</button>
-        <button class="btn btn-g btn-sm" onclick="limpiarDia('${dateKey}')">✕ Limpiar día</button>
-      </div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-        ${ESTADOS.map(e=>`<div class="asist-legend"><div class="asist-dot e-${e.id}"></div>${e.nombre}</div>`).join('')}
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        ${data.players.map((p,i) => {
-          const asist = p.asistencia || {};
-          const dayData = asist[dateKey] || {};
-          const t1 = dayData['t1'] || '';
-          const t2 = dayData['t2'] || '';
-          const e1 = ESTADOS.find(e=>e.id===t1);
-          const e2 = ESTADOS.find(e=>e.id===t2);
-          const ambosPresentes = t1==='p' && t2==='p';
-          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${ambosPresentes?'#f0fbf4':'var(--g5)'};border:1px solid ${ambosPresentes?'#a9dfbf':'var(--border)'};border-radius:var(--rsm);cursor:pointer;"
-            onclick="abrirAsistModal(${i},'${dateKey}')">
-            <div class="pav" style="background:${COLORS[i%COLORS.length]};width:32px;height:32px;font-size:11px;flex-shrink:0;">${ini(p.name)}</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:500;color:var(--gray);">${p.name}</div>
-              <div style="display:flex;gap:6px;margin-top:3px;">
-                <span style="font-size:11px;padding:1px 8px;border-radius:20px;font-weight:600;color:#fff;background:${e1?e1.color:'var(--border)'};">${e1?e1.nombre:'1er turno'}</span>
-                <span style="font-size:11px;padding:1px 8px;border-radius:20px;font-weight:600;color:#fff;background:${e2?e2.color:'var(--border)'};">${e2?e2.nombre:'2do turno'}</span>
-              </div>
-            </div>
-            <span style="font-size:18px;color:var(--g4);">›</span>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    ${asistModalIdx !== null ? renderAsistModal(asistModalIdx, dateKey) : ''}
-  `;
-}
-
-function renderAsistModal(playerIdx, dateKey) {
-  const p = data.players[playerIdx];
-  const asist = p.asistencia || {};
-  const dayData = asist[dateKey] || {};
-  const t1 = dayData['t1'] || '';
-  const t2 = dayData['t2'] || '';
-
-  return `<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:flex-end;justify-content:center;" onclick="cerrarAsistModal()">
-    <div style="background:var(--white);border-radius:18px 18px 0 0;padding:20px;width:100%;max-width:480px;" onclick="event.stopPropagation()">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
-        <div class="pav" style="background:${COLORS[playerIdx%COLORS.length]};width:36px;height:36px;font-size:12px;">${ini(p.name)}</div>
-        <div>
-          <div style="font-size:15px;font-weight:600;">${p.name}</div>
-          <div style="font-size:12px;color:var(--g3);">Marca la asistencia de hoy</div>
-        </div>
-        <button onclick="cerrarAsistModal()" style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:var(--g3);">×</button>
-      </div>
-
-      ${['t1','t2'].map((turno,ti) => {
-        const cur = ti===0?t1:t2;
-        return `<div style="margin-bottom:14px;">
-          <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">${ti===0?'1er turno':'2do turno'}</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
-            ${ESTADOS.map(e=>`
-              <button onclick="setEstadoDirecto(${playerIdx},'${dateKey}','${turno}','${e.id}')"
-                style="padding:10px 6px;border-radius:var(--rsm);border:2px solid ${cur===e.id?e.color:'var(--border)'};background:${cur===e.id?e.color+'22':'transparent'};cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;">
-                <div style="width:14px;height:14px;border-radius:50%;background:${e.color};"></div>
-                <span style="font-size:11px;font-weight:${cur===e.id?'600':'400'};color:${cur===e.id?e.color:'var(--g2)'};">${e.nombre}</span>
-              </button>`).join('')}
-            <button onclick="setEstadoDirecto(${playerIdx},'${dateKey}','${turno}','')"
-              style="padding:10px 6px;border-radius:var(--rsm);border:2px solid ${!cur?'var(--g3)':'var(--border)'};background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;">
-              <div style="width:14px;height:14px;border-radius:50%;background:var(--border);"></div>
-              <span style="font-size:11px;color:var(--g3);">Limpiar</span>
-            </button>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-  </div>`;
-}
-
-function abrirAsistModal(idx, dateKey) {
-  asistModalIdx = idx;
-  const el = document.getElementById('main');
-  if(el) el.innerHTML = renderAsistencia();
-}
-
-function cerrarAsistModal() {
-  asistModalIdx = null;
-  renderMain();
-}
-
-function setEstadoDirecto(playerIdx, dateKey, turno, estado) {
-  const p = data.players[playerIdx];
-  if(!p.asistencia) p.asistencia = {};
-  if(!p.asistencia[dateKey]) p.asistencia[dateKey] = {};
-  if(estado) p.asistencia[dateKey][turno] = estado;
-  else delete p.asistencia[dateKey][turno];
-  scheduleSync();
-  // Actualizar el modal sin cerrarlo para marcar el siguiente turno rápido
-  const el = document.getElementById('main');
-  if(el) el.innerHTML = renderAsistencia();
-}
-
-function todosPresentes(dateKey) {
-  data.players.forEach(p => {
-    if(!p.asistencia) p.asistencia = {};
-    if(!p.asistencia[dateKey]) p.asistencia[dateKey] = {};
-    p.asistencia[dateKey].t1 = 'p';
-    p.asistencia[dateKey].t2 = 'p';
-  });
-  scheduleSync();
-  renderMain();
-}
-
-function limpiarDia(dateKey) {
-  if(!confirm('¿Limpiar toda la asistencia de este día?')) return;
-  data.players.forEach(p => {
-    if(p.asistencia && p.asistencia[dateKey]) delete p.asistencia[dateKey];
-  });
-  scheduleSync();
-  renderMain();
-}
-
-function renderAsistMes() {
-  const mesNombre = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][asistMes.getMonth()];
-  const año = asistMes.getFullYear();
-  const p = data.players[asistPlayerIdx];
-  if(!p) return '<div class="card"><div class="empty">Sin jugadores</div></div>';
-
-  const asist = p.asistencia || {};
-  const diasEnMes = new Date(año, asistMes.getMonth()+1, 0).getDate();
-  const primerDia = new Date(año, asistMes.getMonth(), 1).getDay();
-
-  // Calcular estadísticas del mes
-  let totalSesiones=0, presentes=0, lesiones=0, torneos=0, descansos=0, sinJustificar=0;
-  for(let d=1; d<=diasEnMes; d++){
-    const key = `${año}-${String(asistMes.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dd = asist[key]||{};
-    ['t1','t2'].forEach(t=>{
-      if(dd[t]){
-        totalSesiones++;
-        if(dd[t]==='p') presentes++;
-        else if(dd[t]==='l') lesiones++;
-        else if(dd[t]==='t') torneos++;
-        else if(dd[t]==='d') descansos++;
-        else if(dd[t]==='s') sinJustificar++;
-      }
-    });
-  }
-  const pctAsist = totalSesiones>0?Math.round((presentes/totalSesiones)*100):0;
-
-  return `
-    <div class="card" style="margin-bottom:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-        <div class="asist-nav">
-          <button class="asist-nav-btn" onclick="cambiarMes(-1)">←</button>
-          <div class="asist-date-lbl">${mesNombre} ${año}</div>
-          <button class="asist-nav-btn" onclick="cambiarMes(1)">→</button>
-        </div>
-        <select onchange="asistPlayerIdx=parseInt(this.value);renderMain();"
-          style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;">
-          ${data.players.map((pl,i)=>`<option value="${i}" ${i===asistPlayerIdx?'selected':''}>${pl.name}</option>`).join('')}
-        </select>
-      </div>
-
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-        ${ESTADOS.map(e=>`<div class="asist-legend"><div class="asist-dot e-${e.id}"></div>${e.nombre}</div>`).join('')}
-      </div>
-
-      <div class="mes-grid">
-        ${DIAS_SEMANA.map(d=>`<div class="mes-dh">${d}</div>`).join('')}
-        ${Array(primerDia).fill('<div></div>').join('')}
-        ${Array.from({length:diasEnMes},(_,i)=>{
-          const d=i+1;
-          const key=`${año}-${String(asistMes.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-          const dd=asist[key]||{};
-          const t1=dd.t1||'';const t2=dd.t2||'';
-          const isToday=key===new Date().toISOString().slice(0,10);
-          return `<div class="mes-day" style="${isToday?'border-color:var(--orange);border-width:2px;':''}">
-            <div class="mes-day-num" style="${isToday?'color:var(--orange);':''}">${d}</div>
-            <div class="mes-turnos">
-              ${t1?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===t1)?.color||'#ccc'};">T1</div>`:''}
-              ${t2?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===t2)?.color||'#ccc'};">T2</div>`:''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-
-      <div class="asist-resumen">
-        <div class="asist-stat"><div class="asist-stat-num" style="color:#27ae60;">${pctAsist}%</div><div class="asist-stat-lbl">Asistencia</div></div>
-        <div class="asist-stat"><div class="asist-stat-num">${presentes}</div><div class="asist-stat-lbl">Presentes</div></div>
-        <div class="asist-stat"><div class="asist-stat-num" style="color:#e74c3c;">${sinJustificar}</div><div class="asist-stat-lbl">Sin justificar</div></div>
-        <div class="asist-stat"><div class="asist-stat-num" style="color:#f39c12;">${lesiones}</div><div class="asist-stat-lbl">Lesión</div></div>
-        <div class="asist-stat"><div class="asist-stat-num" style="color:#1DA1D6;">${torneos}</div><div class="asist-stat-lbl">Torneo</div></div>
-        <div class="asist-stat"><div class="asist-stat-num" style="color:#8e44ad;">${descansos}</div><div class="asist-stat-lbl">Descanso</div></div>
-      </div>
-    </div>`;
-}
-
-function ciclarEstado(playerIdx, dateKey, turno) {
-  const p = data.players[playerIdx];
-  if(!p.asistencia) p.asistencia = {};
-  if(!p.asistencia[dateKey]) p.asistencia[dateKey] = {};
-  const cur = p.asistencia[dateKey][turno] || '';
-  const curIdx = ESTADO_IDS.indexOf(cur);
-  const next = curIdx >= ESTADO_IDS.length-1 ? '' : ESTADO_IDS[curIdx+1];
-  if(next) p.asistencia[dateKey][turno] = next;
-  else delete p.asistencia[dateKey][turno];
-  scheduleSync();
-  renderMain();
-}
-
-function cambiarDia(delta) {
-  asistFecha = new Date(asistFecha);
-  asistFecha.setDate(asistFecha.getDate()+delta);
-  renderMain();
-}
-
-function irHoy() {
-  asistFecha = new Date();
-  asistFecha.setHours(0,0,0,0);
-  renderMain();
-}
-
-function cambiarMes(delta) {
-  asistMes = new Date(asistMes);
-  asistMes.setMonth(asistMes.getMonth()+delta);
-  renderMain();
-}
-
-
-function renderSetImportButtons(pName, setNum) {
-  var h = "";
-  h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">';
-  h += '<label style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--ol);color:var(--od);border:1px solid var(--orange);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">';
-  h += "📷 Foto";
-  h += '<input type="file" accept="image/*" multiple style="display:none;" onchange="leerStatsImagenesSet(this,&apos;" + pName + "&apos;,' + setNum + ')" />';
-  h += '</label>';
-  h += '<button onclick="togglePegarTextoSet(' + setNum + ')" style="padding:5px 12px;background:var(--bl);color:var(--bd);border:1px solid var(--blue);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">📋 Pegar texto</button>';
-  h += '<button onclick="intercambiarLados(' + setNum + ', this)" style="padding:5px 12px;background:var(--g5);color:var(--g2);border:1px solid var(--border);border-radius:var(--rsm);font-size:11px;font-weight:500;cursor:pointer;">⇄ Intercambiar lados</button>';
-  h += '<div id="pegar-panel-' + setNum + '" style="display:none;width:100%;margin-top:6px;">';
-  h += '<textarea id="texto-raw-' + setNum + '" placeholder="Pega aquí las estadísticas del Set ' + setNum + '..." style="width:100%;min-height:100px;padding:8px 10px;border:1px solid var(--blue);border-radius:var(--rsm);font-size:11px;outline:none;background:var(--g5);resize:vertical;"></textarea>';
-  h += '<button onclick="leerStatsTextoSet(' + setNum + ')" class="btn btn-b btn-sm" style="margin-top:5px;">Interpretar Set ' + setNum + '</button>';
-  h += '</div></div>';
-  return h;
-}
-
-function togglePegarTextoSet(setNum) {
-  var panel = document.getElementById('pegar-panel-' + setNum);
-  if(panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-}
-
-function intercambiarLados(setNum, btn) {
-  var p = data.players[pid];
-  var pName = p ? p.name.split(' ')[0] : 'Jugador';
-  if(!setData[setNum]) return;
-  var temp = setData[setNum].j;
-  setData[setNum].j = setData[setNum].r;
-  setData[setNum].r = temp;
-  var el = document.getElementById('set-form-content');
-  if(el) el.innerHTML = renderSetForm(pName, setNum);
-}
-
-async function leerStatsTextoSet(setNum) {
-  var p = data.players[pid];
-  var pName = p ? p.name.split(' ')[0] : 'Jugador';
-  var texto = document.getElementById('texto-raw-' + setNum) ? document.getElementById('texto-raw-' + setNum).value.trim() : '';
-  if(!texto) { alert('Pega el texto primero'); return; }
-  var status = document.getElementById('vision-status');
-  if(status) { status.style.display='block'; status.style.background='var(--bl)'; status.style.color='var(--bd)'; status.textContent='Interpretando Set ' + setNum + '...'; }
-  try {
-    var esATP = statsFormato === 'atp';
-    var sysMsg = 'Extraes estadísticas de tenis. Respondes SOLO con JSON válido sin texto adicional.';
-    var userMsg = esATP
-      ? 'Interpreta este texto de estadísticas ATP copiado de atptour.com. Formato: valor_izq / etiqueta / valor_der. Responde SOLO JSON: {"j":{},"r":{}} con keys: valoracionSaque,aces,doblesFaltas,primerSaque_num,primerSaque_den,pts1erSaque_num,pts1erSaque_den,pts2doSaque_num,pts2doSaque_den,roturasSalvadas_num,roturasSalvadas_den,juegosServicio,valoracionResto,ptsRestando1er_num,ptsRestando1er_den,ptsRestando2do_num,ptsRestando2do_den,roturasConvertidas_num,roturasConvertidas_den,juegosResto,ptsSaque_num,ptsSaque_den,ptsResto_num,ptsResto_den,ptsTotales_num,ptsTotales_den. Para "14/29 (48%)" usa _num=14 _den=29. SOLO JSON.\n\nTEXTO:\n' + texto
-      : 'Interpreta este texto de estadísticas ITF. Formato: valor_jugador / etiqueta / valor_rival. Responde SOLO JSON: {"j":{},"r":{}} con keys: aces,doblesFaltas,pct1erSaque,pts1erSaque,pct2doSaque,pts2doSaque,bpJugados,bpConvertidos,ptsGanados. Para "60.4%" usa 60.4. SOLO JSON.\n\nTEXTO:\n' + texto;
-    var res = await fetch(AI_SERVER + '/ai', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: sysMsg, messages: [{role:'user', content: userMsg}] })
-    });
-    var d = await res.json();
-    var txt = d.content && d.content[0] ? d.content[0].text : '';
-    var clean = txt.replace(/```json|```/g,'').trim();
-    var parsed = JSON.parse(clean);
-    if(!setData[setNum]) setData[setNum] = {j:{},r:{}};
-    if(parsed.j) Object.entries(parsed.j).forEach(function(e){ if(e[1]!=null) setData[setNum].j[e[0]]=e[1]; });
-    if(parsed.r) Object.entries(parsed.r).forEach(function(e){ if(e[1]!=null) setData[setNum].r[e[0]]=e[1]; });
-    var panel = document.getElementById('pegar-panel-' + setNum);
-    if(panel) panel.style.display = 'none';
-    var content = document.getElementById('set-form-content');
-    if(content) content.innerHTML = renderSetForm(pName, setNum);
-    if(status) { status.style.background='#eafaf1'; status.style.color='#27ae60'; status.textContent='✓ Set ' + setNum + ' interpretado. Revisa los datos.'; setTimeout(function(){ if(status) status.style.display='none'; }, 3000); }
-  } catch(e) {
-    if(status) { status.style.background='#fdeaea'; status.style.color='#c0392b'; status.textContent='Error al interpretar.'; }
-  }
-}
-
-async function leerStatsImagenesSet(input, pName, setNum) {
-  var files = Array.from(input.files);
-  if(!files.length) return;
-  var status = document.getElementById('vision-status');
-  if(status) { status.style.display='block'; status.style.background='var(--bl)'; status.style.color='var(--bd)'; status.textContent='Leyendo imagen(es) para Set ' + setNum + '...'; }
-  try {
-    if(!setData[setNum]) setData[setNum] = {j:{},r:{}};
-    for(var i=0; i<files.length; i++) {
-      var file = files[i];
-      var base64 = await new Promise(function(resolve,reject){ var r=new FileReader(); r.onload=function(){ resolve(r.result.split(',')[1]); }; r.onerror=reject; r.readAsDataURL(file); });
-      var res = await fetch(AI_SERVER + '/ai-vision', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({imageBase64:base64, mediaType:file.type||'image/jpeg', formato:statsFormato}) });
-      var result = await res.json();
-      if(!result.success||!result.data) continue;
-      var sd = result.data.sets && (result.data.sets['1'] || result.data.sets[setNum]) || {};
-      if(sd.j) Object.entries(sd.j).forEach(function(e){ if(e[1]!=null) setData[setNum].j[e[0]]=e[1]; });
-      if(sd.r) Object.entries(sd.r).forEach(function(e){ if(e[1]!=null) setData[setNum].r[e[0]]=e[1]; });
-    }
-    var p = data.players[pid];
-    var pName2 = p ? p.name.split(' ')[0] : pName;
-    var content = document.getElementById('set-form-content');
-    if(content) content.innerHTML = renderSetForm(pName2, setNum);
-    if(status) { status.style.background='#eafaf1'; status.style.color='#27ae60'; status.textContent='✓ Listo Set ' + setNum; setTimeout(function(){ if(status) status.style.display='none'; },3000); }
-  } catch(e) {
-    if(status) { status.style.background='#fdeaea'; status.style.color='#c0392b'; status.textContent='Error de conexión.'; }
-  }
 }
 
 function buildAlerts(today, wKey) {
@@ -1271,29 +825,8 @@ function renderPerfil(p){
 
 function setStar(n){activeStars=n;document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n));}
 async function saveProfile(){
-  const p=data.players[pid];
-  p.style=document.getElementById('f-style')?.value||'';
-  p.goal=document.getElementById('f-goal')?.value||'';
-  p.stars=activeStars;
-  p.updatedBy=user;
-  p.equipamiento={
-    raqueta:document.getElementById('f-raqueta')?.value||'',
-    grip:document.getElementById('f-grip')?.value||'',
-    cuerdaPrincipal:document.getElementById('f-cuerda1')?.value||'',
-    cuerdaCruzada:document.getElementById('f-cuerda2')?.value||'',
-    tension:document.getElementById('f-tension')?.value||'',
-    balance:document.getElementById('f-balance')?.value||''
-  };
-  p.equipoTrabajo={
-    fisico:document.getElementById('f-fisico')?.value||'',
-    psicologo:document.getElementById('f-psicologo')?.value||'',
-    nutricionista:document.getElementById('f-nutricionista')?.value||'',
-    medico:document.getElementById('f-medico')?.value||''
-  };
-  scheduleSync();
-  const btn=event.target;
-  btn.textContent='✓ Guardado';btn.style.background='#27ae60';
-  setTimeout(()=>{btn.textContent='Guardar perfil';btn.style.background='';},1800);
+  const p=data.players[pid];p.style=document.getElementById('f-style')?.value||'';p.goal=document.getElementById('f-goal')?.value||'';p.stars=activeStars;p.updatedBy=user;
+  scheduleSync();const btn=event.target;btn.textContent='✓ Guardado';btn.style.background='#27ae60';setTimeout(()=>{btn.textContent='Guardar perfil';btn.style.background='';},1800);
 }
 async function addRanking(){
   const month=document.getElementById('rank-month').value,val=parseInt(document.getElementById('rank-val').value);if(!val||val<1)return;
@@ -1307,77 +840,37 @@ async function addRanking(){
 }
 
 // PLAN SEMANAL
-const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
-const TURNOS = ['1er turno','2do turno'];
-
 function renderPlan(p){
   const today=new Date(),wKey=weekKey(today),wLbl=weekLabel(wKey);
   const plans=p.weekPlans||[];
-  const cur=plans.find(pl=>pl.week===wKey)||{week:wKey,dias:{}};
-  const hist=plans.filter(pl=>pl.week!==wKey).slice(0,8);
-
-  // Inicializar días si no existen
-  if(!cur.dias) cur.dias={};
-
+  const cur=plans.find(pl=>pl.week===wKey)||{week:wKey,focos:[],descripcion:'',ejercicios:'',observaciones:''};
+  activeFocos=[...(cur.focos||[])];
+  const hist=plans.filter(pl=>pl.week!==wKey).slice(0,5);
   return `
     <div class="card" style="margin-bottom:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
         <div style="font-size:15px;font-weight:600;">Plan semana actual</div>
         <span class="week-badge">${wLbl}</span>
       </div>
-
-      ${DIAS.map(dia => {
-        const diaData = cur.dias[dia] || {};
-        return `<div style="background:var(--g5);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;">
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--white);">
-            <div style="font-size:13px;font-weight:600;color:var(--gray);">${dia}</div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
-            ${TURNOS.map((turno,ti) => {
-              const turnoData = diaData[turno] || {tipo:'entrenamiento',focos:[],descripcion:''};
-              const isDescanso = turnoData.tipo === 'descanso';
-              const dotColor = ti===0 ? 'var(--orange)' : 'var(--blue)';
-              const labelColor = ti===0 ? 'var(--od)' : 'var(--bd)';
-              const borderStyle = ti===0 ? 'border-right:1px solid var(--border);' : '';
-              return `<div style="padding:12px 14px;${borderStyle}${isDescanso?'background:var(--restl);':''}">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                  <div style="display:flex;align-items:center;gap:5px;">
-                    <div style="width:7px;height:7px;border-radius:50%;background:${isDescanso?'var(--rest)':dotColor};"></div>
-                    <span style="font-size:11px;font-weight:600;color:${isDescanso?'var(--restd)':labelColor};text-transform:uppercase;letter-spacing:.04em;">${turno}</span>
-                  </div>
-                  <div style="display:flex;gap:4px;">
-                    <button onclick="setTurnoTipo('${wKey}','${dia}','${turno}','entrenamiento')" 
-                      style="font-size:9px;padding:2px 7px;border-radius:20px;cursor:pointer;border:1px solid ${!isDescanso?'var(--orange)':'var(--border)'};background:${!isDescanso?'var(--ol)':'transparent'};color:${!isDescanso?'var(--od)':'var(--g3)'};">Entr.</button>
-                    <button onclick="setTurnoTipo('${wKey}','${dia}','${turno}','descanso')"
-                      style="font-size:9px;padding:2px 7px;border-radius:20px;cursor:pointer;border:1px solid ${isDescanso?'var(--rest)':'var(--border)'};background:${isDescanso?'var(--restl)':'transparent'};color:${isDescanso?'var(--restd)':'var(--g3)'};">Desc.</button>
-                  </div>
-                </div>
-                ${isDescanso
-                  ? `<div style="font-size:12px;color:var(--restd);font-style:italic;">Día de descanso</div>`
-                  : `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">
-                      ${FOCOS.map(f=>`<button class="fpill${(turnoData.focos||[]).includes(f)?' '+FOCO_CLS[f]:''}" 
-                        style="font-size:10px;padding:2px 8px;"
-                        onclick="toggleTurnoFoco('${wKey}','${dia}','${turno}','${f}')">${f}</button>`).join('')}
-                    </div>
-                    <textarea placeholder="Descripción de la sesión..."
-                      style="width:100%;min-height:65px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;"
-                      oninput="setTurnoDesc('${wKey}','${dia}','${turno}',this.value)">${turnoData.descripcion||''}</textarea>`
-                }
-              </div>`;
-            }).join('')}
-          </div>
-        </div>`;
-      }).join('')}
-
-      ${cur.updatedBy?`<div class="updated-by">Última edición: ${cur.updatedBy} · ${cur.updatedAt||''}</div>`:''}
-      <div class="btn-row" style="margin-top:14px;">
-        <button class="btn btn-o" onclick="savePlan('${wKey}')">Guardar plan semanal</button>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:500;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Focos de trabajo</div>
+        <div class="foco-pills">${FOCOS.map(f=>`<button class="fpill${activeFocos.includes(f)?' '+FOCO_CLS[f]:''}" onclick="toggleFoco(this,'${f}')">${f}</button>`).join('')}</div>
       </div>
+      <div class="plan-grid">
+        <div class="fg" style="grid-column:1/-1;"><label>Descripción general</label><textarea id="plan-desc" placeholder="Ej: Semana de carga técnica...">${cur.descripcion||''}</textarea></div>
+        <div class="fg"><label>Ejercicios y drills</label><textarea id="plan-ejercicios" placeholder="- Drill derecha cruzada 20 min&#10;- Juego de puntos con restricción">${cur.ejercicios||''}</textarea></div>
+        <div class="fg"><label>Observaciones para el equipo</label><textarea id="plan-obs" placeholder="Ej: Coordinar con preparador físico...">${cur.observaciones||''}</textarea></div>
+      </div>
+      ${cur.updatedBy?`<div class="updated-by">Última edición: ${cur.updatedBy} · ${cur.updatedAt||''}</div>`:''}
+      <div class="btn-row">
+        <button class="btn btn-o" onclick="savePlan('${wKey}')">Guardar plan semanal</button>
+        <button class="btn btn-g" onclick="sugerirIA()">✦ Sugerir con IA</button>
+      </div>
+      <div id="plan-ia" style="display:none;margin-top:12px;" class="ai-result"></div>
     </div>
-
-    ${hist.length?`<div class="card"><div style="font-size:14px;font-weight:600;margin-bottom:12px;">Historial de planes anteriores</div>
-    ${hist.map((pl)=>`
-      <div class="hist-item" style="cursor:pointer;" onclick="toggleHistPlan(this)">
+    ${hist.length?`<div class="card"><div style="font-size:14px;font-weight:600;margin-bottom:12px;">Historial de planes anteriores</div>${hist.map((pl,i)=>{
+      const isOpen = false;
+      return `<div class="hist-item" style="cursor:pointer;" onclick="toggleHistPlan(this)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
           <div>
             <div style="font-size:13px;font-weight:500;">${weekLabel(pl.week)}</div>
@@ -1385,75 +878,30 @@ function renderPlan(p){
           </div>
           <span style="font-size:11px;color:var(--g3);">Ver más ▾</span>
         </div>
-        <div class="hist-detail" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-          ${DIAS.map(dia=>{
-            const dd=pl.dias&&pl.dias[dia];
-            if(!dd) return '';
-            return TURNOS.map(turno=>{
-              const td=dd[turno];
-              if(!td) return '';
-              const isD=td.tipo==='descanso';
-              return `<div style="margin-bottom:8px;">
-                <div style="font-size:11px;font-weight:600;color:var(--g3);">${dia} — ${turno}</div>
-                ${isD?'<div style="font-size:12px;color:var(--restd);">Descanso</div>':`
-                  <div style="display:flex;flex-wrap:wrap;gap:3px;margin:3px 0;">${(td.focos||[]).map(f=>`<span class="fpill ${FOCO_CLS[f]||''}" style="font-size:10px;padding:2px 8px;">${f}</span>`).join('')}</div>
-                  ${td.descripcion?`<div style="font-size:12px;color:var(--g2);">${td.descripcion}</div>`:''}`}
-              </div>`;
-            }).join('');
-          }).join('')}
+        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;">${(pl.focos||[]).map(f=>`<span class="fpill ${FOCO_CLS[f]||''}" style="font-size:10px;padding:2px 8px;">${f}</span>`).join('')}</div>
+        <div class="hist-body" style="color:var(--g2);">${(pl.descripcion||'Sin descripción').slice(0,80)}${pl.descripcion&&pl.descripcion.length>80?'...':''}</div>
+        <div class="hist-detail" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          ${pl.descripcion?`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Descripción general</div><div style="font-size:13px;line-height:1.6;">${pl.descripcion}</div></div>`:''}
+          ${pl.ejercicios?`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Ejercicios y drills</div><div style="font-size:13px;line-height:1.6;white-space:pre-line;">${pl.ejercicios}</div></div>`:''}
+          ${pl.observaciones?`<div><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">Observaciones del equipo</div><div style="font-size:13px;line-height:1.6;font-style:italic;color:var(--g2);">${pl.observaciones}</div></div>`:''}
         </div>
-      </div>`).join('')}
-    </div>`:''}`;
-}
-
-function getTurnoData(wKey, dia, turno, p) {
-  const plans = p.weekPlans || [];
-  let cur = plans.find(pl => pl.week === wKey);
-  if (!cur) { cur = {week:wKey, dias:{}}; p.weekPlans = [...plans, cur]; }
-  if (!cur.dias) cur.dias = {};
-  if (!cur.dias[dia]) cur.dias[dia] = {};
-  if (!cur.dias[dia][turno]) cur.dias[dia][turno] = {tipo:'entrenamiento', focos:[], descripcion:''};
-  return cur.dias[dia][turno];
-}
-
-function setTurnoTipo(wKey, dia, turno, tipo) {
-  const p = data.players[pid];
-  const td = getTurnoData(wKey, dia, turno, p);
-  td.tipo = tipo;
-  scheduleSync();
-  const el = document.getElementById('dtab-content');
-  if(el) el.innerHTML = renderDtab();
-}
-
-function toggleTurnoFoco(wKey, dia, turno, foco) {
-  const p = data.players[pid];
-  const td = getTurnoData(wKey, dia, turno, p);
-  td.focos = td.focos || [];
-  if(td.focos.includes(foco)) td.focos = td.focos.filter(f=>f!==foco);
-  else td.focos.push(foco);
-  scheduleSync();
-  const el = document.getElementById('dtab-content');
-  if(el) el.innerHTML = renderDtab();
-}
-
-function setTurnoDesc(wKey, dia, turno, desc) {
-  const p = data.players[pid];
-  const td = getTurnoData(wKey, dia, turno, p);
-  td.descripcion = desc;
-  scheduleSync();
+      </div>`;}).join('')}</div>`:''}`;
 }
 
 function toggleFoco(el,f){const cls=FOCO_CLS[f]||'fp-t';if(activeFocos.includes(f)){activeFocos=activeFocos.filter(x=>x!==f);el.className='fpill';}else{activeFocos.push(f);el.className='fpill '+cls;}}
 async function savePlan(wKey){
   const p=data.players[pid];p.weekPlans=p.weekPlans||[];
-  const existing=p.weekPlans.find(pl=>pl.week===wKey)||{week:wKey,dias:{}};
-  existing.updatedBy=user;existing.updatedAt=new Date().toLocaleString('es-CL');
-  const idx=p.weekPlans.findIndex(pl=>pl.week===wKey);
-  if(idx>=0)p.weekPlans[idx]=existing;else p.weekPlans.unshift(existing);
+  const plan={week:wKey,focos:[...activeFocos],descripcion:document.getElementById('plan-desc')?.value||'',ejercicios:document.getElementById('plan-ejercicios')?.value||'',observaciones:document.getElementById('plan-obs')?.value||'',updatedBy:user,updatedAt:new Date().toLocaleString('es-CL')};
+  const idx=p.weekPlans.findIndex(pl=>pl.week===wKey);if(idx>=0)p.weekPlans[idx]=plan;else p.weekPlans.unshift(plan);
   scheduleSync();const btn=event.target;btn.textContent='✓ Guardado';btn.style.background='#27ae60';setTimeout(()=>{btn.textContent='Guardar plan semanal';btn.style.background='';},1800);
 }
-// sugerirIA removido
-
+async function sugerirIA(){
+  const p=data.players[pid],el=document.getElementById('plan-ia');
+  el.style.display='block';el.className='ai-result loading';el.textContent='Generando sugerencia...';
+  const focos=activeFocos.length?activeFocos.join(', '):'general';
+  const r=await callAI(`Sugiere un plan semanal de entrenamiento de tenis para: ${p.name}, ${p.age} años, Ranking ${p.ranking}. Estilo: ${p.style||'no definido'}. Objetivo: ${p.goal||'no definido'}. Focos: ${focos}. Incluye descripción general, 4-5 drills con duración y series, y observaciones clave.`);
+  el.className='ai-result';el.innerHTML=typeof marked!=='undefined'?marked.parse(r):r.replace(/\n/g,'<br>');
+}
 
 // CALENDARIO MEJORADO
 function renderCal(p){
@@ -1581,49 +1029,16 @@ async function addNote(){
 }
 
 // ── AGREGAR/EDITAR JUGADOR ────────────────────────────────
-function renderModalForm(p){
-  return `
-    <div class="fg fg-full"><label>Nombre completo</label><input id="m-name" value="${p?p.name||'':''}" placeholder="Ej: Martina López" /></div>
-    <div class="fg"><label>Edad</label><input id="m-age" type="number" value="${p?p.age||'':''}" placeholder="18" /></div>
-    <div class="fg"><label>Ranking actual</label><input id="m-ranking" value="${p?p.ranking||'':''}" placeholder="Ej: 450 WTA" /></div>
-    <div class="fg"><label>Circuito</label><select id="m-circuit"><option value="atp" ${!p||p.circuit==='atp'?'selected':''}>ATP</option><option value="wta" ${p&&p.circuit==='wta'?'selected':''}>WTA</option><option value="itf" ${p&&p.circuit==='itf'?'selected':''}>ITF Junior</option></select></div>
-    <div class="fg"><label>Género</label><select id="m-gender"><option value="M" ${!p||p.gender==='M'?'selected':''}>Masculino</option><option value="F" ${p&&p.gender==='F'?'selected':''}>Femenino</option></select></div>
-    <div class="fg"><label>Mano dominante</label><select id="m-hand"><option value="Diestro" ${!p||p.hand==='Diestro'?'selected':''}>Diestro</option><option value="Zurdo" ${p&&p.hand==='Zurdo'?'selected':''}>Zurdo</option></select></div>
-  `;
-}
-
-function openAddPlayer(){
-  editingPlayerId=null;
-  document.getElementById('modal-title').textContent='Nuevo jugador';
-  document.getElementById('modal-form-fields').innerHTML=renderModalForm(null);
-  document.getElementById('modal-delete-btn').style.display='none';
-  document.getElementById('player-modal').classList.add('open');
-}
-function openEditPlayer(i){
-  editingPlayerId=i;
-  const p=data.players[i];
-  document.getElementById('modal-title').textContent='Editar jugador';
-  document.getElementById('modal-form-fields').innerHTML=renderModalForm(p);
-  document.getElementById('modal-delete-btn').style.display='inline-flex';
-  document.getElementById('player-modal').classList.add('open');
-}
+function openAddPlayer(){editingPlayerId=null;document.getElementById('modal-title').textContent='Nuevo jugador';['m-name','m-age','m-ranking'].forEach(id=>{document.getElementById(id).value='';});document.getElementById('m-circuit').value='atp';document.getElementById('m-gender').value='M';document.getElementById('m-hand').value='Diestro';document.getElementById('modal-delete-btn').style.display='none';document.getElementById('player-modal').classList.add('open');}
+function openEditPlayer(i){editingPlayerId=i;const p=data.players[i];document.getElementById('modal-title').textContent='Editar jugador';document.getElementById('m-name').value=p.name||'';document.getElementById('m-age').value=p.age||'';document.getElementById('m-ranking').value=p.ranking||'';document.getElementById('m-circuit').value=p.circuit||'atp';document.getElementById('m-gender').value=p.gender||'M';document.getElementById('m-hand').value=p.hand||'Diestro';document.getElementById('modal-delete-btn').style.display='inline-flex';document.getElementById('player-modal').classList.add('open');}
 function closePlayerModal(){document.getElementById('player-modal').classList.remove('open');}
 async function savePlayerModal(){
   const name=document.getElementById('m-name').value.trim();if(!name){alert('Ingresa el nombre del jugador');return;}
-  const pd={
-    name,
-    age:parseInt(document.getElementById('m-age').value)||0,
-    ranking:document.getElementById('m-ranking')?.value||'',
-    circuit:document.getElementById('m-circuit')?.value||'atp',
-    gender:document.getElementById('m-gender').value,
-    hand:document.getElementById('m-hand').value,
-    style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]
-  };
+  const pd={name,age:parseInt(document.getElementById('m-age').value)||0,ranking:document.getElementById('m-ranking').value,circuit:document.getElementById('m-circuit').value,gender:document.getElementById('m-gender').value,hand:document.getElementById('m-hand').value,style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]};
   if(editingPlayerId!==null){data.players[editingPlayerId]={...data.players[editingPlayerId],...pd,id:editingPlayerId};}
   else{const newId=data.players.length;data.players.push({...pd,id:newId});}
   scheduleSync();closePlayerModal();renderAll();if(editingPlayerId!==null)pid=editingPlayerId;
 }
-
 async function deletePlayer(){
   if(!confirm('¿Eliminar a '+data.players[editingPlayerId].name+'?'))return;
   data.players.splice(editingPlayerId,1);data.players.forEach((p,i)=>p.id=i);
@@ -1631,7 +1046,40 @@ async function deletePlayer(){
 }
 
 // ── COACHING ──────────────────────────────────────────────
-// renderCoaching reemplazado por biblioteca de ejercicios arriba
+function renderCoaching(){
+  return `
+    <div class="page-header"><div><div class="page-title">Coaching</div><div class="page-sub">Herramientas para el equipo técnico</div></div></div>
+    <div class="g2">
+      <div class="card" style="grid-column:1/-1;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:12px;">★ Generador de plan de entrenamiento</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">
+          <button class="fpill fp-t" onclick="togglePTag(this)">Técnico</button>
+          <button class="fpill" onclick="togglePTag(this)">Táctico</button>
+          <button class="fpill" onclick="togglePTag(this)">Físico</button>
+          <button class="fpill" onclick="togglePTag(this)">Mental</button>
+        </div>
+        <div class="input-row" style="margin-bottom:10px;">
+          <input type="text" id="plan-input" placeholder="Ej: jugadora 19 años, mejorar topspin, torneo en 3 semanas..." />
+          <button class="btn btn-o btn-sm" onclick="genPlan()">Generar ↗</button>
+        </div>
+        <div class="ai-result" id="plan-result">Describe el perfil del jugador para generar un plan personalizado.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:12px;">◉ Recursos de coaching</div>
+        <div class="input-row" style="margin-bottom:10px;">
+          <input type="text" id="resource-input" placeholder="Ej: saque, táctica en tierra batida..." />
+          <button class="btn btn-b btn-sm" onclick="searchRes()">Buscar ↗</button>
+        </div>
+        <div class="ai-result" id="resource-result">Busca conceptos, metodologías o situaciones tácticas.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:12px;">✎ Mis reflexiones</div>
+        <textarea id="ref-input" placeholder="Reflexión sobre tu práctica como entrenador..." style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;resize:vertical;min-height:70px;margin-bottom:8px;font-family:'DM Sans',sans-serif;"></textarea>
+        <button class="btn btn-b btn-sm" onclick="saveRef()">Guardar reflexión</button>
+        <div id="ref-list" style="margin-top:12px;">${(data.reflections||[]).slice(0,6).map(r=>`<div class="note-item"><div class="note-text">${r.text}</div><div class="note-meta">${r.date} · ${r.author||''}</div></div>`).join('')||'<div class="empty">Sin reflexiones aún</div>'}</div>
+      </div>
+    </div>`;
+}
 function togglePTag(el){const cls=FOCO_CLS[el.textContent]||'fp-t';if(el.classList.contains(cls)){el.className='fpill';activePlanTags=activePlanTags.filter(x=>x!==el.textContent);}else{el.className='fpill '+cls;activePlanTags.push(el.textContent);}}
 async function genPlan(){
   const input=document.getElementById('plan-input').value.trim(),result=document.getElementById('plan-result');if(!input)return;
@@ -1650,273 +1098,6 @@ async function saveRef(){
   const date=new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
   data.reflections=data.reflections||[];data.reflections.unshift({text,date,author:user});scheduleSync();document.getElementById('ref-input').value='';
   const list=document.getElementById('ref-list');if(list)list.innerHTML=data.reflections.slice(0,6).map(r=>`<div class="note-item"><div class="note-text">${r.text}</div><div class="note-meta">${r.date} · ${r.author||''}</div></div>`).join('');
-}
-
-
-// ── BIBLIOTECA DE EJERCICIOS ──────────────────────────────
-const ITF_EJERCICIOS = [{"nombre": "Fondo - Situación ofensiva", "tipo": "tactico", "objetivo": "Entrenar el ataque desde el fondo usando el mejor golpe para mover al rival y buscar ganadores", "duracion": "20", "jugadores": "2", "descripcion": "Desde posición ofensiva dentro de la cancha, usar el mejor golpe para mover al contrario. Buscar dejadas para sorprender y subir a la red. Usar toda la cancha.", "tags": ["Fondo", "Ofensivo", "Derecha", "Revés"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Fondo - Situación defensiva", "tipo": "tactico", "objetivo": "Recuperar la posición y neutralizar la ventaja del rival con golpes altos profundos", "duracion": "20", "jugadores": "2", "descripcion": "Bajo presión, jugar golpes altos y profundos. Moverse en diagonal hacia la pelota. Priorizar control sobre potencia. Cambiar el ritmo con pelotas altas seguidas de anguladas.", "tags": ["Fondo", "Defensivo", "Recuperación"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Fondo - Contra el que sube a la red", "tipo": "tactico", "objetivo": "Entrenar passing shots y globos cuando el rival sube", "duracion": "20", "jugadores": "2", "descripcion": "Jugador A sube a la red con aproximación. Jugador B practica passing shots cruzados cortos y angulados, paralelos fuertes y profundos, y globos liftados altos.", "tags": ["Fondo", "Passing", "Globo", "Red"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Saque - Primer servicio + golpe de fondo", "tipo": "tactico", "objetivo": "Dominar el punto desde el saque con el primer golpe de fondo", "duracion": "20", "jugadores": "2", "descripcion": "Sacar con 70-80% de potencia máxima. Tras el saque, posicionarse hacia la izquierda y atacar con derecha cruzada de dentro hacia afuera. Variar dirección del saque para crear incertidumbre.", "tags": ["Saque", "Primer saque", "Derecha"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Saque - Segundo servicio agresivo", "tipo": "tactico", "objetivo": "Ser agresivo con el segundo saque y dominar el siguiente golpe", "duracion": "20", "jugadores": "2", "descripcion": "100% de entrada con el segundo saque. Variar efecto y velocidad. Tras buen segundo saque, rodear el revés y pegar derecha cruzada de dentro hacia afuera o en paralelo.", "tags": ["Saque", "Segundo saque"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Resto - Primer saque", "tipo": "tactico", "objetivo": "Regularidad y neutralización en el resto del primer saque", "duracion": "15", "jugadores": "2", "descripcion": "Buscar regularidad. No regalar puntos. Contra saque angulado, anticiparse y jugar cruzado. Contra primer saque débil, avanzar para volear o quedarse en el fondo.", "tags": ["Resto", "Primer saque", "Regularidad"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Resto - Segundo saque ofensivo", "tipo": "tactico", "objetivo": "Atacar el segundo saque del rival para dominar el punto", "duracion": "15", "jugadores": "2", "descripcion": "Atacar el segundo saque pegando la pelota cuando sube a altura del hombro. Rodear el revés para pegar derecha de ataque. Moverse hacia adelante para posición dominante.", "tags": ["Resto", "Segundo saque", "Ataque"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Subida a la red - Aproximación y volea", "tipo": "tactico", "objetivo": "Entrenar la subida sorpresiva, el golpe de aproximación y el juego en la red", "duracion": "25", "jugadores": "2", "descripcion": "Usar el mejor golpe para la aproximación. Dirigir al lado débil del rival. Split step antes de la volea. No más de 3 voleas para terminar el punto. Las voleas a media cancha: profundas y bajas. Las voleas cerca de la red: anguladas y cortas.", "tags": ["Red", "Volea", "Aproximación", "Subida"], "visible": "shared", "fuente": "ITF"}, {"nombre": "Drill canasto - Fondo cruzado-paralelo", "tipo": "canasto", "objetivo": "Mejorar consistencia y dirección desde el fondo", "duracion": "15", "jugadores": "1", "descripcion": "Entrenador alimenta con canasto desde la red. Jugador alterna golpes cruzados profundos y paralelos desde el fondo. 3 series de 20 pelotas por lado. Foco en posición y finish del golpe.", "tags": ["Canasto", "Fondo", "Derecha", "Revés"], "visible": "shared", "fuente": "Altotenis"}, {"nombre": "Drill canasto - Ataque desde zona 3/4", "tipo": "canasto", "objetivo": "Entrenar el golpe ofensivo desde adentro de la cancha", "duracion": "15", "jugadores": "1", "descripcion": "Entrenador alimenta pelotas cortas a zona 3/4. Jugador avanza y ataca con derecha o revés a la cancha abierta. Énfasis en timing de entrada y finish agresivo. 3 series de 15 pelotas.", "tags": ["Canasto", "Ataque", "Zona 3/4", "Ofensivo"], "visible": "shared", "fuente": "Altotenis"}];
-
-let bibFilter = 'todos';
-let bibSearch = '';
-let bibViewIdx = null;
-let showBibForm = false;
-let editingBibIdx = null;
-
-function renderCoaching() {
-  const reflections = data.reflections || [];
-  const ejercicios = data.ejercicios || [];
-  const allEjercicios = [...ITF_EJERCICIOS, ...ejercicios];
-
-  const filtered = allEjercicios.filter(e => {
-    const matchFilter = bibFilter === 'todos' || e.tipo === bibFilter || (bibFilter === 'shared' && e.visible === 'shared') || (bibFilter === 'mios' && e.addedBy === user);
-    const matchSearch = !bibSearch || e.nombre.toLowerCase().includes(bibSearch.toLowerCase()) || (e.descripcion||'').toLowerCase().includes(bibSearch.toLowerCase()) || (e.tags||[]).some(t=>t.toLowerCase().includes(bibSearch.toLowerCase()));
-    return matchFilter && matchSearch;
-  });
-
-  return `
-    <div class="page-header">
-      <div><div class="page-title">Biblioteca de ejercicios</div>
-      <div class="page-sub">Ejercicios técnicos, drills y patrones tácticos del equipo</div></div>
-      <button class="btn btn-o btn-sm" onclick="openBibForm(null)">+ Agregar ejercicio</button>
-    </div>
-
-    ${showBibForm ? renderBibForm(editingBibIdx) : ''}
-    ${bibViewIdx !== null ? renderBibDetail(allEjercicios[bibViewIdx], bibViewIdx) : ''}
-
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <input type="text" placeholder="Buscar ejercicio..." value="${bibSearch}"
-        oninput="bibSearch=this.value;renderMain();"
-        style="flex:1;min-width:180px;padding:9px 14px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);" />
-    </div>
-
-    <div class="bib-filters">
-      ${[['todos','Todos'],['tecnico','Técnico'],['canasto','Canasto'],['tactico','Táctico'],['shared','Compartidos'],['mios','Mis ejercicios']].map(([v,l])=>
-        `<button class="bib-filter-btn${bibFilter===v?' active':''}" onclick="bibFilter='${v}';renderMain();">${l}</button>`
-      ).join('')}
-    </div>
-
-    <div style="font-size:12px;color:var(--g3);margin-bottom:10px;">${filtered.length} ejercicio${filtered.length!==1?'s':''}</div>
-
-    ${filtered.length === 0
-      ? `<div class="card"><div class="empty">No hay ejercicios que coincidan con la búsqueda.</div></div>`
-      : `<div class="bib-grid">${filtered.map((e,i) => {
-          const realIdx = allEjercicios.indexOf(e);
-          return renderBibCard(e, realIdx);
-        }).join('')}</div>`
-    }
-
-    <div class="card" style="margin-top:20px;">
-      <div style="font-size:14px;font-weight:600;margin-bottom:12px;">✎ Reflexiones del equipo técnico</div>
-      <textarea id="ref-input" placeholder="Reflexión sobre tu práctica como entrenador..." style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;resize:vertical;min-height:70px;margin-bottom:8px;font-family:'DM Sans',sans-serif;"></textarea>
-      <button class="btn btn-b btn-sm" onclick="saveRef()">Guardar reflexión</button>
-      <div id="ref-list" style="margin-top:12px;">${(data.reflections||[]).slice(0,6).map(r=>`<div class="note-item"><div class="note-text">${r.text}</div><div class="note-meta">${r.date} · ${r.author||''}</div></div>`).join('')||'<div class="empty">Sin reflexiones aún</div>'}</div>
-    </div>`;
-}
-
-function renderBibCard(e, idx) {
-  const typeStyle = {tecnico:'bib-type-tecnico',canasto:'bib-type-canasto',tactico:'bib-type-tactico'}[e.tipo]||'bib-type-tecnico';
-  const typeLabel = {tecnico:'Técnico',canasto:'Canasto',tactico:'Táctico'}[e.tipo]||e.tipo;
-  const isCustom = !e.fuente || e.fuente === 'Altotenis' || e.addedBy;
-  return `<div class="bib-card" onclick="bibViewIdx=${idx};showBibForm=false;renderMain();">
-    <div class="bib-card-type ${typeStyle}">${typeLabel}</div>
-    <div class="bib-card-title">${e.nombre}</div>
-    <div class="bib-card-desc">${e.objetivo||e.descripcion||''}</div>
-    <div class="bib-card-meta">
-      ${e.duracion?`<span class="bib-tag">⏱ ${e.duracion} min</span>`:''}
-      ${e.jugadores?`<span class="bib-tag">👥 ${e.jugadores}</span>`:''}
-      ${e.visible==='shared'?`<span class="bib-tag bib-shared">Compartido</span>`:`<span class="bib-tag">Privado</span>`}
-      ${e.fuente==='ITF'?`<span class="bib-tag" style="background:var(--bl);color:var(--bd);border-color:var(--blue);">ITF</span>`:''}
-      ${isCustom&&e.addedBy?`<span class="bib-tag">${e.addedBy}</span>`:''}
-    </div>
-  </div>`;
-}
-
-function renderBibDetail(e, idx) {
-  if(!e) return '';
-  const typeStyle = {tecnico:'bib-type-tecnico',canasto:'bib-type-canasto',tactico:'bib-type-tactico'}[e.tipo]||'';
-  const typeLabel = {tecnico:'Técnico',canasto:'Canasto',tactico:'Táctico'}[e.tipo]||e.tipo;
-  const isCustom = e.addedBy;
-  return `<div class="card" style="margin-bottom:14px;border-color:var(--orange);">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <div>
-        <div class="bib-card-type ${typeStyle}" style="margin-bottom:6px;">${typeLabel}</div>
-        <div style="font-size:16px;font-weight:600;">${e.nombre}</div>
-        ${e.fuente==='ITF'?`<div style="font-size:11px;color:var(--blue);margin-top:2px;">Fuente: ITF Coach Education</div>`:''}
-      </div>
-      <div style="display:flex;gap:6px;">
-        ${isCustom?`<button onclick="openBibForm(${idx})" style="font-size:11px;padding:4px 10px;background:var(--bl);color:var(--bd);border:1px solid var(--blue);border-radius:4px;cursor:pointer;">Editar</button>`:''}
-        <button onclick="bibViewIdx=null;renderMain();" style="font-size:11px;padding:4px 10px;background:var(--g5);color:var(--g2);border:1px solid var(--border);border-radius:4px;cursor:pointer;">Cerrar ✕</button>
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-      ${e.duracion?`<div style="text-align:center;padding:8px 14px;background:var(--g5);border-radius:var(--rsm);"><div style="font-size:16px;font-weight:700;">${e.duracion}</div><div style="font-size:10px;color:var(--g3);">minutos</div></div>`:''}
-      ${e.jugadores?`<div style="text-align:center;padding:8px 14px;background:var(--g5);border-radius:var(--rsm);"><div style="font-size:16px;font-weight:700;">${e.jugadores}</div><div style="font-size:10px;color:var(--g3);">jugadores</div></div>`:''}
-    </div>
-    ${e.objetivo?`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Objetivo</div><div style="font-size:13px;color:var(--gray);line-height:1.6;">${e.objetivo}</div></div>`:''}
-    ${e.descripcion?`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Descripción</div><div style="font-size:13px;color:var(--gray);line-height:1.7;white-space:pre-line;">${e.descripcion}</div></div>`:''}
-    ${e.tags&&e.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">${e.tags.map(t=>`<span class="bib-tag">${t}</span>`).join('')}</div>`:''}
-  </div>`;
-}
-
-function renderBibForm(idx) {
-  const isEdit = idx !== null && idx !== undefined;
-  const allE = [...ITF_EJERCICIOS, ...(data.ejercicios||[])];
-  const e = isEdit ? allE[idx] : null;
-  const customIdx = isEdit ? idx - ITF_EJERCICIOS.length : null;
-  return `<div class="card" style="margin-bottom:14px;border-color:var(--blue);">
-    <div style="font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-      <span style="background:${isEdit?'var(--blue)':'var(--orange)'};color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;">${isEdit?'Editando':'+ Nuevo'}</span>
-      ${isEdit?'Editar ejercicio':'Agregar ejercicio'}
-    </div>
-    <div class="form-grid" style="margin-bottom:12px;">
-      <div class="fg fg-full"><label>Nombre del ejercicio</label><input id="bib-nombre" value="${e?e.nombre||'':''}" placeholder="Ej: Drill cruzado-paralelo con canasto" /></div>
-      <div class="fg"><label>Tipo</label>
-        <select id="bib-tipo">
-          <option value="tecnico" ${!e||e.tipo==='tecnico'?'selected':''}>Técnico</option>
-          <option value="canasto" ${e&&e.tipo==='canasto'?'selected':''}>Canasto</option>
-          <option value="tactico" ${e&&e.tipo==='tactico'?'selected':''}>Táctico</option>
-        </select>
-      </div>
-      <div class="fg"><label>Visibilidad</label>
-        <select id="bib-visible">
-          <option value="shared" ${!e||e.visible==='shared'?'selected':''}>Compartido con el equipo</option>
-          <option value="private" ${e&&e.visible==='private'?'selected':''}>Solo yo (privado)</option>
-        </select>
-      </div>
-      <div class="fg"><label>Duración (minutos)</label><input type="number" id="bib-duracion" value="${e?e.duracion||'':''}" placeholder="Ej: 20" /></div>
-      <div class="fg"><label>Jugadores necesarios</label><input type="number" id="bib-jugadores" value="${e?e.jugadores||'':''}" placeholder="Ej: 2" /></div>
-    </div>
-    <div class="fg" style="margin-bottom:10px;"><label>Objetivo</label>
-      <input id="bib-objetivo" value="${e?e.objetivo||'':''}" placeholder="¿Qué se trabaja con este ejercicio?" />
-    </div>
-    <div class="fg" style="margin-bottom:10px;"><label>Descripción paso a paso</label>
-      <textarea id="bib-desc" style="min-height:100px;width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;" placeholder="Describe el ejercicio en detalle: posición inicial, desarrollo, variantes...">${e?e.descripcion||'':''}</textarea>
-    </div>
-    <div class="fg" style="margin-bottom:14px;"><label>Etiquetas (separadas por coma)</label>
-      <input id="bib-tags" value="${e&&e.tags?e.tags.join(', '):''}" placeholder="Ej: Fondo, Derecha, Ofensivo" />
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-o btn-sm" onclick="saveBib(${isEdit?customIdx:null})">${isEdit?'Guardar cambios':'Agregar ejercicio'}</button>
-      ${isEdit&&customIdx>=0?`<button class="btn btn-red btn-sm" onclick="deleteBib(${customIdx})">Eliminar</button>`:''}
-      <button class="btn btn-g btn-sm" onclick="cancelBibForm()">Cancelar</button>
-    </div>
-  </div>`;
-}
-
-function openBibForm(idx) {
-  showBibForm = true;
-  editingBibIdx = idx;
-  bibViewIdx = null;
-  renderMain();
-  window.scrollTo(0,0);
-}
-
-function cancelBibForm() {
-  showBibForm = false;
-  editingBibIdx = null;
-  renderMain();
-}
-
-async function saveBib(customIdx) {
-  const nombre = document.getElementById('bib-nombre')?.value?.trim();
-  if(!nombre){alert('El nombre es obligatorio');return;}
-  const tagsRaw = document.getElementById('bib-tags')?.value||'';
-  const e = {
-    nombre,
-    tipo: document.getElementById('bib-tipo')?.value||'tecnico',
-    visible: document.getElementById('bib-visible')?.value||'shared',
-    duracion: document.getElementById('bib-duracion')?.value||'',
-    jugadores: document.getElementById('bib-jugadores')?.value||'',
-    objetivo: document.getElementById('bib-objetivo')?.value||'',
-    descripcion: document.getElementById('bib-desc')?.value||'',
-    tags: tagsRaw.split(',').map(t=>t.trim()).filter(Boolean),
-    addedBy: user,
-    fuente: 'Altotenis',
-    fecha: new Date().toLocaleDateString('es-CL')
-  };
-  data.ejercicios = data.ejercicios || [];
-  if(customIdx !== null && customIdx >= 0) {
-    data.ejercicios[customIdx] = e;
-  } else {
-    data.ejercicios.push(e);
-  }
-  showBibForm = false;
-  editingBibIdx = null;
-  scheduleSync();
-  renderMain();
-}
-
-async function deleteBib(customIdx) {
-  if(!confirm('¿Eliminar este ejercicio?')) return;
-  data.ejercicios.splice(customIdx, 1);
-  showBibForm = false;
-  editingBibIdx = null;
-  scheduleSync();
-  renderMain();
-}
-
-
-// ── LECTURA DE ESTADÍSTICAS POR IMAGEN ───────────────────
-async function leerStatsImagen(input, pName) {
-  const file = input.files[0];
-  if (!file) return;
-
-  const status = document.getElementById('vision-status');
-  if (status) { status.style.display = 'block'; status.textContent = '📷 Leyendo estadísticas con IA...'; }
-
-  try {
-    // Convertir imagen a base64
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-    const mediaType = file.type || 'image/jpeg';
-
-    const res = await fetch(`${AI_SERVER}/ai-vision`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64: base64, mediaType, formato: statsFormato })
-    });
-
-    const result = await res.json();
-
-    if (!result.success) {
-      if (status) { status.style.display = 'block'; status.style.background = '#fdeaea'; status.style.color = '#c0392b'; status.textContent = 'No se pudieron leer las estadísticas. Intenta con una imagen más clara.'; }
-      return;
-    }
-
-    // Cargar datos extraídos en setData
-    const extracted = result.data;
-    if (extracted.sets) {
-      setData = { 1:{j:{},r:{}}, 2:{j:{},r:{}}, 3:{j:{},r:{}} };
-      Object.entries(extracted.sets).forEach(([setNum, sd]) => {
-        if (setData[setNum]) {
-          setData[setNum].j = sd.j || {};
-          setData[setNum].r = sd.r || {};
-        }
-      });
-    }
-
-    // Actualizar formato si viene en la respuesta
-    if (extracted.formato) statsFormato = extracted.formato;
-
-    // Re-renderizar formulario con datos
-    const content = document.getElementById('set-form-content');
-    if (content) content.innerHTML = renderSetForm(pName, activeSet);
-
-    if (status) {
-      status.style.background = '#eafaf1';
-      status.style.color = '#27ae60';
-      status.textContent = '✓ Estadísticas leídas correctamente. Revisa los datos antes de guardar.';
-      setTimeout(() => { if(status) status.style.display = 'none'; }, 4000);
-    }
-
-  } catch (e) {
-    if (status) { status.style.display = 'block'; status.style.background = '#fdeaea'; status.style.color = '#c0392b'; status.textContent = 'Error al conectar con el servidor. Verifica tu conexión.'; }
-  }
 }
 
 // ── IA via servidor Render ────────────────────────────────
@@ -2235,55 +1416,27 @@ function formatFecha(f) {
 
 
 // ── ESTADÍSTICAS POR SET ──────────────────────────────────
-const SET_FIELDS_ITF = [
-  {key:'aces',         label:'Aces'},
+const SET_FIELDS = [
+  {key:'aces', label:'Aces'},
   {key:'doblesFaltas', label:'Dobles faltas'},
-  {key:'pct1erSaque',  label:'% 1er servicio',           unit:'%'},
-  {key:'pts1erSaque',  label:'1er servicios ganados'},
-  {key:'pct2doSaque',  label:'% 2do servicio',            unit:'%'},
-  {key:'pts2doSaque',  label:'2dos servicios ganados'},
-  {key:'bpJugados',    label:'Break points jugados'},
-  {key:'bpConvertidos',label:'Break points convertidos'},
-  {key:'ptsGanados',   label:'Puntos ganados'},
+  {key:'pct1erSaque', label:'% 1er servicio', unit:'%'},
+  {key:'pts1erSaque', label:'1er servicios ganados'},
+  {key:'pct2doSaque', label:'% 2do servicio', unit:'%'},
+  {key:'pts2doSaque', label:'2dos servicios ganados'},
+  {key:'bpJugados', label:'Break points jugados'},
+  {key:'bpConvertidos', label:'Break points convertidos'},
+  {key:'ptsGanados', label:'Puntos ganados'},
 ];
-
-// Challenger/ATP: fracción num/den → calcula % automático
-const SET_FIELDS_ATP = {
-  servicio: [
-    {key:'valoracionSaque',  label:'Valoración de servicio', tipo:'num'},
-    {key:'aces',             label:'Aces',                   tipo:'num'},
-    {key:'doblesFaltas',     label:'Dobles faltas',          tipo:'num'},
-    {key:'primerSaque',      label:'1er saque',              tipo:'frac'},
-    {key:'pts1erSaque',      label:'Pts ganados con 1er saque', tipo:'frac'},
-    {key:'pts2doSaque',      label:'Pts ganados con 2do saque', tipo:'frac'},
-    {key:'roturasSalvadas',  label:'Puntos de rotura salvados', tipo:'frac'},
-    {key:'juegosServicio',   label:'Juegos de servicio jugados', tipo:'num'},
-  ],
-  resto: [
-    {key:'valoracionResto',  label:'Valoración de resto',    tipo:'num'},
-    {key:'ptsRestando1er',   label:'Pts ganados restando 1er saque', tipo:'frac'},
-    {key:'ptsRestando2do',   label:'Pts ganados restando 2do saque', tipo:'frac'},
-    {key:'roturasConvertidas',label:'Puntos de rotura convertidos', tipo:'frac'},
-    {key:'juegosResto',      label:'Juegos ganados al resto', tipo:'num'},
-  ],
-  puntos: [
-    {key:'ptsSaque',         label:'Puntos ganados al saque', tipo:'frac'},
-    {key:'ptsResto',         label:'Puntos ganados al resto', tipo:'frac'},
-    {key:'ptsTotales',       label:'Puntos totales ganados',  tipo:'frac'},
-  ]
-};
 
 let activeSet = 1;
 let setData = {1:{j:{},r:{}}, 2:{j:{},r:{}}, 3:{j:{},r:{}}};
 let editingStatsIdx = null;
-let statsFormato = 'itf'; // 'itf' | 'atp'
 
 function renderStats(p, editIdx) {
   const stats = p.matchStats || [];
   activeSet = 1;
   editingStatsIdx = editIdx !== undefined ? editIdx : null;
   const editData = editingStatsIdx !== null ? stats[editingStatsIdx] : null;
-  if(editData) statsFormato = editData.formato || 'itf';
   setData = editData ? JSON.parse(JSON.stringify(editData.sets || {1:{j:{},r:{}},2:{j:{},r:{}},3:{j:{},r:{}}})) : {1:{j:{},r:{}}, 2:{j:{},r:{}}, 3:{j:{},r:{}}};
 
   const histHtml = stats.length === 0
@@ -2305,24 +1458,9 @@ function renderStatsForm(p, editIdx) {
   const s = isEdit ? stats[editIdx] : null;
   return `<div class="card">
     <div style="font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-      <span style="background:var(--blue);color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;">${isEdit?'Editando':'+ Nuevo'}</span>
+      <span style="background:${isEdit?'var(--blue)':'var(--blue)'};color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;">${isEdit?'Editando':'+ Nuevo'}</span>
       ${isEdit?'Editar estadísticas':'Registrar estadísticas de partido'}
     </div>
-
-    <div style="margin-bottom:14px;">
-      <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Formato de torneo</div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="statsFormato='itf';document.getElementById('set-form-content').innerHTML=renderSetForm('${pName}',activeSet);"
-          style="padding:7px 18px;border-radius:var(--rsm);font-size:13px;cursor:pointer;font-weight:500;border:2px solid ${statsFormato==='itf'?'var(--orange)':'var(--border)'};background:${statsFormato==='itf'?'var(--ol)':'transparent'};color:${statsFormato==='itf'?'var(--od)':'var(--g2)'};">
-          ITF
-        </button>
-        <button onclick="statsFormato='atp';document.getElementById('set-form-content').innerHTML=renderSetForm('${pName}',activeSet);"
-          style="padding:7px 18px;border-radius:var(--rsm);font-size:13px;cursor:pointer;font-weight:500;border:2px solid ${statsFormato==='atp'?'var(--blue)':'var(--border)'};background:${statsFormato==='atp'?'var(--bl)':'transparent'};color:${statsFormato==='atp'?'var(--bd)':'var(--g2)'};">
-          Challenger / ATP
-        </button>
-      </div>
-    </div>
-
     <div class="form-grid" style="margin-bottom:16px;">
       <div class="fg"><label>Fecha</label><input type="date" id="sf-fecha" value="${s?s.fecha:today}" /></div>
       <div class="fg"><label>Rival</label><input type="text" id="sf-rival" value="${s?s.rival:''}" placeholder="Nombre del rival" /></div>
@@ -2333,44 +1471,29 @@ function renderStatsForm(p, editIdx) {
       <div class="fg"><label>Marcador</label><input type="text" id="sf-marcador" value="${s?s.marcador:''}" placeholder="Ej: 6-3 4-6 6-2" /></div>
     </div>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;">Estadísticas por set</div>
-      <label style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--ol);color:var(--od);border:1px solid var(--orange);border-radius:var(--rsm);font-size:12px;font-weight:500;cursor:pointer;">
-        📷 Subir foto de stats
-        <input type="file" accept="image/*" style="display:none;" onchange="leerStatsImagen(this,'\${pName}')" />
-      </label>
-    </div>
-    <div id="vision-status" style="display:none;padding:8px 12px;background:var(--bl);color:var(--bd);border-radius:var(--rsm);font-size:12px;margin-bottom:8px;">Leyendo estadísticas...</div>
-    <div class="set-tabs">
+    <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Estadísticas por set</div>
+    <div class="set-tabs" id="set-tabs">
       <button class="set-tab active" onclick="switchSet(1,this)">Set 1</button>
       <button class="set-tab" onclick="switchSet(2,this)">Set 2</button>
       <button class="set-tab" onclick="switchSet(3,this)">Set 3</button>
     </div>
+
     <div id="set-form-content">${renderSetForm(pName, 1)}</div>
 
     <div class="fg" style="margin-top:14px;margin-bottom:14px;">
       <label>Observaciones del partido</label>
-      <textarea id="sf-obs" placeholder="Notas tácticas, mentales, físicas del partido..." style="min-height:70px;width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;">${s?s.observaciones||'':''}</textarea>
+      <textarea id="sf-obs" placeholder="Notas tácticas, mentales, físicas del partido..." style="min-height:70px;width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;"></textarea>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-b btn-sm" onclick="saveStats()">${isEdit?'Guardar cambios':'Guardar estadísticas'}</button>
-      ${isEdit?`<button class="btn btn-red btn-sm" onclick="event.stopPropagation();deleteStats(${editIdx})">Eliminar</button>
-      <button class="btn btn-g btn-sm" onclick="cancelEditStats()">Cancelar</button>`:''}
-    </div>
+    <button class="btn btn-b btn-sm" onclick="saveStats()">Guardar estadísticas</button>
   </div>`;
 }
 
 function renderSetForm(pName, setNum) {
   const sd = setData[setNum] || {j:{},r:{}};
-  if(statsFormato === 'atp') return renderSetFormATP(pName, setNum, sd);
-  return renderSetFormITF(pName, setNum, sd);
-}
-
-function renderSetFormITF(pName, setNum, sd) {
-  return renderSetImportButtons(pName, setNum) + `<div class="set-grid">
+  return `<div class="set-grid">
     <div>
       <div class="set-col-head" style="background:var(--ol);color:var(--od);">${pName}</div>
-      ${SET_FIELDS_ITF.map(f => `
+      ${SET_FIELDS.map(f => `
         <div style="margin-bottom:8px;">
           <div style="font-size:11px;color:var(--g3);margin-bottom:3px;">${f.label}${f.unit?' ('+f.unit+')':''}</div>
           <input type="number" class="sf-inp" id="sf-${setNum}-j-${f.key}"
@@ -2380,7 +1503,7 @@ function renderSetFormITF(pName, setNum, sd) {
     </div>
     <div>
       <div class="set-col-head" style="background:var(--bl);color:var(--bd);">Rival</div>
-      ${SET_FIELDS_ITF.map(f => `
+      ${SET_FIELDS.map(f => `
         <div style="margin-bottom:8px;">
           <div style="font-size:11px;color:var(--g3);margin-bottom:3px;">${f.label}${f.unit?' ('+f.unit+')':''}</div>
           <input type="number" class="sf-inp" id="sf-${setNum}-r-${f.key}"
@@ -2390,72 +1513,6 @@ function renderSetFormITF(pName, setNum, sd) {
     </div>
   </div>`;
 }
-
-function renderSetFormATP(pName, setNum, sd) {
-  const bloques = [
-    {titulo:'Estadísticas de servicio', campos: SET_FIELDS_ATP.servicio},
-    {titulo:'Estadísticas de resto',    campos: SET_FIELDS_ATP.resto},
-    {titulo:'Estadísticas de puntos',   campos: SET_FIELDS_ATP.puntos},
-  ];
-  return renderSetImportButtons(pName, setNum) + `<div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
-      <div class="set-col-head" style="background:var(--ol);color:var(--od);">${pName}</div>
-      <div class="set-col-head" style="background:var(--bl);color:var(--bd);">Rival</div>
-    </div>
-    ${bloques.map(b => `
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding:5px 8px;background:var(--g5);border-radius:var(--rsm);">${b.titulo}</div>
-        ${b.campos.map(f => `
-          <div style="margin-bottom:10px;">
-            <div style="font-size:11px;color:var(--g3);margin-bottom:5px;">${f.label}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              ${['j','r'].map(side => {
-                if(f.tipo==='frac'){
-                  const num = sd[side][f.key+'_num']??'';
-                  const den = sd[side][f.key+'_den']??'';
-                  const pct = (num!==''&&den!==''&&den>0)?Math.round(num/den*100):'';
-                  return `<div style="display:flex;gap:4px;align-items:center;">
-                    <input type="number" id="atp-${setNum}-${side}-${f.key}-num"
-                      style="width:42px;padding:6px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;text-align:center;outline:none;background:#fff;"
-                      value="${num}" placeholder="0"
-                      oninput="saveSetFieldATP(${setNum},'${side}','${f.key}_num',this.value);calcPctATP('${setNum}','${side}','${f.key}')" />
-                    <span style="color:var(--g3);font-size:13px;">/</span>
-                    <input type="number" id="atp-${setNum}-${side}-${f.key}-den"
-                      style="width:42px;padding:6px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;text-align:center;outline:none;background:#fff;"
-                      value="${den}" placeholder="0"
-                      oninput="saveSetFieldATP(${setNum},'${side}','${f.key}_den',this.value);calcPctATP('${setNum}','${side}','${f.key}')" />
-                    <span id="pct-${setNum}-${side}-${f.key}" style="font-size:11px;font-weight:600;color:${side==='j'?'var(--od)':'var(--bd)'};min-width:32px;">${pct!==''?pct+'%':''}</span>
-                  </div>`;
-                } else {
-                  return `<input type="number" id="atp-${setNum}-${side}-${f.key}"
-                    style="padding:7px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;text-align:center;outline:none;background:#fff;"
-                    value="${sd[side][f.key]??''}" placeholder="#"
-                    oninput="saveSetFieldATP(${setNum},'${side}','${f.key}',this.value)" />`;
-                }
-              }).join('')}
-            </div>
-          </div>`).join('')}
-      </div>`).join('')}
-  </div>`;
-}
-
-function saveSetFieldATP(setNum, side, key, val) {
-  if (!setData[setNum]) setData[setNum] = {j:{},r:{}};
-  setData[setNum][side][key] = val !== '' ? parseFloat(val) : null;
-}
-
-function calcPctATP(setNum, side, key) {
-  const numEl = document.getElementById(`atp-${setNum}-${side}-${key}-num`);
-  const denEl = document.getElementById(`atp-${setNum}-${side}-${key}-den`);
-  const pctEl = document.getElementById(`pct-${setNum}-${side}-${key}`);
-  if(!numEl||!denEl||!pctEl) return;
-  const n = parseFloat(numEl.value)||0;
-  const d = parseFloat(denEl.value)||0;
-  pctEl.textContent = d>0 ? Math.round(n/d*100)+'%' : '';
-}
-
-
-
 
 function saveSetField(setNum, side, key, val) {
   if (!setData[setNum]) setData[setNum] = {j:{},r:{}};
@@ -2480,30 +1537,13 @@ async function saveStats() {
 
   // Leer campos del set activo antes de guardar
   [1,2,3].forEach(setNum => {
-    if (!setData[setNum]) setData[setNum] = {j:{},r:{}};
-    if(statsFormato === 'atp') {
-      const allATPFields = [...SET_FIELDS_ATP.servicio,...SET_FIELDS_ATP.resto,...SET_FIELDS_ATP.puntos];
-      allATPFields.forEach(f => {
-        ['j','r'].forEach(side => {
-          if(f.tipo==='frac'){
-            const numEl = document.getElementById(`atp-${setNum}-${side}-${f.key}-num`);
-            const denEl = document.getElementById(`atp-${setNum}-${side}-${f.key}-den`);
-            if(numEl && numEl.value !== '') setData[setNum][side][f.key+'_num'] = parseFloat(numEl.value);
-            if(denEl && denEl.value !== '') setData[setNum][side][f.key+'_den'] = parseFloat(denEl.value);
-          } else {
-            const el = document.getElementById(`atp-${setNum}-${side}-${f.key}`);
-            if(el && el.value !== '') setData[setNum][side][f.key] = parseFloat(el.value);
-          }
-        });
-      });
-    } else {
-      SET_FIELDS_ITF.forEach(f => {
-        const jEl = document.getElementById(`sf-${setNum}-j-${f.key}`);
-        const rEl = document.getElementById(`sf-${setNum}-r-${f.key}`);
-        if (jEl && jEl.value !== '') setData[setNum].j[f.key] = parseFloat(jEl.value);
-        if (rEl && rEl.value !== '') setData[setNum].r[f.key] = parseFloat(rEl.value);
-      });
-    }
+    SET_FIELDS.forEach(f => {
+      const jEl = document.getElementById(`sf-${setNum}-j-${f.key}`);
+      const rEl = document.getElementById(`sf-${setNum}-r-${f.key}`);
+      if (!setData[setNum]) setData[setNum] = {j:{},r:{}};
+      if (jEl && jEl.value !== '') setData[setNum].j[f.key] = parseFloat(jEl.value);
+      if (rEl && rEl.value !== '') setData[setNum].r[f.key] = parseFloat(rEl.value);
+    });
   });
 
   const s = {
@@ -2512,7 +1552,6 @@ async function saveStats() {
     torneo: document.getElementById('sf-torneo')?.value || '',
     resultado: document.getElementById('sf-resultado')?.value || 'G',
     marcador: document.getElementById('sf-marcador')?.value || '',
-    formato: statsFormato,
     sets: JSON.parse(JSON.stringify(setData)),
     observaciones: document.getElementById('sf-obs')?.value || '',
     addedBy: user,
@@ -2559,8 +1598,7 @@ function renderStatHistCard(s, idx) {
   const sets = s.sets || {};
   const setsConDatos = Object.keys(sets).filter(k => {
     const sd = sets[k];
-    if(!sd) return false;
-    return Object.values(sd.j||{}).some(v=>v!=null) || Object.values(sd.r||{}).some(v=>v!=null);
+    return sd && (Object.values(sd.j||{}).some(v=>v!=null) || Object.values(sd.r||{}).some(v=>v!=null));
   });
 
   return `<div class="stat-hist-card" style="cursor:pointer;" onclick="toggleStatDetail(this)">
@@ -2578,15 +1616,10 @@ function renderStatHistCard(s, idx) {
     ${setsConDatos.map(setNum => {
       const sd = sets[setNum];
       const j = sd.j || {}, r = sd.r || {};
-      const isATP = s.formato === 'atp';
-      const fields = isATP ? [...SET_FIELDS_ATP.servicio,...SET_FIELDS_ATP.resto,...SET_FIELDS_ATP.puntos] : SET_FIELDS_ITF;
-      const tieneData = fields.some(f => {
-        if(isATP && f.tipo==='frac') return j[f.key+'_num']!=null||r[f.key+'_num']!=null;
-        return j[f.key]!=null||r[f.key]!=null;
-      });
+      const tieneData = SET_FIELDS.some(f => j[f.key]!=null || r[f.key]!=null);
       if (!tieneData) return '';
       return `<div style="margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Set ${setNum} ${isATP?'<span style="background:var(--bl);color:var(--bd);padding:1px 6px;border-radius:4px;font-size:10px;">ATP</span>':''}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Set ${setNum}</div>
         <table class="stat-set-table">
           <thead>
             <tr>
@@ -2596,18 +1629,15 @@ function renderStatHistCard(s, idx) {
             </tr>
           </thead>
           <tbody>
-            ${fields.map(f => {
-              if(isATP && f.tipo==='frac'){
-                const jn=j[f.key+'_num'],jd=j[f.key+'_den'],rn=r[f.key+'_num'],rd=r[f.key+'_den'];
-                if(jn==null&&rn==null) return '';
-                const vj=jn!=null?(jd!=null?jn+'/'+jd+' ('+Math.round(jn/jd*100)+'%)':jn):'—';
-                const vr=rn!=null?(rd!=null?rn+'/'+rd+' ('+Math.round(rn/rd*100)+'%)':rn):'—';
-                return `<tr><td class="lbl-col">${f.label}</td><td class="val-j">${vj}</td><td class="val-r">${vr}</td></tr>`;
-              }
-              if(j[f.key]==null&&r[f.key]==null) return '';
-              const vj=j[f.key]!=null?j[f.key]+(f.unit||''):'—';
-              const vr=r[f.key]!=null?r[f.key]+(f.unit||''):'—';
-              return `<tr><td class="lbl-col">${f.label}</td><td class="val-j">${vj}</td><td class="val-r">${vr}</td></tr>`;
+            ${SET_FIELDS.map(f => {
+              if (j[f.key]==null && r[f.key]==null) return '';
+              const vj = j[f.key]!=null ? j[f.key]+(f.unit||'') : '—';
+              const vr = r[f.key]!=null ? r[f.key]+(f.unit||'') : '—';
+              return `<tr>
+                <td class="lbl-col">${f.label}</td>
+                <td class="val-j">${vj}</td>
+                <td class="val-r">${vr}</td>
+              </tr>`;
             }).join('')}
           </tbody>
         </table>
