@@ -186,6 +186,20 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 .input-row input:focus{border-color:var(--blue);background:#fff;}
 .updated-by{font-size:11px;color:var(--g3);margin-top:8px;font-style:italic;}
 
+/* ── ASISTENCIA ── */
+.att-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .13s;}
+.att-row:hover{background:var(--g5);}
+.att-row:last-child{border-bottom:none;}
+.att-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;}
+.att-chip-empty{background:var(--g5);color:var(--g3);border:1px solid var(--border);}
+.att-state-btn{padding:7px 13px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:all .13s;}
+.att-inline{background:#fafaf8;border-bottom:1px solid var(--border);padding:14px 16px;animation:fadeIn .15s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.att-month-cell{min-height:50px;border-radius:var(--rsm);border:1.5px solid var(--border);padding:4px;display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--white);}
+.att-month-cell.today{border-color:var(--orange);}
+.att-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.att-dot-empty{width:10px;height:10px;border-radius:50%;background:var(--border);display:inline-block;}
+
 /* ESTADÍSTICAS */
 .set-tabs{display:flex;gap:3px;margin-bottom:14px;}
 .set-tab{padding:5px 14px;border-radius:var(--rsm);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--g3);transition:all .13s;}
@@ -264,6 +278,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <button class="nav-btn active" onclick="navTo('dashboard')">◈ &nbsp;Dashboard</button>
       <button class="nav-btn" onclick="navTo('coaching')">★ &nbsp;Coaching</button>
       <button class="nav-btn" onclick="navTo('scouting')">◎ &nbsp;Scouting</button>
+      <button class="nav-btn" onclick="navTo('attendance')">✓ &nbsp;Asistencia</button>
       <div class="nav-lbl" style="margin-top:14px;">Jugadores</div>
       <div id="player-nav"></div>
       <button class="nav-btn" style="margin-top:8px;color:var(--orange);" onclick="openAddPlayer()">+ Agregar jugador</button>
@@ -282,6 +297,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <button class="mnav-btn" id="mnav-coaching" onclick="navTo('coaching')"><span class="mnav-icon">★</span>Coaching</button>
       <button class="mnav-btn" id="mnav-players" onclick="toggleDrawer()"><span class="mnav-icon">👥</span>Jugadores</button>
       <button class="mnav-btn" id="mnav-scouting" onclick="navTo('scouting')"><span class="mnav-icon">◎</span>Scouting</button>
+      <button class="mnav-btn" id="mnav-attendance" onclick="navTo('attendance')"><span class="mnav-icon">✓</span>Asistencia</button>
     </div>
   </nav>
 
@@ -343,6 +359,11 @@ let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
 let saveTimer=null,editingPlayerId=null;
 // Selección múltiple calendario
 let selMode=false,selectedDays=new Set();
+// Asistencia
+let attView='day',attDate=todayStr(),attMonth=new Date(),attPid=0,attOpenPid=null;
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+S2(d.getMonth()+1)+'-'+S2(d.getDate());}
+function S2(n){return String(n).padStart(2,'0');}
+function dStr(d){return d.getFullYear()+'-'+S2(d.getMonth()+1)+'-'+S2(d.getDate());}
 
 // ── AUTH ──────────────────────────────────────────────────
 async function doLogin(){
@@ -458,12 +479,211 @@ function renderDrawerList(){
   dl.innerHTML=data.players.map((p,i)=>`<div class="drawer-item${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};width:36px;height:36px;font-size:12px;">${ini(p.name)}</div><div><div class="drawer-name">${p.name}</div><div class="drawer-rank">${p.ranking}</div></div></div>`).join('');
 }
 function updateMobileNav(){
-  ['dashboard','coaching','scouting'].forEach(p=>{const b=document.getElementById('mnav-'+p);if(b)b.classList.toggle('active',page===p);});
+  ['dashboard','coaching','scouting','attendance'].forEach(p=>{const b=document.getElementById('mnav-'+p);if(b)b.classList.toggle('active',page===p);});
   const pb=document.getElementById('mnav-players');if(pb)pb.classList.toggle('active',page==='player');
 }
 function toggleDrawer(){const dr=document.getElementById('player-drawer'),ov=document.getElementById('drawer-overlay');dr.classList.toggle('open');ov.classList.toggle('open');}
 function closeDrawer(){document.getElementById('player-drawer').classList.remove('open');document.getElementById('drawer-overlay').classList.remove('open');}
-function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='player')m.innerHTML=renderPlayer();}
+function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='player')m.innerHTML=renderPlayer();else if(page==='attendance')m.innerHTML=renderAttendance();}
+// también actualizar nav-btn activo para asistencia
+const _origRenderPlayerNav=renderPlayerNav;
+function renderPlayerNav(){_origRenderPlayerNav();document.querySelectorAll('.nav-btn').forEach(b=>{if(b.textContent.trim().includes('Asistencia'))b.classList.toggle('active',page==='attendance');});}
+
+// ── ASISTENCIA ────────────────────────────────────────────
+const ATT_STATES={
+  present:{label:'Presente',color:'#27ae60',bg:'#eafaf1',border:'#a9dfbf'},
+  injury:{label:'Lesión',color:'#FF6B00',bg:'#FFF0E6',border:'#ffc09c'},
+  tournament:{label:'Torneo',color:'#1DA1D6',bg:'#E3F4FB',border:'#9dd8f0'},
+  rest:{label:'Descanso',color:'#8e44ad',bg:'#f4eafb',border:'#c7a0e0'},
+  unjustified:{label:'Sin justificar',color:'#e74c3c',bg:'#fdeaea',border:'#f5b7b1'}
+};
+
+function getAtt(ds,pidx,sh){return data.attendance?.[ds]?.[pidx]?.[sh]||null;}
+function setAtt(ds,pidx,sh,state){
+  if(!data.attendance)data.attendance={};
+  if(!data.attendance[ds])data.attendance[ds]={};
+  if(!data.attendance[ds][pidx])data.attendance[ds][pidx]={};
+  data.attendance[ds][pidx][sh]=state;
+  scheduleSync();renderMain();
+}
+function attClearDay(ds){
+  if(data.attendance)delete data.attendance[ds];
+  attOpenPid=null;scheduleSync();renderMain();
+}
+function attMarkAllPresent(ds){
+  if(!data.attendance)data.attendance={};
+  if(!data.attendance[ds])data.attendance[ds]={};
+  data.players.forEach((_,i)=>{data.attendance[ds][i]={t1:'present',t2:'present'};});
+  scheduleSync();renderMain();
+}
+function attDateLabel(ds){
+  const d=new Date(ds+'T12:00:00');
+  return DAYS[d.getDay()]+' '+d.getDate()+' de '+MONTHS_FULL[d.getMonth()];
+}
+function attDot(state){
+  if(!state)return`<span class="att-dot-empty"></span>`;
+  return`<span class="att-dot" style="background:${ATT_STATES[state].color};" title="${ATT_STATES[state].label}"></span>`;
+}
+function attBadge(state){
+  if(!state)return`<span class="att-chip att-chip-empty">—</span>`;
+  const s=ATT_STATES[state];
+  return`<span class="att-chip" style="background:${s.bg};color:${s.color};border:1px solid ${s.border};">${s.label}</span>`;
+}
+
+function renderAttendance(){
+  return`
+<div class="page-header">
+  <div><div class="page-title">✓ Asistencia</div><div class="page-sub">Control de presencia diaria</div></div>
+  <div class="tab-row">
+    <button class="tab-btn${attView==='day'?' active':''}" onclick="attView='day';renderMain()">Vista diaria</button>
+    <button class="tab-btn${attView==='month'?' active':''}" onclick="attView='month';renderMain()">Vista mensual</button>
+  </div>
+</div>
+${attView==='day'?renderAttDay():renderAttMonth()}`;
+}
+
+function renderAttDay(){
+  const today=todayStr();
+  const prev=new Date(attDate+'T12:00:00');prev.setDate(prev.getDate()-1);
+  const next=new Date(attDate+'T12:00:00');next.setDate(next.getDate()+1);
+
+  const rows=data.players.map((p,i)=>{
+    const att=data.attendance?.[attDate]?.[i]||{};
+    const isOpen=attOpenPid===i;
+    const panel=isOpen?`
+<div class="att-inline">
+  <div style="margin-bottom:14px;">
+    <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">1er turno</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;">
+      ${Object.entries(ATT_STATES).map(([k,v])=>`<button class="att-state-btn"
+        onclick="event.stopPropagation();setAtt('${attDate}',${i},'t1','${k}')"
+        style="border:1.5px solid ${att.t1===k?v.border:'var(--border)'};background:${att.t1===k?v.bg:'transparent'};color:${att.t1===k?v.color:'var(--g3)'};">${v.label}</button>`).join('')}
+    </div>
+  </div>
+  <div>
+    <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">2do turno</div>
+    <div style="display:flex;flex-wrap:wrap;gap:7px;">
+      ${Object.entries(ATT_STATES).map(([k,v])=>`<button class="att-state-btn"
+        onclick="event.stopPropagation();setAtt('${attDate}',${i},'t2','${k}')"
+        style="border:1.5px solid ${att.t2===k?v.border:'var(--border)'};background:${att.t2===k?v.bg:'transparent'};color:${att.t2===k?v.color:'var(--g3)'};">${v.label}</button>`).join('')}
+    </div>
+  </div>
+</div>`:'';
+    return`<div>
+<div class="att-row" onclick="attOpenPid=${isOpen?'null':i};renderMain()">
+  <div class="pav" style="background:${COLORS[i%COLORS.length]};width:34px;height:34px;font-size:11px;flex-shrink:0;">${ini(p.name)}</div>
+  <div style="flex:1;min-width:0;">
+    <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</div>
+    <div style="font-size:11px;color:var(--g3);">${p.ranking}</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">${attBadge(att.t1||null)}${attBadge(att.t2||null)}</div>
+  <div style="color:var(--g4);font-size:13px;margin-left:6px;">${isOpen?'▲':'▼'}</div>
+</div>
+${panel}
+</div>`;
+  }).join('');
+
+  return`
+<div class="card" style="padding:0;overflow:hidden;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="btn btn-g btn-sm" onclick="attDate='${dStr(prev)}';attOpenPid=null;renderMain()">←</button>
+      <span style="font-size:14px;font-weight:600;">${attDateLabel(attDate)}</span>
+      <button class="btn btn-g btn-sm" onclick="attDate='${dStr(next)}';attOpenPid=null;renderMain()">→</button>
+      ${attDate!==today?`<button class="btn btn-b btn-sm" onclick="attDate='${today}';attOpenPid=null;renderMain()">Hoy</button>`:''}
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-g btn-sm" onclick="attMarkAllPresent('${attDate}')">✓ Todos presentes</button>
+      <button class="btn btn-red btn-sm" onclick="attClearDay('${attDate}')">✕ Limpiar día</button>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;padding:7px 16px 7px;border-bottom:1px solid var(--border);background:var(--g5);">
+    <span style="flex:1;font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;">Jugador</span>
+    <span style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-right:90px;">1er turno &nbsp; 2do turno</span>
+  </div>
+  ${rows}
+</div>`;
+}
+
+function renderAttMonth(){
+  const year=attMonth.getFullYear(),month=attMonth.getMonth();
+  const prevM=new Date(year,month-1,1),nextM=new Date(year,month+1,1);
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const firstDay=new Date(year,month,1).getDay();
+  const today=new Date();
+  const p=data.players[attPid];
+
+  // Stats
+  const counts={present:0,injury:0,tournament:0,rest:0,unjustified:0};
+  let totalShifts=0;
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`${year}-${S2(month+1)}-${S2(d)}`;
+    const pa=data.attendance?.[ds]?.[attPid]||{};
+    ['t1','t2'].forEach(sh=>{if(pa[sh]){counts[pa[sh]]=(counts[pa[sh]]||0)+1;totalShifts++;}});
+  }
+  const pct=totalShifts>0?Math.round((counts.present||0)/totalShifts*100):0;
+  const pctColor=pct>=80?'#27ae60':pct>=50?'var(--orange)':'#e74c3c';
+
+  // Calendar
+  let cells='';
+  for(let i=0;i<firstDay;i++)cells+=`<div></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`${year}-${S2(month+1)}-${S2(d)}`;
+    const pa=data.attendance?.[ds]?.[attPid]||{};
+    const isToday=(d===today.getDate()&&month===today.getMonth()&&year===today.getFullYear());
+    cells+=`<div class="att-month-cell${isToday?' today':''}">
+      <span style="font-size:12px;font-weight:600;color:var(--gray);">${d}</span>
+      <div style="display:flex;gap:3px;">${attDot(pa.t1||null)}${attDot(pa.t2||null)}</div>
+    </div>`;
+  }
+
+  return`
+<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;">
+  <div style="flex:1;min-width:280px;">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);">
+        <button class="btn btn-g btn-sm" onclick="attMonth=new Date(${prevM.getFullYear()},${prevM.getMonth()},1);renderMain()">←</button>
+        <span style="font-size:14px;font-weight:600;">${MONTHS_FULL[month]} ${year}</span>
+        <button class="btn btn-g btn-sm" onclick="attMonth=new Date(${nextM.getFullYear()},${nextM.getMonth()},1);renderMain()">→</button>
+      </div>
+      <div style="padding:12px 14px;">
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Jugador</label>
+          <select onchange="attPid=+this.value;renderMain()">
+            ${data.players.map((pl,i)=>`<option value="${i}"${i===attPid?' selected':''}>${pl.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="cal-grid">
+          ${DAYS.map(d=>`<div class="cal-dh">${d}</div>`).join('')}
+          ${cells}
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+          ${Object.entries(ATT_STATES).map(([,v])=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--g2);"><span class="att-dot" style="background:${v.color};"></span>${v.label}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="width:220px;min-width:200px;">
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">${p?p.name:''}</div>
+      <div style="font-size:11px;color:var(--g3);margin-bottom:16px;">${MONTHS_FULL[month]} ${year}</div>
+      <div style="text-align:center;margin-bottom:18px;">
+        <div style="font-size:40px;font-weight:700;color:${pctColor};font-family:'DM Mono',monospace;line-height:1;">${pct}%</div>
+        <div style="font-size:12px;color:var(--g3);margin-top:4px;">asistencia</div>
+        <div style="font-size:11px;color:var(--g3);">${counts.present||0} de ${totalShifts} turnos registrados</div>
+      </div>
+      ${Object.entries(ATT_STATES).map(([k,v])=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="att-dot" style="background:${v.color};"></span>
+          <span style="font-size:13px;">${v.label}</span>
+        </div>
+        <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;">${counts[k]||0}</span>
+      </div>`).join('')}
+    </div>
+  </div>
+</div>`;
+}
 
 // ── DASHBOARD ─────────────────────────────────────────────
 function renderDashboard(){
