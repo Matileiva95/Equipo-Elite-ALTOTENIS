@@ -472,7 +472,7 @@ function renderAll(){renderPlayerNav();renderDrawerList();renderMain();updateMob
 function renderPlayerNav(){
   const nav=document.getElementById('player-nav');if(!nav)return;
   nav.innerHTML=data.players.map((p,i)=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name.split(' ')[0]}</span></button>`).join('');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting'][i]===page));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','attendance'][i]===page));
 }
 function renderDrawerList(){
   const dl=document.getElementById('drawer-list');if(!dl)return;
@@ -486,8 +486,6 @@ function toggleDrawer(){const dr=document.getElementById('player-drawer'),ov=doc
 function closeDrawer(){document.getElementById('player-drawer').classList.remove('open');document.getElementById('drawer-overlay').classList.remove('open');}
 function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='player')m.innerHTML=renderPlayer();else if(page==='attendance')m.innerHTML=renderAttendance();}
 // también actualizar nav-btn activo para asistencia
-const _origRenderPlayerNav=renderPlayerNav;
-function renderPlayerNav(){_origRenderPlayerNav();document.querySelectorAll('.nav-btn').forEach(b=>{if(b.textContent.trim().includes('Asistencia'))b.classList.toggle('active',page==='attendance');});}
 
 // ── ASISTENCIA ────────────────────────────────────────────
 const ATT_STATES={
