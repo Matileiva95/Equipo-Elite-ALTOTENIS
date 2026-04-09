@@ -1468,16 +1468,17 @@ function renderPlayer(){
       <button class="tab-btn${dtab==='stats'?' active':''}" onclick="switchDtab('stats')">Estadísticas</button>
       <button class="tab-btn${dtab==='rivales'?' active':''}" onclick="switchDtab('rivales')">Rivales</button>
       <button class="tab-btn${dtab==='notas'?' active':''}" onclick="switchDtab('notas')">Notas</button>
+      <button class="tab-btn${dtab==='carga'?' active':''}" onclick="switchDtab('carga')">Carga</button>
     </div>
     <div id="dtab-content">${renderDtab()}</div>`;
 }
 
 function switchDtab(t){
   dtab=t;selMode=false;selectedDays=new Set();
-  document.querySelectorAll('.tab-btn').forEach(b=>{const m={perfil:'Perfil',plan:'Plan semanal',calendario:'Calendario',notas:'Notas'};b.classList.toggle('active',b.textContent===m[t]);});
+  document.querySelectorAll('.tab-btn').forEach(b=>{const m={perfil:'Perfil',plan:'Plan semanal',calendario:'Calendario',notas:'Notas',carga:'Carga',torneos:'Torneos',stats:'Estadísticas',rivales:'Rivales'};b.classList.toggle('active',b.textContent===m[t]);});
   const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
 }
-function renderDtab(){const p=data.players[pid];if(dtab==='perfil')return renderPerfil(p);if(dtab==='plan')return renderPlan(p);if(dtab==='calendario')return renderCal(p);if(dtab==='torneos')return renderTorneos(p);if(dtab==='stats')return renderStats(p);if(dtab==='rivales')return renderPlayerScouting(p);if(dtab==='notas')return renderNotas(p);return '';}
+function renderDtab(){const p=data.players[pid];if(dtab==='perfil')return renderPerfil(p);if(dtab==='plan')return renderPlan(p);if(dtab==='calendario')return renderCal(p);if(dtab==='torneos')return renderTorneos(p);if(dtab==='stats')return renderStats(p);if(dtab==='rivales')return renderPlayerScouting(p);if(dtab==='notas')return renderNotas(p);if(dtab==='carga')return renderCarga(p);return '';}
 
 // PERFIL
 function renderPerfil(p){
@@ -1865,6 +1866,184 @@ async function addNote(){
   scheduleSync();input.value='';
   const list=document.getElementById('notes-list');
   if(list)list.innerHTML=data.players[pid].notes.map(n=>`<div class="note-item"><div class="note-text">${n.text}</div><div class="note-meta">${n.date}${n.author?' · '+n.author:''}</div></div>`).join('');
+}
+
+// ── CARGA DE ENTRENAMIENTO ────────────────────────────────
+const RPE_COLORS = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
+const RPE_LABELS = ['','Muy tranquilo','Tranquilo','Normal','Exigente','Muy exigente'];
+const MOOD_ICONS = ['','😞','😐','😊'];
+const CARGA_TIPOS = ['Técnico','Táctico','Físico','Mental','Competencia'];
+let _cargaRpe = 0;
+let _cargaMood = 0;
+
+function renderCarga(p) {
+  const loads = p.trainingLoad || [];
+  const today = new Date().toISOString().slice(0,10);
+
+  // Last 14 days for chart
+  const chartDays = [];
+  for(let i=13; i>=0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
+    const key = d.toISOString().slice(0,10);
+    const sessions = loads.filter(l => l.date === key);
+    const avgRpe = sessions.length ? sessions.reduce((a,b)=>a+b.rpe,0)/sessions.length : null;
+    chartDays.push({ key, avgRpe, label: String(d.getDate()) });
+  }
+
+  // High load alert: last 5 days avg >= 4
+  const last5vals = chartDays.slice(-5).filter(d=>d.avgRpe!==null).map(d=>d.avgRpe);
+  const avg5 = last5vals.length ? last5vals.reduce((a,b)=>a+b,0)/last5vals.length : 0;
+  const highLoad = avg5 >= 4;
+
+  // SVG chart
+  const W=440, H=72, pX=18, pY=8;
+  const iW=W-2*pX, iH=H-2*pY;
+  const pts = chartDays.map((d,i)=>({
+    x: pX + i*(iW/13),
+    y: d.avgRpe!=null ? pY + iH - ((d.avgRpe-1)/4)*iH : null,
+    avgRpe: d.avgRpe, label: d.label
+  }));
+  const validPts = pts.filter(pt=>pt.y!=null);
+  const pathD = validPts.map((pt,i)=>`${i===0?'M':'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
+  const circles = pts.map(pt=>pt.y!=null?`<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${RPE_COLORS[Math.round(pt.avgRpe)]}" stroke="#fff" stroke-width="1.5"/>`:'').join('');
+  const labels = pts.map(pt=>`<text x="${pt.x.toFixed(1)}" y="${H+10}" font-size="8" text-anchor="middle" fill="#bbb">${pt.label}</text>`).join('');
+  const yLines = [1,2,3,4,5].map(v=>{
+    const y=(pY + iH - ((v-1)/4)*iH).toFixed(1);
+    return `<line x1="${pX}" y1="${y}" x2="${W-pX}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/><text x="${pX-4}" y="${parseFloat(y)+3}" font-size="7" text-anchor="end" fill="#ccc">${v}</text>`;
+  }).join('');
+  const svg = `<svg viewBox="0 0 ${W} ${H+14}" width="100%" style="display:block;overflow:visible;">
+    ${yLines}
+    ${pathD?`<path d="${pathD}" fill="none" stroke="#1DA1D6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`:''}
+    ${circles}
+    ${labels}
+  </svg>`;
+
+  // Last 10 sessions
+  const recent = loads.slice(0,10);
+
+  return `
+    ${highLoad?`<div style="background:#fff5f5;border:1px solid #f5c6c6;border-radius:var(--rsm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#c0392b;">⚠️ <strong>Carga alta acumulada</strong> — RPE promedio últimos 5 días: ${avg5.toFixed(1)}</div>`:''}
+
+    <div class="card" style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">RPE — últimos 14 días</div>
+      <div style="padding:0 4px;">${svg}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+        ${RPE_COLORS.slice(1).map((c,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--g3);"><div style="width:9px;height:9px;border-radius:50%;background:${c};"></div>${i+1}</div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:14px;">Registrar sesión</div>
+
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">FECHA</div>
+        <input type="date" id="carga-fecha" value="${today}" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;"/>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">RPE — PERCEPCIÓN DE ESFUERZO</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${RPE_COLORS.slice(1).map((c,i)=>`<button id="rpe-btn-${i+1}" onclick="selRpe(${i+1})" style="padding:7px 12px;border-radius:var(--rsm);border:2px solid ${c};background:transparent;color:${c};font-size:12px;font-weight:600;cursor:pointer;transition:all .13s;">${i+1} — ${RPE_LABELS[i+1]}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">ESTADO DE ÁNIMO</div>
+        <div style="display:flex;gap:8px;">
+          ${MOOD_ICONS.slice(1).map((ico,i)=>`<button id="mood-btn-${i+1}" onclick="selMood(${i+1})" style="padding:8px 18px;border-radius:var(--rsm);border:2px solid var(--border);background:transparent;font-size:20px;cursor:pointer;transition:all .13s;">${ico}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">DURACIÓN</div>
+        <select id="carga-dur" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;">
+          <option value="60">60 min</option>
+          <option value="90" selected>90 min</option>
+          <option value="120">120 min</option>
+          <option value="150">150 min</option>
+          <option value="180">180 min</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">TIPO DE SESIÓN</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="tipo-btns">
+          ${CARGA_TIPOS.map(t=>`<button onclick="toggleTipo(this)" data-tipo="${t}" data-active="0" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--g3);font-size:12px;cursor:pointer;transition:all .13s;">${t}</button>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">NOTAS (OPCIONAL)</div>
+        <input type="text" id="carga-notas" placeholder="Observaciones de la sesión..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;box-sizing:border-box;"/>
+      </div>
+
+      <button class="btn btn-o" onclick="registrarCarga()">Registrar sesión</button>
+    </div>
+
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:14px;">Historial</div>
+      ${recent.length===0?'<div class="empty">Sin sesiones registradas</div>':
+        recent.map((s,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:6px;flex-wrap:wrap;">
+          <div style="font-size:12px;color:var(--g3);min-width:80px;">${s.date}</div>
+          <span style="padding:2px 9px;border-radius:20px;background:${RPE_COLORS[s.rpe]};color:#fff;font-size:12px;font-weight:700;">RPE ${s.rpe}</span>
+          <span style="font-size:17px;">${MOOD_ICONS[s.mood]||''}</span>
+          <span style="font-size:12px;color:var(--g3);">${s.duration} min</span>
+          <span style="font-size:12px;color:var(--g2);flex:1;">${(s.tipos||[]).join(', ')||'—'}</span>
+          ${s.notas?`<div style="font-size:11px;color:var(--g3);width:100%;margin-top:2px;">📝 ${s.notas}</div>`:''}
+          <button onclick="eliminarCarga(${i})" style="padding:2px 8px;border:1px solid var(--border);border-radius:var(--rsm);background:transparent;color:var(--g3);font-size:11px;cursor:pointer;">✕</button>
+        </div>`).join('')
+      }
+    </div>`;
+}
+
+function selRpe(v) {
+  _cargaRpe = v;
+  [1,2,3,4,5].forEach(n=>{
+    const btn=document.getElementById(`rpe-btn-${n}`); if(!btn)return;
+    const c=RPE_COLORS[n];
+    btn.style.background = n===v?c:'transparent';
+    btn.style.color = n===v?'#fff':c;
+  });
+}
+
+function selMood(v) {
+  _cargaMood = v;
+  [1,2,3].forEach(n=>{
+    const btn=document.getElementById(`mood-btn-${n}`); if(!btn)return;
+    btn.style.background = n===v?'var(--g4)':'transparent';
+    btn.style.borderColor = n===v?'var(--gray)':'var(--border)';
+  });
+}
+
+function toggleTipo(btn) {
+  const active = btn.dataset.active==='1';
+  btn.dataset.active = active?'0':'1';
+  btn.style.background = active?'transparent':'var(--orange)';
+  btn.style.color = active?'var(--g3)':'#fff';
+  btn.style.borderColor = active?'var(--border)':'var(--orange)';
+}
+
+function registrarCarga() {
+  if(!_cargaRpe){alert('Seleccioná un RPE');return;}
+  if(!_cargaMood){alert('Seleccioná el estado de ánimo');return;}
+  const fecha=document.getElementById('carga-fecha')?.value||new Date().toISOString().slice(0,10);
+  const dur=parseInt(document.getElementById('carga-dur')?.value||'90');
+  const notas=document.getElementById('carga-notas')?.value?.trim()||'';
+  const tipos=Array.from(document.querySelectorAll('#tipo-btns button')).filter(b=>b.dataset.active==='1').map(b=>b.dataset.tipo);
+  const p=data.players[pid];
+  if(!p.trainingLoad)p.trainingLoad=[];
+  p.trainingLoad.unshift({date:fecha,rpe:_cargaRpe,mood:_cargaMood,duration:dur,tipos,notas});
+  scheduleSync();
+  _cargaRpe=0;_cargaMood=0;
+  const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
+}
+
+function eliminarCarga(idx) {
+  const p=data.players[pid];
+  if(!p.trainingLoad)return;
+  p.trainingLoad.splice(idx,1);
+  scheduleSync();
+  const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
 }
 
 // ── AGREGAR/EDITAR JUGADOR ────────────────────────────────
