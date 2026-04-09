@@ -394,6 +394,8 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script>
 const BACKEND_URL = "https://courtiq-backend-hrdc.onrender.com";
 const ACADEMY_ID = "2d20c092-bfb8-41ca-8342-c2b5d34fde8c";
@@ -772,9 +774,10 @@ function renderAsistencia() {
       <div class="page-sub">Registro diario por jugador y turno</div></div>
     </div>
 
-    <div style="display:flex;gap:6px;margin-bottom:16px;">
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
       <button class="bib-filter-btn${asistVista==='dia'?' active':''}" onclick="asistVista='dia';renderMain();">Vista diaria</button>
       <button class="bib-filter-btn${asistVista==='mes'?' active':''}" onclick="asistVista='mes';renderMain();">Vista mensual</button>
+      <button class="btn btn-sm" style="margin-left:auto;background:#eaf2ff;color:#1a5bc4;border:1px solid #b0c9f5;" onclick="generarReporteSecretaria()">📄 Reporte secretaría</button>
     </div>
 
     ${asistVista==='dia' ? renderAsistDia() : renderAsistMes()}
@@ -960,10 +963,13 @@ function renderAsistMes() {
           <div class="asist-date-lbl">${mesNombre} ${año}</div>
           <button class="asist-nav-btn" onclick="cambiarMes(1)">→</button>
         </div>
-        <select onchange="asistPlayerIdx=parseInt(this.value);renderMain();"
-          style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;">
-          ${data.players.map((pl,i)=>`<option value="${i}" ${i===asistPlayerIdx?'selected':''}>${pl.name}</option>`).join('')}
-        </select>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select onchange="asistPlayerIdx=parseInt(this.value);renderMain();"
+            style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;">
+            ${data.players.map((pl,i)=>`<option value="${i}" ${i===asistPlayerIdx?'selected':''}>${pl.name}</option>`).join('')}
+          </select>
+          <button class="btn btn-sm" style="background:#eaf2ff;color:#1a5bc4;border:1px solid #b0c9f5;" onclick="generarReporteJugador()">📄 Reporte jugador</button>
+        </div>
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
@@ -1031,6 +1037,251 @@ function cambiarMes(delta) {
   renderMain();
 }
 
+
+function generarReporteSecretaria() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const año = asistMes.getFullYear();
+  const mes = asistMes.getMonth();
+  const mesNombre = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][mes];
+  const diasEnMes = new Date(año, mes+1, 0).getDate();
+
+  // Collect weekday columns
+  const cols = [];
+  for(let d=1; d<=diasEnMes; d++){
+    const dt = new Date(año, mes, d);
+    const dow = dt.getDay();
+    if(dow>=1 && dow<=5) cols.push({d, key:`${año}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`, dow});
+  }
+
+  const pageW = 297; const pageH = 210;
+  const marginL = 10; const marginR = 10; const marginT = 12;
+
+  // Title
+  doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.setTextColor(30,30,30);
+  doc.text(`Reporte de Asistencia — ${mesNombre} ${año}`, marginL, marginT+4);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.setTextColor(100,100,100);
+  doc.text(`Generado el ${new Date().toLocaleDateString('es-AR')}`, pageW-marginR, marginT+4, {align:'right'});
+
+  // Stats boxes
+  const players = data.players;
+  let totalAsist=0, totalSes=0, conFaltas=0, ok=0;
+  players.forEach(p=>{
+    const asist = p.asistencia||{};
+    let pSes=0, pPres=0;
+    cols.forEach(c=>{
+      const dd = asist[c.key]||{};
+      ['t1','t2'].forEach(t=>{ if(dd[t]){pSes++;if(dd[t]==='p')pPres++;} });
+    });
+    totalSes+=pSes; totalAsist+=pPres;
+    const pct = pSes>0?Math.round((pPres/pSes)*100):100;
+    if(pct<100) conFaltas++; else ok++;
+  });
+  const avgPct = totalSes>0?Math.round((totalAsist/totalSes)*100):0;
+
+  const boxY = marginT+9; const boxH2 = 12; const boxW = 38;
+  const boxes = [
+    {label:'Total jugadores', val:String(players.length), color:[41,182,246]},
+    {label:'Asistencia promedio', val:`${avgPct}%`, color: avgPct>=90?[39,174,96]:avgPct>=70?[243,156,18]:[231,76,60]},
+    {label:'Con ausencias', val:String(conFaltas), color:[231,76,60]},
+    {label:'Sin ausencias', val:String(ok), color:[39,174,96]},
+  ];
+  boxes.forEach((b,i)=>{
+    const bx = marginL + i*(boxW+4);
+    doc.setFillColor(...b.color); doc.roundedRect(bx, boxY, boxW, boxH2, 2, 2, 'F');
+    doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+    doc.text(b.val, bx+boxW/2, boxY+7.5, {align:'center'});
+    doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(b.label, bx+boxW/2, boxY+11, {align:'center'});
+  });
+
+  // Table
+  const tableStartY = boxY + boxH2 + 5;
+  const dayLabels = cols.map(c=>{ const names=['','L','M','X','J','V']; return `${names[c.dow]}\n${c.d}`; });
+  const head = [['Jugador', ...dayLabels, 'Asist%', 'Faltas']];
+  const body = players.map(p=>{
+    const asist = p.asistencia||{};
+    let pSes=0, pPres=0;
+    const row = [p.name];
+    cols.forEach(c=>{
+      const dd = asist[c.key]||{};
+      const t1 = dd.t1||''; const t2 = dd.t2||'';
+      const both = t1 && t2;
+      let cell = '';
+      if(t1===t2&&t1) cell = t1.toUpperCase();
+      else if(t1&&t2) cell = `${t1.toUpperCase()}/${t2.toUpperCase()}`;
+      else if(t1) cell = t1.toUpperCase();
+      else if(t2) cell = t2.toUpperCase();
+      row.push(cell);
+      [t1,t2].forEach(t=>{ if(t){pSes++;if(t==='p')pPres++;} });
+    });
+    const pct = pSes>0?Math.round((pPres/pSes)*100):'-';
+    const faltas = pSes>0?(pSes-pPres):0;
+    row.push(pct==='-'?'-':`${pct}%`);
+    row.push(String(faltas));
+    return row;
+  });
+
+  const statusColors = {p:[39,174,96],l:[243,156,18],t:[29,161,214],d:[142,68,173],s:[231,76,60]};
+  doc.autoTable({
+    head, body,
+    startY: tableStartY,
+    margin:{left:marginL, right:marginR},
+    styles:{fontSize:7,cellPadding:1.5,halign:'center',valign:'middle'},
+    headStyles:{fillColor:[52,73,94],textColor:255,fontSize:7,fontStyle:'bold',halign:'center'},
+    columnStyles:{
+      0:{halign:'left',fontStyle:'bold',cellWidth:32},
+      [cols.length+1]:{fontStyle:'bold'},
+      [cols.length+2]:{fontStyle:'bold'},
+    },
+    didDrawCell(data){
+      if(data.section==='body' && data.column.index>=1 && data.column.index<=cols.length){
+        const val = (data.cell.raw||'').split('/')[0].toLowerCase();
+        const col = statusColors[val];
+        if(col){
+          doc.setFillColor(...col);
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height,'F');
+          doc.setTextColor(255,255,255);
+          doc.setFontSize(6.5);
+          doc.text(String(data.cell.raw||''), data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+0.8, {align:'center'});
+        }
+      }
+      if(data.section==='body' && data.column.index===cols.length+1){
+        const pct = parseInt(data.cell.raw)||0;
+        if(data.cell.raw!=='-'){
+          const col = pct>=90?[39,174,96]:pct>=70?[243,156,18]:[231,76,60];
+          doc.setTextColor(...col);
+          doc.setFontSize(7); doc.setFont('helvetica','bold');
+          doc.text(String(data.cell.raw||''), data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+0.8, {align:'center'});
+        }
+      }
+    },
+    alternateRowStyles:{fillColor:[248,249,250]},
+  });
+
+  doc.save(`Asistencia_Secretaria_${mesNombre}_${año}.pdf`);
+}
+
+function generarReporteJugador() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const p = data.players[asistPlayerIdx];
+  if(!p) return;
+  const año = asistMes.getFullYear();
+  const mes = asistMes.getMonth();
+  const mesNombre = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][mes];
+  const diasEnMes = new Date(año, mes+1, 0).getDate();
+  const asist = p.asistencia||{};
+
+  const pageW = 210;
+  const marginL = 14; const marginR = 14; const marginT = 14;
+
+  // Header
+  doc.setFontSize(16); doc.setFont('helvetica','bold'); doc.setTextColor(30,30,30);
+  doc.text('Reporte de Asistencia', marginL, marginT+4);
+  doc.setFontSize(11); doc.setFont('helvetica','normal'); doc.setTextColor(60,60,60);
+  doc.text(`${p.name}  ·  ${mesNombre} ${año}`, marginL, marginT+10);
+  doc.setFontSize(8); doc.setTextColor(140,140,140);
+  doc.text(`Generado el ${new Date().toLocaleDateString('es-AR')}`, pageW-marginR, marginT+4, {align:'right'});
+  doc.setDrawColor(220,220,220); doc.line(marginL, marginT+13, pageW-marginR, marginT+13);
+
+  // Build rows — weekdays only
+  const head = [['Fecha','Día','1er turno','2do turno','Estado día']];
+  const body = [];
+  const diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  let totalSes=0, presentes=0, lesiones=0, torneos=0, descansos=0, sinJust=0;
+  for(let d=1; d<=diasEnMes; d++){
+    const dt = new Date(año, mes, d);
+    if(dt.getDay()<1||dt.getDay()>5) continue;
+    const key = `${año}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dd = asist[key]||{};
+    const t1 = dd.t1||''; const t2 = dd.t2||'';
+    const e1 = ESTADOS.find(e=>e.id===t1);
+    const e2 = ESTADOS.find(e=>e.id===t2);
+    const label1 = e1?e1.nombre:'-';
+    const label2 = e2?e2.nombre:'-';
+    let estado = '';
+    if(!t1&&!t2) estado = 'Sin registrar';
+    else if(t1==='p'&&t2==='p') estado = 'Completo';
+    else if(t1==='s'||t2==='s') estado = 'Falta';
+    else estado = 'Parcial';
+    body.push([`${String(d).padStart(2,'0')}/${String(mes+1).padStart(2,'0')}`, diasSemana[dt.getDay()], label1, label2, estado]);
+    [t1,t2].forEach(t=>{ if(t){totalSes++;if(t==='p')presentes++;else if(t==='l')lesiones++;else if(t==='t')torneos++;else if(t==='d')descansos++;else if(t==='s')sinJust++;} });
+  }
+
+  const estadoColors = {
+    'Completo':[39,174,96],'Parcial':[243,156,18],'Falta':[231,76,60],'Sin registrar':[189,189,189]
+  };
+  const turnoColors = {
+    'Presente':[39,174,96],'Lesión':[243,156,18],'Torneo':[29,161,214],'Descanso':[142,68,173],'Sin justificar':[231,76,60]
+  };
+
+  doc.autoTable({
+    head, body,
+    startY: marginT+16,
+    margin:{left:marginL, right:marginR},
+    styles:{fontSize:9,cellPadding:2,valign:'middle'},
+    headStyles:{fillColor:[52,73,94],textColor:255,fontStyle:'bold'},
+    columnStyles:{
+      0:{cellWidth:22,halign:'center'},
+      1:{cellWidth:28},
+      2:{cellWidth:35},
+      3:{cellWidth:35},
+      4:{cellWidth:30,halign:'center'},
+    },
+    didDrawCell(data){
+      if(data.section==='body'){
+        const val = data.cell.raw;
+        if((data.column.index===2||data.column.index===3)&&turnoColors[val]){
+          doc.setFillColor(...turnoColors[val]);
+          doc.rect(data.cell.x+1, data.cell.y+1, data.cell.width-2, data.cell.height-2, 'F');
+          doc.setTextColor(255,255,255); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+          doc.text(val, data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+0.8, {align:'center'});
+        }
+        if(data.column.index===4&&estadoColors[val]){
+          doc.setTextColor(...estadoColors[val]); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+          doc.text(val, data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+0.8, {align:'center'});
+        }
+      }
+    },
+    alternateRowStyles:{fillColor:[248,249,250]},
+  });
+
+  // Summary table
+  const finalY = doc.lastAutoTable.finalY + 6;
+  const pctAsist = totalSes>0?Math.round((presentes/totalSes)*100):0;
+  const pctColor = pctAsist>=90?[39,174,96]:pctAsist>=70?[243,156,18]:[231,76,60];
+  doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(30,30,30);
+  doc.text('Resumen del mes', marginL, finalY);
+  doc.autoTable({
+    head:[['Métrica','Valor']],
+    body:[
+      ['Total sesiones registradas', String(totalSes)],
+      ['Presentes', String(presentes)],
+      ['Sin justificar', String(sinJust)],
+      ['Lesión', String(lesiones)],
+      ['Torneo', String(torneos)],
+      ['Descanso', String(descansos)],
+      ['% Asistencia', `${pctAsist}%`],
+    ],
+    startY: finalY+3,
+    margin:{left:marginL, right:pageW/2},
+    styles:{fontSize:9,cellPadding:2},
+    headStyles:{fillColor:[52,73,94],textColor:255,fontStyle:'bold'},
+    columnStyles:{1:{fontStyle:'bold',halign:'center'}},
+    didDrawCell(data){
+      if(data.section==='body'&&data.row.index===6&&data.column.index===1){
+        doc.setTextColor(...pctColor); doc.setFontSize(9); doc.setFont('helvetica','bold');
+        doc.text(`${pctAsist}%`, data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+0.8, {align:'center'});
+      }
+    },
+    alternateRowStyles:{fillColor:[248,249,250]},
+  });
+
+  doc.save(`Asistencia_${p.name.replace(/\s+/g,'_')}_${mesNombre}_${año}.pdf`);
+}
 
 function renderSetImportButtons(pName, setNum) {
   var h = "";
