@@ -344,6 +344,12 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 .pp-stat{flex:1;background:var(--g5);border-radius:8px;padding:10px;text-align:center;}
 .pp-stat-num{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;}
 .pp-stat-lbl{font-size:10px;color:var(--g3);margin-top:2px;}
+/* ── LOGIN ROLE SELECTOR ──────────────────────────────── */
+.role-selector{display:flex;gap:8px;margin-bottom:20px;}
+.role-btn{flex:1;padding:12px 6px;border-radius:10px;border:2px solid var(--border);background:var(--g5);cursor:pointer;font-size:12px;font-weight:500;color:var(--g3);transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit;line-height:1.2;}
+.role-btn .role-icon{font-size:24px;}
+.role-btn.active.role-coach{border-color:var(--orange);background:#fff5eb;color:var(--od);}
+.role-btn.active.role-player{border-color:var(--blue);background:#eef7fc;color:var(--bd);}
 </style>
 </head>
 <body>
@@ -354,7 +360,15 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <div class="balls"><div class="bl b1"></div><div class="bl b2"></div><div class="bl b3"></div></div>
       <span class="brand-name">ALTO<span>TENIS</span></span>
     </div>
-    <div class="login-sub">Hub de entrenadores<br>Club de Tenis Providencia</div>
+    <div class="login-sub">Club de Tenis Providencia</div>
+    <div class="role-selector">
+      <button class="role-btn role-coach active" id="rbtn-coach" onclick="setLoginRole('coach')">
+        <span class="role-icon">🎾</span>Soy entrenador
+      </button>
+      <button class="role-btn role-player" id="rbtn-player" onclick="setLoginRole('player')">
+        <span class="role-icon">👤</span>Soy jugador
+      </button>
+    </div>
     <input type="email" id="li-user" placeholder="Tu email" autocomplete="email" />
     <input type="password" id="li-pass" placeholder="Contraseña" />
     <button class="login-btn" onclick="doLogin()">Ingresar</button>
@@ -484,6 +498,14 @@ let saveTimer=null,editingPlayerId=null;
 let selMode=false,selectedDays=new Set();
 
 // ── AUTH ──────────────────────────────────────────────────
+let loginRole = 'coach';
+function setLoginRole(r) {
+  loginRole = r;
+  document.getElementById('rbtn-coach').classList.toggle('active', r === 'coach');
+  document.getElementById('rbtn-player').classList.toggle('active', r === 'player');
+  document.getElementById('li-user').placeholder = r === 'player' ? 'Tu email de jugador' : 'Tu email';
+}
+
 async function doLogin() {
   const u = document.getElementById('li-user').value.trim();
   const p = document.getElementById('li-pass').value;
@@ -494,31 +516,36 @@ async function doLogin() {
   btn.disabled = true;
   errEl.textContent = 'Conectando...';
   try { await fetch(`${BACKEND_URL}/health`, {signal: AbortSignal.timeout(25000)}); } catch(_) {}
-  errEl.textContent = 'Iniciando sesión...';
+  errEl.textContent = loginRole === 'player' ? 'Cargando tu portal...' : 'Iniciando sesión...';
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email: u, password: p}),
-      signal: AbortSignal.timeout(15000)
-    });
-    const d = await res.json();
-    if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
-    sessionStorage.setItem('ciq_token', d.session.access_token);
-    sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
-    user = d.user?.user_metadata?.full_name || u;
-    const role = d.user?.user_metadata?.role || 'coach';
-    document.getElementById('login-screen').style.display = 'none';
-    if (role === 'player') {
-      // Fetch full profile to get player_id
-      const profRes = await fetch(`${BACKEND_URL}/api/v1/auth/me`, {
-        headers: {'Authorization': `Bearer ${d.session.access_token}`}
+    if (loginRole === 'player') {
+      const res = await fetch(`${BACKEND_URL}/api/v1/auth/player-login`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email: u, password: p}),
+        signal: AbortSignal.timeout(15000)
       });
-      const prof = await profRes.json();
-      sessionStorage.setItem('ciq_player_id', prof.player_id || '');
+      const d = await res.json();
+      if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
+      sessionStorage.setItem('ciq_token', d.session.access_token);
+      sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
+      sessionStorage.setItem('ciq_player_id', d.playerId || '');
+      user = d.session?.user?.user_metadata?.full_name || u;
+      document.getElementById('login-screen').style.display = 'none';
       document.getElementById('player-panel').style.display = 'flex';
       document.getElementById('pp-player-name').textContent = user;
-      loadPlayerPortal(prof.player_id || '');
+      loadPlayerPortal(d.playerId || '');
     } else {
+      const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email: u, password: p}),
+        signal: AbortSignal.timeout(15000)
+      });
+      const d = await res.json();
+      if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
+      sessionStorage.setItem('ciq_token', d.session.access_token);
+      sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
+      user = d.user?.user_metadata?.full_name || u;
+      document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
       document.getElementById('user-lbl').textContent = user;
       if (history.pushState) history.pushState({page: 'dashboard'}, '', '');
@@ -1948,11 +1975,7 @@ const CARGA_TIPOS = ['Técnico','Táctico','Físico','Mental','Competencia'];
 let _cargaRpe = 0;
 let _cargaMood = 0;
 
-function renderCarga(p) {
-  const loads = p.trainingLoad || [];
-  const today = new Date().toISOString().slice(0,10);
-
-  // Last 14 days for chart
+function buildCargaChart(loads) {
   const chartDays = [];
   for(let i=13; i>=0; i--) {
     const d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
@@ -1961,15 +1984,10 @@ function renderCarga(p) {
     const avgRpe = sessions.length ? sessions.reduce((a,b)=>a+b.rpe,0)/sessions.length : null;
     chartDays.push({ key, avgRpe, label: String(d.getDate()) });
   }
-
-  // High load alert: last 5 days avg >= 4
   const last5vals = chartDays.slice(-5).filter(d=>d.avgRpe!==null).map(d=>d.avgRpe);
   const avg5 = last5vals.length ? last5vals.reduce((a,b)=>a+b,0)/last5vals.length : 0;
   const highLoad = avg5 >= 4;
-
-  // SVG chart
-  const W=440, H=72, pX=18, pY=8;
-  const iW=W-2*pX, iH=H-2*pY;
+  const W=440, H=72, pX=18, pY=8, iW=440-2*18, iH=72-2*8;
   const pts = chartDays.map((d,i)=>({
     x: pX + i*(iW/13),
     y: d.avgRpe!=null ? pY + iH - ((d.avgRpe-1)/4)*iH : null,
@@ -1979,23 +1997,17 @@ function renderCarga(p) {
   const pathD = validPts.map((pt,i)=>`${i===0?'M':'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
   const circles = pts.map(pt=>pt.y!=null?`<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${RPE_COLORS[Math.round(pt.avgRpe)]}" stroke="#fff" stroke-width="1.5"/>`:'').join('');
   const labels = pts.map(pt=>`<text x="${pt.x.toFixed(1)}" y="${H+10}" font-size="8" text-anchor="middle" fill="#bbb">${pt.label}</text>`).join('');
-  const yLines = [1,2,3,4,5].map(v=>{
-    const y=(pY + iH - ((v-1)/4)*iH).toFixed(1);
-    return `<line x1="${pX}" y1="${y}" x2="${W-pX}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/><text x="${pX-4}" y="${parseFloat(y)+3}" font-size="7" text-anchor="end" fill="#ccc">${v}</text>`;
-  }).join('');
-  const svg = `<svg viewBox="0 0 ${W} ${H+14}" width="100%" style="display:block;overflow:visible;">
-    ${yLines}
-    ${pathD?`<path d="${pathD}" fill="none" stroke="#1DA1D6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`:''}
-    ${circles}
-    ${labels}
-  </svg>`;
+  const yLines = [1,2,3,4,5].map(v=>{const y=(pY+iH-((v-1)/4)*iH).toFixed(1);return `<line x1="${pX}" y1="${y}" x2="${W-pX}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/><text x="${pX-4}" y="${parseFloat(y)+3}" font-size="7" text-anchor="end" fill="#ccc">${v}</text>`;}).join('');
+  const svg = `<svg viewBox="0 0 ${W} ${H+14}" width="100%" style="display:block;overflow:visible;">${yLines}${pathD?`<path d="${pathD}" fill="none" stroke="#1DA1D6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`:''}${circles}${labels}</svg>`;
+  return { svg, highLoad, avg5 };
+}
 
-  // Last 10 sessions
+function renderCarga(p) {
+  const loads = p.trainingLoad || [];
+  const { svg, highLoad, avg5 } = buildCargaChart(loads);
   const recent = loads.slice(0,10);
-
   return `
     ${highLoad?`<div style="background:#fff5f5;border:1px solid #f5c6c6;border-radius:var(--rsm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#c0392b;">⚠️ <strong>Carga alta acumulada</strong> — RPE promedio últimos 5 días: ${avg5.toFixed(1)}</div>`:''}
-
     <div class="card" style="margin-bottom:14px;">
       <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">RPE — últimos 14 días</div>
       <div style="padding:0 4px;">${svg}</div>
@@ -2003,55 +2015,6 @@ function renderCarga(p) {
         ${RPE_COLORS.slice(1).map((c,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--g3);"><div style="width:9px;height:9px;border-radius:50%;background:${c};"></div>${i+1}</div>`).join('')}
       </div>
     </div>
-
-    <div class="card" style="margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:14px;">Registrar sesión</div>
-
-      <div style="margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">FECHA</div>
-        <input type="date" id="carga-fecha" value="${today}" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;"/>
-      </div>
-
-      <div style="margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">RPE — PERCEPCIÓN DE ESFUERZO</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${RPE_COLORS.slice(1).map((c,i)=>`<button id="rpe-btn-${i+1}" onclick="selRpe(${i+1})" style="padding:7px 12px;border-radius:var(--rsm);border:2px solid ${c};background:transparent;color:${c};font-size:12px;font-weight:600;cursor:pointer;transition:all .13s;">${i+1} — ${RPE_LABELS[i+1]}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">ESTADO DE ÁNIMO</div>
-        <div style="display:flex;gap:8px;">
-          ${MOOD_ICONS.slice(1).map((ico,i)=>`<button id="mood-btn-${i+1}" onclick="selMood(${i+1})" style="padding:8px 18px;border-radius:var(--rsm);border:2px solid var(--border);background:transparent;font-size:20px;cursor:pointer;transition:all .13s;">${ico}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">DURACIÓN</div>
-        <select id="carga-dur" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;">
-          <option value="60">60 min</option>
-          <option value="90" selected>90 min</option>
-          <option value="120">120 min</option>
-          <option value="150">150 min</option>
-          <option value="180">180 min</option>
-        </select>
-      </div>
-
-      <div style="margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">TIPO DE SESIÓN</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="tipo-btns">
-          ${CARGA_TIPOS.map(t=>`<button onclick="toggleTipo(this)" data-tipo="${t}" data-active="0" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--g3);font-size:12px;cursor:pointer;transition:all .13s;">${t}</button>`).join('')}
-        </div>
-      </div>
-
-      <div style="margin-bottom:14px;">
-        <div style="font-size:11px;color:var(--g3);margin-bottom:6px;font-weight:500;">NOTAS (OPCIONAL)</div>
-        <input type="text" id="carga-notas" placeholder="Observaciones de la sesión..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;box-sizing:border-box;"/>
-      </div>
-
-      <button class="btn btn-o" onclick="registrarCarga()">Registrar sesión</button>
-    </div>
-
     <div class="card">
       <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:14px;">Historial</div>
       ${recent.length===0?'<div class="empty">Sin sesiones registradas</div>':
@@ -3863,7 +3826,9 @@ function renderCoachPortalView(p) {
     return `<div class="card"><div style="padding:20px 0;color:var(--g3);text-align:center;">Cargando datos del portal...</div></div>`;
   }
   const { objectives, analyses } = cache;
-  const lastLoad = (p.trainingLoad || [])[0];
+  const loads = p.trainingLoad || [];
+  const lastLoad = loads[0];
+  const { svg: chartSvg, highLoad, avg5 } = buildCargaChart(loads);
   const rpeColors = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
   const moodIcons = ['','😞','😐','😊'];
   const tipoBadge = {
@@ -3873,6 +3838,14 @@ function renderCoachPortalView(p) {
   };
 
   return `
+    ${highLoad?`<div style="background:#fff5f5;border:1px solid #f5c6c6;border-radius:var(--rsm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#c0392b;">⚠️ <strong>Carga alta acumulada</strong> — RPE promedio últimos 5 días: ${avg5.toFixed(1)}</div>`:''}
+    <div class="card" style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">RPE — últimos 14 días</div>
+      <div style="padding:0 4px;">${chartSvg}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+        ${rpeColors.slice(1).map((c,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--g3);"><div style="width:9px;height:9px;border-radius:50%;background:${c};"></div>${i+1}</div>`).join('')}
+      </div>
+    </div>
     <div class="card" style="margin-bottom:14px;">
       <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Última carga registrada</div>
       ${lastLoad ? `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
