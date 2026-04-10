@@ -313,6 +313,37 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 .asist-stat-num{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;}
 .asist-stat-lbl{font-size:11px;color:var(--g3);margin-top:2px;}
 @media(max-width:700px){.asist-resumen{grid-template-columns:1fr 1fr!important;}.asist-table{font-size:11px;}}
+/* ── PLAYER PORTAL ────────────────────────────────────── */
+#player-panel{display:none;min-height:100vh;background:#f5f6f8;flex-direction:column;max-width:480px;margin:0 auto;position:relative;}
+.pp-header{background:var(--white);border-bottom:1px solid var(--border);padding:13px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;}
+.pp-header-brand{display:flex;align-items:center;gap:6px;flex:1;}
+.pp-logout-btn{padding:5px 11px;background:transparent;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;color:var(--g3);cursor:pointer;}
+.pp-content{flex:1;padding:16px 14px 90px;}
+.pp-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--white);border-top:1px solid var(--border);display:flex;z-index:20;box-shadow:0 -2px 10px rgba(0,0,0,.06);}
+.pp-nav-btn{flex:1;padding:7px 2px 9px;border:none;background:transparent;font-size:9.5px;color:var(--g3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:color .13s;font-family:inherit;}
+.pp-nav-btn.active{color:var(--orange);font-weight:600;}
+.pp-nav-icon{font-size:17px;line-height:1;}
+.pp-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+.pp-section-title{font-size:17px;font-weight:700;color:var(--gray);margin-bottom:14px;}
+.pp-label{font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;}
+.pp-rpe-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:4px;}
+.pp-rpe-btn{padding:10px 2px;border-radius:8px;border:2px solid;font-size:12px;font-weight:700;cursor:pointer;transition:all .13s;text-align:center;background:transparent;}
+.pp-mood-row{display:flex;gap:10px;}
+.pp-mood-btn{flex:1;padding:9px;border-radius:8px;border:2px solid var(--border);background:transparent;font-size:22px;cursor:pointer;transition:all .13s;text-align:center;}
+.pp-mood-btn.active{border-color:var(--orange);background:#fff5eb;}
+.pp-obj-item{display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);}
+.pp-obj-item:last-child{border-bottom:none;}
+.pp-tipo-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;flex-shrink:0;margin-top:1px;}
+.pp-analysis-item{padding:12px 0;border-bottom:1px solid var(--border);}
+.pp-analysis-item:last-child{border-bottom:none;}
+.pp-plan-day{background:var(--g5);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;}
+.pp-plan-day-head{padding:8px 12px;font-size:12px;font-weight:600;background:var(--white);border-bottom:1px solid var(--border);}
+.pp-plan-session{padding:8px 12px;font-size:12px;color:var(--g2);}
+.pp-empty{text-align:center;padding:32px 0;color:var(--g3);font-size:13px;}
+.pp-stat-row{display:flex;gap:10px;margin-bottom:14px;}
+.pp-stat{flex:1;background:var(--g5);border-radius:8px;padding:10px;text-align:center;}
+.pp-stat-num{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;}
+.pp-stat-lbl{font-size:10px;color:var(--g3);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -397,6 +428,29 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
   </div>
 </div>
 
+<div id="player-panel">
+  <div class="pp-header">
+    <div class="pp-header-brand">
+      <div class="balls" style="transform:scale(.6);transform-origin:left;width:30px;height:20px;overflow:hidden;">
+        <div class="bl b1"></div><div class="bl b2"></div><div class="bl b3"></div>
+      </div>
+      <span class="brand-name" style="font-size:14px;">ALTO<span>TENIS</span></span>
+    </div>
+    <span style="font-size:12px;color:var(--g3);flex:1;text-align:right;padding-right:10px;" id="pp-player-name"></span>
+    <button class="pp-logout-btn" onclick="doLogout()">↩ Salir</button>
+  </div>
+  <div class="pp-content" id="pp-content">
+    <div class="pp-empty">Cargando...</div>
+  </div>
+  <nav class="pp-nav">
+    <button class="pp-nav-btn" id="ppnav-plan" onclick="switchPortalSection('plan')"><span class="pp-nav-icon">📋</span>Mi plan</button>
+    <button class="pp-nav-btn" id="ppnav-session" onclick="switchPortalSection('session')"><span class="pp-nav-icon">💪</span>Sesión</button>
+    <button class="pp-nav-btn" id="ppnav-matches" onclick="switchPortalSection('matches')"><span class="pp-nav-icon">🎾</span>Partidos</button>
+    <button class="pp-nav-btn" id="ppnav-objectives" onclick="switchPortalSection('objectives')"><span class="pp-nav-icon">🎯</span>Objetivos</button>
+    <button class="pp-nav-btn" id="ppnav-analysis" onclick="switchPortalSection('analysis')"><span class="pp-nav-icon">📝</span>Análisis</button>
+  </nav>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -451,12 +505,25 @@ async function doLogin() {
     if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
     sessionStorage.setItem('ciq_token', d.session.access_token);
     sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
-    user = d.user.user_metadata?.full_name || u;
+    user = d.user?.user_metadata?.full_name || u;
+    const role = d.user?.user_metadata?.role || 'coach';
     document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    document.getElementById('user-lbl').textContent = user;
-    if (history.pushState) history.pushState({page: 'dashboard'}, '', '');
-    loadData();
+    if (role === 'player') {
+      // Fetch full profile to get player_id
+      const profRes = await fetch(`${BACKEND_URL}/api/v1/auth/me`, {
+        headers: {'Authorization': `Bearer ${d.session.access_token}`}
+      });
+      const prof = await profRes.json();
+      sessionStorage.setItem('ciq_player_id', prof.player_id || '');
+      document.getElementById('player-panel').style.display = 'flex';
+      document.getElementById('pp-player-name').textContent = user;
+      loadPlayerPortal(prof.player_id || '');
+    } else {
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('user-lbl').textContent = user;
+      if (history.pushState) history.pushState({page: 'dashboard'}, '', '');
+      loadData();
+    }
   } catch(e) {
     errEl.textContent = e.name === 'TimeoutError' ? 'El servidor tardó demasiado. Intenta de nuevo.' : 'Error de conexión';
     btn.disabled = false;
@@ -481,10 +548,14 @@ window.addEventListener('popstate', function(e) {
   }
 });
 function doLogout() {
-  sessionStorage.removeItem('ciq_token'); sessionStorage.removeItem('ciq_refresh');
-  user = "";
+  sessionStorage.removeItem('ciq_token');
+  sessionStorage.removeItem('ciq_refresh');
+  sessionStorage.removeItem('ciq_player_id');
+  user = '';
+  portalPlayer = null; portalObjectives = []; portalAnalyses = [];
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
+  document.getElementById('player-panel').style.display = 'none';
   document.getElementById('li-pass').value = '';
   document.getElementById('li-err').textContent = '';
 }
@@ -1469,16 +1540,17 @@ function renderPlayer(){
       <button class="tab-btn${dtab==='rivales'?' active':''}" onclick="switchDtab('rivales')">Rivales</button>
       <button class="tab-btn${dtab==='notas'?' active':''}" onclick="switchDtab('notas')">Notas</button>
       <button class="tab-btn${dtab==='carga'?' active':''}" onclick="switchDtab('carga')">Carga</button>
+      <button class="tab-btn${dtab==='portal'?' active':''}" onclick="switchDtab('portal')">Portal</button>
     </div>
     <div id="dtab-content">${renderDtab()}</div>`;
 }
 
 function switchDtab(t){
   dtab=t;selMode=false;selectedDays=new Set();
-  document.querySelectorAll('.tab-btn').forEach(b=>{const m={perfil:'Perfil',plan:'Plan semanal',calendario:'Calendario',notas:'Notas',carga:'Carga',torneos:'Torneos',stats:'Estadísticas',rivales:'Rivales'};b.classList.toggle('active',b.textContent===m[t]);});
+  document.querySelectorAll('.tab-btn').forEach(b=>{const m={perfil:'Perfil',plan:'Plan semanal',calendario:'Calendario',notas:'Notas',carga:'Carga',torneos:'Torneos',stats:'Estadísticas',rivales:'Rivales',portal:'Portal'};b.classList.toggle('active',b.textContent===m[t]);});
   const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
 }
-function renderDtab(){const p=data.players[pid];if(dtab==='perfil')return renderPerfil(p);if(dtab==='plan')return renderPlan(p);if(dtab==='calendario')return renderCal(p);if(dtab==='torneos')return renderTorneos(p);if(dtab==='stats')return renderStats(p);if(dtab==='rivales')return renderPlayerScouting(p);if(dtab==='notas')return renderNotas(p);if(dtab==='carga')return renderCarga(p);return '';}
+function renderDtab(){const p=data.players[pid];if(dtab==='perfil')return renderPerfil(p);if(dtab==='plan')return renderPlan(p);if(dtab==='calendario')return renderCal(p);if(dtab==='torneos')return renderTorneos(p);if(dtab==='stats')return renderStats(p);if(dtab==='rivales')return renderPlayerScouting(p);if(dtab==='notas')return renderNotas(p);if(dtab==='carga')return renderCarga(p);if(dtab==='portal')return renderCoachPortalView(p);return '';}
 
 // PERFIL
 function renderPerfil(p){
@@ -3402,6 +3474,467 @@ function toggleHistPlan(el) {
   const isOpen = detail.style.display !== 'none';
   detail.style.display = isOpen ? 'none' : 'block';
   if(arrow) arrow.textContent = isOpen ? 'Ver más ▾' : 'Cerrar ▴';
+}
+
+// ── PLAYER PORTAL ─────────────────────────────────────────
+let portalSection = 'plan';
+let portalPlayer = null;
+let portalObjectives = [];
+let portalAnalyses = [];
+let _ppRpe = 0, _ppMood = 0;
+let _coachPortalCache = {};  // { [playerId]: { objectives, analyses, ts } }
+
+async function loadPlayerPortal(playerId) {
+  const token = sessionStorage.getItem('ciq_token');
+  const h = {'Authorization': `Bearer ${token}`};
+  try {
+    const [playerRes, objRes, anlRes] = await Promise.all([
+      fetch(`${BACKEND_URL}/api/v1/players/${playerId}/my-data`, {headers: h}),
+      fetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {headers: h}),
+      fetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {headers: h}),
+    ]);
+    const [playerData, objData, anlData] = await Promise.all([playerRes.json(), objRes.json(), anlRes.json()]);
+    portalPlayer = playerData.player || null;
+    portalObjectives = objData.objectives || [];
+    portalAnalyses = anlData.analyses || [];
+  } catch(e) {
+    portalPlayer = null;
+  }
+  switchPortalSection('plan');
+}
+
+function switchPortalSection(s) {
+  portalSection = s;
+  document.querySelectorAll('.pp-nav-btn').forEach(b => b.classList.remove('active'));
+  const nb = document.getElementById('ppnav-' + s);
+  if (nb) nb.classList.add('active');
+  const el = document.getElementById('pp-content');
+  if (el) el.innerHTML = renderPortalSection();
+  window.scrollTo(0,0);
+}
+
+function renderPortalSection() {
+  if (!portalPlayer) return `<div class="pp-empty">No se pudo cargar tu información.<br><button class="btn btn-o btn-sm" style="margin-top:12px;" onclick="loadPlayerPortal(sessionStorage.getItem('ciq_player_id'))">Reintentar</button></div>`;
+  if (portalSection === 'plan') return renderPortalPlan();
+  if (portalSection === 'session') return renderPortalSession();
+  if (portalSection === 'matches') return renderPortalMatches();
+  if (portalSection === 'objectives') return renderPortalObjectives();
+  if (portalSection === 'analysis') return renderPortalAnalysis();
+  return '';
+}
+
+function renderPortalPlan() {
+  const p = portalPlayer;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const wKey = weekKey(today);
+  const plans = p.weekPlans || [];
+  const cur = plans.find(pl => pl.week === wKey);
+  const recent = cur || plans.slice(-1)[0];
+  const dias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+  const turnos = ['1er turno','2do turno'];
+
+  let planHtml = '';
+  if (recent && recent.dias) {
+    dias.forEach(dia => {
+      const diaData = recent.dias[dia] || {};
+      let sessions = '';
+      turnos.forEach(turno => {
+        const t = diaData[turno];
+        if (!t) return;
+        const isDescanso = t.tipo === 'descanso';
+        const focos = (t.focos || []).join(', ') || '';
+        const desc = t.descripcion || '';
+        sessions += `<div class="pp-plan-session" style="${isDescanso ? 'color:var(--g3);font-style:italic;' : ''}">
+          <span style="font-weight:600;color:var(--g3);font-size:10px;">${turno}</span><br>
+          ${isDescanso ? 'Descanso' : `${focos}${desc ? ' — ' + desc : ''}`}
+        </div>`;
+      });
+      if (sessions) {
+        planHtml += `<div class="pp-plan-day"><div class="pp-plan-day-head">${dia}</div>${sessions}</div>`;
+      }
+    });
+  }
+
+  const rankHist = (p.rankingHistory || []).slice(-1)[0];
+  return `
+    <div class="pp-stat-row">
+      <div class="pp-stat"><div class="pp-stat-num">${p.ranking || '—'}</div><div class="pp-stat-lbl">Ranking</div></div>
+      <div class="pp-stat"><div class="pp-stat-num">${p.age || '—'}</div><div class="pp-stat-lbl">Años</div></div>
+      <div class="pp-stat"><div class="pp-stat-num">${(p.trainingLoad || []).length}</div><div class="pp-stat-lbl">Sesiones reg.</div></div>
+    </div>
+    <div class="pp-card">
+      <div class="pp-label">Plan semana actual${!cur && recent ? ' (más reciente)' : ''}</div>
+      ${planHtml || '<div class="pp-empty">Sin plan asignado esta semana</div>'}
+    </div>
+    ${p.goal ? `<div class="pp-card"><div class="pp-label">Objetivo del coach</div><div style="font-size:13px;color:var(--g2);">${p.goal}</div></div>` : ''}`;
+}
+
+function renderPortalSession() {
+  const rpeColors = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
+  const rpeLabels = ['','Muy tranquilo','Tranquilo','Normal','Exigente','Muy exigente'];
+  const tipos = ['Técnico','Táctico','Físico','Mental','Competencia'];
+  const today = new Date().toISOString().slice(0,10);
+  const loads = (portalPlayer?.trainingLoad || []).slice(0,5);
+  const moodIcons = ['','😞','😐','😊'];
+
+  return `
+    <div class="pp-card">
+      <div class="pp-label">Fecha</div>
+      <input type="date" id="pp-fecha" value="${today}" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;margin-bottom:14px;"/>
+
+      <div class="pp-label">RPE — Esfuerzo percibido</div>
+      <div class="pp-rpe-grid" style="margin-bottom:14px;">
+        ${rpeColors.slice(1).map((c,i) => `<button class="pp-rpe-btn" id="pp-rpe-${i+1}" onclick="ppSelRpe(${i+1})" style="border-color:${c};color:${c};" title="${rpeLabels[i+1]}">${i+1}</button>`).join('')}
+      </div>
+      <div style="text-align:center;font-size:11px;color:var(--g3);margin-bottom:14px;" id="pp-rpe-lbl">Seleccioná el nivel de esfuerzo</div>
+
+      <div class="pp-label">Estado de ánimo</div>
+      <div class="pp-mood-row" style="margin-bottom:14px;">
+        ${moodIcons.slice(1).map((ico,i) => `<button class="pp-mood-btn" id="pp-mood-${i+1}" onclick="ppSelMood(${i+1})">${ico}</button>`).join('')}
+      </div>
+
+      <div class="pp-label">Duración</div>
+      <select id="pp-dur" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;margin-bottom:14px;">
+        <option value="60">60 min</option><option value="90" selected>90 min</option>
+        <option value="120">120 min</option><option value="150">150 min</option><option value="180">180 min</option>
+      </select>
+
+      <div class="pp-label">Tipo de sesión</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="pp-tipos">
+        ${tipos.map(t => `<button onclick="ppToggleTipo(this)" data-tipo="${t}" data-active="0" style="padding:5px 11px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--g3);font-size:12px;cursor:pointer;transition:all .13s;">${t}</button>`).join('')}
+      </div>
+
+      <div class="pp-label">Notas opcionales</div>
+      <input type="text" id="pp-notas" placeholder="¿Algo que destacar?" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;margin-bottom:14px;box-sizing:border-box;"/>
+
+      <button class="btn btn-o" style="width:100%;" onclick="submitPortalSession()">Registrar sesión</button>
+    </div>
+
+    ${loads.length > 0 ? `<div class="pp-card">
+      <div class="pp-label">Últimas sesiones</div>
+      ${loads.map(s => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--g3);min-width:80px;">${s.date}</div>
+        <span style="padding:2px 8px;border-radius:20px;background:${rpeColors[s.rpe]};color:#fff;font-size:12px;font-weight:700;">RPE ${s.rpe}</span>
+        <span style="font-size:15px;">${moodIcons[s.mood]||''}</span>
+        <span style="font-size:12px;color:var(--g3);">${s.duration} min</span>
+      </div>`).join('')}
+    </div>` : ''}`;
+}
+
+function ppSelRpe(v) {
+  _ppRpe = v;
+  const rpeColors = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
+  const rpeLabels = ['','Muy tranquilo','Tranquilo','Normal','Exigente','Muy exigente'];
+  [1,2,3,4,5].forEach(n => {
+    const btn = document.getElementById(`pp-rpe-${n}`); if(!btn) return;
+    const c = rpeColors[n];
+    btn.style.background = n===v ? c : 'transparent';
+    btn.style.color = n===v ? '#fff' : c;
+  });
+  const lbl = document.getElementById('pp-rpe-lbl');
+  if (lbl) lbl.textContent = rpeLabels[v];
+}
+
+function ppSelMood(v) {
+  _ppMood = v;
+  [1,2,3].forEach(n => {
+    const btn = document.getElementById(`pp-mood-${n}`); if(!btn) return;
+    btn.classList.toggle('active', n===v);
+  });
+}
+
+function ppToggleTipo(btn) {
+  const active = btn.dataset.active === '1';
+  btn.dataset.active = active ? '0' : '1';
+  btn.style.background = active ? 'transparent' : 'var(--orange)';
+  btn.style.color = active ? 'var(--g3)' : '#fff';
+  btn.style.borderColor = active ? 'var(--border)' : 'var(--orange)';
+}
+
+async function submitPortalSession() {
+  if (!_ppRpe) { alert('Seleccioná el nivel de esfuerzo (RPE)'); return; }
+  if (!_ppMood) { alert('Seleccioná el estado de ánimo'); return; }
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const token = sessionStorage.getItem('ciq_token');
+  const fecha = document.getElementById('pp-fecha')?.value || new Date().toISOString().slice(0,10);
+  const dur = parseInt(document.getElementById('pp-dur')?.value || '90');
+  const notas = document.getElementById('pp-notas')?.value?.trim() || '';
+  const tipos = Array.from(document.querySelectorAll('#pp-tipos button')).filter(b=>b.dataset.active==='1').map(b=>b.dataset.tipo);
+  const body = { date: fecha, rpe: _ppRpe, mood: _ppMood, duration: dur, tipos, notas };
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) { alert('Error al guardar'); return; }
+    if (!portalPlayer.trainingLoad) portalPlayer.trainingLoad = [];
+    portalPlayer.trainingLoad.unshift(body);
+    _ppRpe = 0; _ppMood = 0;
+    switchPortalSection('session');
+  } catch(e) { alert('Error de conexión'); }
+}
+
+function renderPortalMatches() {
+  const p = portalPlayer;
+  const events = p.events || {};
+  const sorted = Object.entries(events)
+    .filter(([,ev]) => ev.type === 'competition')
+    .sort(([a],[b]) => b.localeCompare(a))
+    .slice(0, 20);
+  const monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  return `
+    <div class="pp-stat-row">
+      <div class="pp-stat"><div class="pp-stat-num">${p.ranking || '—'}</div><div class="pp-stat-lbl">Ranking actual</div></div>
+      <div class="pp-stat"><div class="pp-stat-num">${sorted.length}</div><div class="pp-stat-lbl">Torneos</div></div>
+    </div>
+    <div class="pp-card">
+      <div class="pp-label">Historial de torneos</div>
+      ${sorted.length === 0 ? '<div class="pp-empty">Sin torneos registrados</div>' :
+        sorted.map(([date, ev]) => {
+          const d = new Date(date + 'T12:00:00');
+          const label = `${d.getDate()} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+          return `<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+            <div style="font-size:12px;color:var(--g3);">${label}</div>
+            <div style="font-size:13px;font-weight:500;margin-top:2px;">${ev.desc || 'Competencia'}</div>
+          </div>`;
+        }).join('')
+      }
+    </div>`;
+}
+
+function renderPortalObjectives() {
+  const tipoBadge = {
+    corto: {bg:'#e8f8f0',color:'#27ae60',label:'Corto plazo'},
+    mediano: {bg:'#fff5eb',color:'#f39c12',label:'Mediano plazo'},
+    largo: {bg:'#eef7fc',color:'#1DA1D6',label:'Largo plazo'},
+  };
+  return `
+    <div class="pp-card" style="margin-bottom:14px;">
+      <div class="pp-label">Nuevo objetivo</div>
+      <select id="pp-obj-tipo" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;margin-bottom:10px;">
+        <option value="corto">Corto plazo</option>
+        <option value="mediano">Mediano plazo</option>
+        <option value="largo">Largo plazo</option>
+      </select>
+      <textarea id="pp-obj-texto" placeholder="Describe tu objetivo..." rows="3"
+        style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;resize:vertical;box-sizing:border-box;margin-bottom:10px;font-family:inherit;"></textarea>
+      <button class="btn btn-o" style="width:100%;" onclick="addPortalObjective()">Agregar objetivo</button>
+    </div>
+    <div class="pp-card">
+      <div class="pp-label">Mis objetivos</div>
+      ${portalObjectives.length === 0 ? '<div class="pp-empty">Sin objetivos definidos aún</div>' :
+        portalObjectives.map(obj => {
+          const tb = tipoBadge[obj.tipo] || tipoBadge.corto;
+          return `<div class="pp-obj-item">
+            <span class="pp-tipo-badge" style="background:${tb.bg};color:${tb.color};">${tb.label}</span>
+            <div style="flex:1;font-size:13px;color:var(--g2);">${obj.texto}</div>
+            <button onclick="deletePortalObjective('${obj.id}')" style="padding:2px 7px;border:1px solid var(--border);border-radius:var(--rsm);background:transparent;color:var(--g3);font-size:11px;cursor:pointer;flex-shrink:0;">✕</button>
+          </div>`;
+        }).join('')
+      }
+    </div>`;
+}
+
+async function addPortalObjective() {
+  const tipo = document.getElementById('pp-obj-tipo')?.value;
+  const texto = document.getElementById('pp-obj-texto')?.value?.trim();
+  if (!texto) { alert('Escribí el objetivo'); return; }
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const token = sessionStorage.getItem('ciq_token');
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body: JSON.stringify({tipo, texto})
+    });
+    if (!res.ok) { alert('Error al guardar'); return; }
+    const obj = await res.json();
+    portalObjectives.unshift(obj);
+    switchPortalSection('objectives');
+  } catch(e) { alert('Error de conexión'); }
+}
+
+async function deletePortalObjective(id) {
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const token = sessionStorage.getItem('ciq_token');
+  try {
+    await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives/${id}`, {
+      method: 'DELETE', headers: {'Authorization': `Bearer ${token}`}
+    });
+    portalObjectives = portalObjectives.filter(o => o.id !== id);
+    switchPortalSection('objectives');
+  } catch(e) { alert('Error de conexión'); }
+}
+
+function renderPortalAnalysis() {
+  return `
+    <div class="pp-card" style="margin-bottom:14px;">
+      <div class="pp-label">Nuevo análisis post-partido</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <div class="pp-label">Fecha</div>
+          <input type="date" id="pp-an-fecha" value="${new Date().toISOString().slice(0,10)}"
+            style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;background:var(--g5);outline:none;box-sizing:border-box;"/>
+        </div>
+        <div>
+          <div class="pp-label">Resultado</div>
+          <input type="text" id="pp-an-resultado" placeholder="6-4, 3-6, 7-5"
+            style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;background:var(--g5);outline:none;box-sizing:border-box;"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div>
+          <div class="pp-label">Torneo</div>
+          <input type="text" id="pp-an-torneo" placeholder="Nombre del torneo"
+            style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;background:var(--g5);outline:none;box-sizing:border-box;"/>
+        </div>
+        <div>
+          <div class="pp-label">Rival</div>
+          <input type="text" id="pp-an-rival" placeholder="Nombre del rival"
+            style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;background:var(--g5);outline:none;box-sizing:border-box;"/>
+        </div>
+      </div>
+      <div class="pp-label">Análisis / reflexión</div>
+      <textarea id="pp-an-texto" placeholder="¿Qué funcionó? ¿Qué mejorar? ¿Cómo te sentiste?" rows="4"
+        style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;resize:vertical;box-sizing:border-box;margin-bottom:10px;font-family:inherit;"></textarea>
+      <button class="btn btn-o" style="width:100%;" onclick="addPortalAnalysis()">Guardar análisis</button>
+    </div>
+    <div class="pp-card">
+      <div class="pp-label">Mis análisis</div>
+      ${portalAnalyses.length === 0 ? '<div class="pp-empty">Sin análisis guardados aún</div>' :
+        portalAnalyses.map(an => `<div class="pp-analysis-item">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+            <span style="font-size:12px;color:var(--g3);">${an.fecha}</span>
+            ${an.torneo?`<span style="font-size:12px;font-weight:500;">${an.torneo}</span>`:''}
+            ${an.rival?`<span style="font-size:12px;color:var(--g3);">vs ${an.rival}</span>`:''}
+            ${an.resultado?`<span style="font-size:12px;font-weight:600;color:var(--orange);">${an.resultado}</span>`:''}
+            <button onclick="deletePortalAnalysis('${an.id}')" style="padding:1px 6px;border:1px solid var(--border);border-radius:var(--rsm);background:transparent;color:var(--g3);font-size:10px;cursor:pointer;margin-left:auto;">✕</button>
+          </div>
+          <div style="font-size:13px;color:var(--g2);line-height:1.5;">${an.analisis_texto}</div>
+        </div>`).join('')
+      }
+    </div>`;
+}
+
+async function addPortalAnalysis() {
+  const texto = document.getElementById('pp-an-texto')?.value?.trim();
+  if (!texto) { alert('Escribí el análisis'); return; }
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const token = sessionStorage.getItem('ciq_token');
+  const body = {
+    fecha: document.getElementById('pp-an-fecha')?.value || new Date().toISOString().slice(0,10),
+    torneo: document.getElementById('pp-an-torneo')?.value?.trim() || undefined,
+    rival: document.getElementById('pp-an-rival')?.value?.trim() || undefined,
+    resultado: document.getElementById('pp-an-resultado')?.value?.trim() || undefined,
+    analisis_texto: texto,
+  };
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) { alert('Error al guardar'); return; }
+    const an = await res.json();
+    portalAnalyses.unshift(an);
+    switchPortalSection('analysis');
+  } catch(e) { alert('Error de conexión'); }
+}
+
+async function deletePortalAnalysis(id) {
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const token = sessionStorage.getItem('ciq_token');
+  try {
+    await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis/${id}`, {
+      method: 'DELETE', headers: {'Authorization': `Bearer ${token}`}
+    });
+    portalAnalyses = portalAnalyses.filter(a => a.id !== id);
+    switchPortalSection('analysis');
+  } catch(e) { alert('Error de conexión'); }
+}
+
+// ── COACH VIEW OF PLAYER PORTAL ────────────────────────────
+function renderCoachPortalView(p) {
+  const cache = _coachPortalCache[p.id];
+  if (!cache || Date.now() - cache.ts > 30000) {
+    loadCoachPortalData(p.id);
+    return `<div class="card"><div style="padding:20px 0;color:var(--g3);text-align:center;">Cargando datos del portal...</div></div>`;
+  }
+  const { objectives, analyses } = cache;
+  const lastLoad = (p.trainingLoad || [])[0];
+  const rpeColors = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
+  const moodIcons = ['','😞','😐','😊'];
+  const tipoBadge = {
+    corto: {bg:'#e8f8f0',color:'#27ae60',label:'Corto plazo'},
+    mediano: {bg:'#fff5eb',color:'#f39c12',label:'Mediano plazo'},
+    largo: {bg:'#eef7fc',color:'#1DA1D6',label:'Largo plazo'},
+  };
+
+  return `
+    <div class="card" style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Última carga registrada</div>
+      ${lastLoad ? `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:12px;color:var(--g3);">${lastLoad.date}</span>
+        <span style="padding:2px 10px;border-radius:20px;background:${rpeColors[lastLoad.rpe]};color:#fff;font-size:13px;font-weight:700;">RPE ${lastLoad.rpe}</span>
+        <span style="font-size:18px;">${moodIcons[lastLoad.mood]||''}</span>
+        <span style="font-size:12px;color:var(--g3);">${lastLoad.duration} min</span>
+        <span style="font-size:12px;color:var(--g2);">${(lastLoad.tipos||[]).join(', ')||''}</span>
+        ${lastLoad.notas?`<div style="width:100%;font-size:11px;color:var(--g3);margin-top:2px;">📝 ${lastLoad.notas}</div>`:''}
+      </div>` : '<div style="color:var(--g3);font-size:13px;">Sin sesiones registradas aún</div>'}
+    </div>
+
+    <div class="card" style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Objetivos del jugador</div>
+      ${objectives.length === 0 ? '<div style="color:var(--g3);font-size:13px;">Sin objetivos definidos</div>' :
+        objectives.map(obj => {
+          const tb = tipoBadge[obj.tipo] || tipoBadge.corto;
+          return `<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;flex-shrink:0;margin-top:2px;background:${tb.bg};color:${tb.color};">${tb.label}</span>
+            <div style="font-size:13px;color:var(--g2);">${obj.texto}</div>
+          </div>`;
+        }).join('')
+      }
+    </div>
+
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Análisis post-partido</div>
+      ${analyses.length === 0 ? '<div style="color:var(--g3);font-size:13px;">Sin análisis aún</div>' :
+        analyses.slice(0,10).map(an => `<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+            <span style="font-size:12px;color:var(--g3);">${an.fecha}</span>
+            ${an.torneo?`<span style="font-size:12px;font-weight:500;">${an.torneo}</span>`:''}
+            ${an.rival?`<span style="font-size:12px;color:var(--g3);">vs ${an.rival}</span>`:''}
+            ${an.resultado?`<span style="font-size:12px;font-weight:600;color:var(--orange);">${an.resultado}</span>`:''}
+          </div>
+          <div style="font-size:12px;color:var(--g2);line-height:1.5;">${an.analisis_texto}</div>
+        </div>`).join('')
+      }
+    </div>`;
+}
+
+async function loadCoachPortalData(playerId) {
+  const token = sessionStorage.getItem('ciq_token');
+  const h = {'Authorization': `Bearer ${token}`};
+  try {
+    const [objRes, anlRes] = await Promise.all([
+      fetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {headers: h}),
+      fetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {headers: h}),
+    ]);
+    const [objData, anlData] = await Promise.all([objRes.json(), anlRes.json()]);
+    _coachPortalCache[playerId] = {
+      objectives: objData.objectives || [],
+      analyses: anlData.analyses || [],
+      ts: Date.now()
+    };
+    const el = document.getElementById('dtab-content');
+    if (el && dtab === 'portal') el.innerHTML = renderDtab();
+  } catch(e) {
+    _coachPortalCache[playerId] = { objectives: [], analyses: [], ts: Date.now() };
+    const el = document.getElementById('dtab-content');
+    if (el && dtab === 'portal') el.innerHTML = renderDtab();
+  }
 }
 
 // ── UTILS ─────────────────────────────────────────────────
