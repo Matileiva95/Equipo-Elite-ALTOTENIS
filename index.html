@@ -529,8 +529,10 @@ async function doLogin() {
       sessionStorage.setItem('ciq_token', d.session.access_token);
       sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
       sessionStorage.setItem('ciq_player_id', d.playerId || '');
+      sessionStorage.setItem('ciq_role', 'player');
       user = d.session?.user?.user_metadata?.full_name || u;
       document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'none';
       document.getElementById('player-panel').style.display = 'flex';
       document.getElementById('pp-player-name').textContent = user;
       loadPlayerPortal(d.playerId || '');
@@ -542,11 +544,20 @@ async function doLogin() {
       });
       const d = await res.json();
       if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
+      const detectedRole = d.user?.user_metadata?.role || 'coach';
+      // Bloqueo de seguridad: un jugador no puede acceder al panel de entrenadores
+      if (detectedRole === 'player') {
+        errEl.textContent = 'Esta cuenta es de jugador. Usá el acceso de jugador.';
+        btn.disabled = false;
+        return;
+      }
       sessionStorage.setItem('ciq_token', d.session.access_token);
       sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
+      sessionStorage.setItem('ciq_role', detectedRole);
       user = d.user?.user_metadata?.full_name || u;
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
+      document.getElementById('player-panel').style.display = 'none';
       document.getElementById('user-lbl').textContent = user;
       if (history.pushState) history.pushState({page: 'dashboard'}, '', '');
       loadData();
@@ -590,6 +601,14 @@ function doLogout() {
 // ── SYNC ──────────────────────────────────────────────────
 function setSS(s,l){const d=document.getElementById('sync-dot'),lb=document.getElementById('sync-lbl');if(d)d.className='sync-dot '+s;if(lb)lb.textContent=l;}
 async function loadData(){
+  // Guardia de seguridad: si el rol guardado es player, no cargar el panel coach
+  if (sessionStorage.getItem('ciq_role') === 'player') {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('player-panel').style.display = 'flex';
+    const pid = sessionStorage.getItem('ciq_player_id');
+    if (pid) loadPlayerPortal(pid);
+    return;
+  }
   setSS('syncing','Cargando...');
   data = {players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)), reflections: [], scouting: []};
   try{
@@ -3444,7 +3463,7 @@ let portalSection = 'plan';
 let portalPlayer = null;
 let portalObjectives = [];
 let portalAnalyses = [];
-let _ppRpe = 0, _ppMood = 0;
+let _ppRpe = 0, _ppMood = 0, _ppEditIdx = null;
 let _coachPortalCache = {};  // { [playerId]: { objectives, analyses, ts } }
 
 async function loadPlayerPortal(playerId) {
@@ -3536,14 +3555,29 @@ function renderPortalSession() {
   const rpeColors = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
   const rpeLabels = ['','Muy tranquilo','Tranquilo','Normal','Exigente','Muy exigente'];
   const tipos = ['Técnico','Táctico','Físico','Mental','Competencia'];
-  const today = new Date().toISOString().slice(0,10);
-  const loads = (portalPlayer?.trainingLoad || []).slice(0,5);
+  const loads = (portalPlayer?.trainingLoad || []).slice(0,10);
   const moodIcons = ['','😞','😐','😊'];
+  const editing = _ppEditIdx !== null;
+  const editSess = editing ? loads[_ppEditIdx] : null;
+  const defDate = editSess ? editSess.date : new Date().toISOString().slice(0,10);
+  const defDur = editSess ? editSess.duration : 90;
+  const defNotas = editSess ? (editSess.notas || '') : '';
+  const activeTipos = editSess ? (editSess.tipos || []) : [];
+
+  // After render, pre-select RPE and mood buttons for the edited session
+  if (editing && editSess) {
+    setTimeout(() => { ppSelRpe(editSess.rpe); ppSelMood(editSess.mood); }, 0);
+  }
 
   return `
     <div class="pp-card">
+      ${editing ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:600;color:var(--blue);">✏️ Editando sesión del ${editSess.date}</div>
+        <button onclick="_ppEditIdx=null;_ppRpe=0;_ppMood=0;switchPortalSection('session');" style="padding:3px 8px;border:1px solid var(--border);border-radius:var(--rsm);background:transparent;color:var(--g3);font-size:11px;cursor:pointer;">Cancelar</button>
+      </div>` : ''}
+
       <div class="pp-label">Fecha</div>
-      <input type="date" id="pp-fecha" value="${today}" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;margin-bottom:14px;"/>
+      <input type="date" id="pp-fecha" value="${defDate}" style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;margin-bottom:14px;"/>
 
       <div class="pp-label">RPE — Esfuerzo percibido</div>
       <div class="pp-rpe-grid" style="margin-bottom:14px;">
@@ -3558,28 +3592,31 @@ function renderPortalSession() {
 
       <div class="pp-label">Duración</div>
       <select id="pp-dur" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;margin-bottom:14px;">
-        <option value="60">60 min</option><option value="90" selected>90 min</option>
-        <option value="120">120 min</option><option value="150">150 min</option><option value="180">180 min</option>
+        ${[60,90,120,150,180].map(v=>`<option value="${v}"${v===defDur?' selected':''}>${v} min</option>`).join('')}
       </select>
 
       <div class="pp-label">Tipo de sesión</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="pp-tipos">
-        ${tipos.map(t => `<button onclick="ppToggleTipo(this)" data-tipo="${t}" data-active="0" style="padding:5px 11px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--g3);font-size:12px;cursor:pointer;transition:all .13s;">${t}</button>`).join('')}
+        ${tipos.map(t => { const on = activeTipos.includes(t); return `<button onclick="ppToggleTipo(this)" data-tipo="${t}" data-active="${on?'1':'0'}" style="padding:5px 11px;border-radius:20px;border:1px solid ${on?'var(--orange)':'var(--border)'};background:${on?'var(--orange)':'transparent'};color:${on?'#fff':'var(--g3)'};font-size:12px;cursor:pointer;transition:all .13s;">${t}</button>`; }).join('')}
       </div>
 
       <div class="pp-label">Notas opcionales</div>
-      <input type="text" id="pp-notas" placeholder="¿Algo que destacar?" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;margin-bottom:14px;box-sizing:border-box;"/>
+      <input type="text" id="pp-notas" value="${defNotas}" placeholder="¿Algo que destacar?" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;margin-bottom:14px;box-sizing:border-box;"/>
 
-      <button class="btn btn-o" style="width:100%;" onclick="submitPortalSession()">Registrar sesión</button>
+      <button class="btn ${editing?'btn-b':'btn-o'}" style="width:100%;" onclick="submitPortalSession()">
+        ${editing ? '✓ Actualizar sesión' : 'Registrar sesión'}
+      </button>
     </div>
 
     ${loads.length > 0 ? `<div class="pp-card">
-      <div class="pp-label">Últimas sesiones</div>
-      ${loads.map(s => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div class="pp-label">Historial de sesiones</div>
+      ${loads.map((s,i) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
         <div style="font-size:12px;color:var(--g3);min-width:80px;">${s.date}</div>
         <span style="padding:2px 8px;border-radius:20px;background:${rpeColors[s.rpe]};color:#fff;font-size:12px;font-weight:700;">RPE ${s.rpe}</span>
         <span style="font-size:15px;">${moodIcons[s.mood]||''}</span>
         <span style="font-size:12px;color:var(--g3);">${s.duration} min</span>
+        <span style="flex:1;"></span>
+        <button onclick="ppEditSession(${i})" style="padding:3px 8px;border:1px solid var(--border);border-radius:var(--rsm);background:transparent;font-size:13px;cursor:pointer;" title="Editar">✏️</button>
       </div>`).join('')}
     </div>` : ''}`;
 }
@@ -3614,6 +3651,12 @@ function ppToggleTipo(btn) {
   btn.style.borderColor = active ? 'var(--border)' : 'var(--orange)';
 }
 
+function ppEditSession(idx) {
+  _ppEditIdx = idx;
+  _ppRpe = 0; _ppMood = 0;
+  switchPortalSection('session');
+}
+
 async function submitPortalSession() {
   if (!_ppRpe) { alert('Seleccioná el nivel de esfuerzo (RPE)'); return; }
   if (!_ppMood) { alert('Seleccioná el estado de ánimo'); return; }
@@ -3623,17 +3666,29 @@ async function submitPortalSession() {
   const dur = parseInt(document.getElementById('pp-dur')?.value || '90');
   const notas = document.getElementById('pp-notas')?.value?.trim() || '';
   const tipos = Array.from(document.querySelectorAll('#pp-tipos button')).filter(b=>b.dataset.active==='1').map(b=>b.dataset.tipo);
-  const body = { date: fecha, rpe: _ppRpe, mood: _ppMood, duration: dur, tipos, notas };
+  const entry = { date: fecha, rpe: _ppRpe, mood: _ppMood, duration: dur, tipos, notas };
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) { alert('Error al guardar'); return; }
-    if (!portalPlayer.trainingLoad) portalPlayer.trainingLoad = [];
-    portalPlayer.trainingLoad.unshift(body);
-    _ppRpe = 0; _ppMood = 0;
+    if (_ppEditIdx !== null) {
+      // Editar sesión existente
+      const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({ index: _ppEditIdx, entry })
+      });
+      if (!res.ok) { alert('Error al actualizar'); return; }
+      portalPlayer.trainingLoad[_ppEditIdx] = entry;
+    } else {
+      // Nueva sesión
+      const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify(entry)
+      });
+      if (!res.ok) { alert('Error al guardar'); return; }
+      if (!portalPlayer.trainingLoad) portalPlayer.trainingLoad = [];
+      portalPlayer.trainingLoad.unshift(entry);
+    }
+    _ppRpe = 0; _ppMood = 0; _ppEditIdx = null;
     switchPortalSection('session');
   } catch(e) { alert('Error de conexión'); }
 }
