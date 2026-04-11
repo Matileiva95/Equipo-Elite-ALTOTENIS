@@ -4056,13 +4056,13 @@ const COURT_W = 220, COURT_H = 390;
 
 const CRT_G = {
   gx:0,gy:0,gw:220,gh:390,           // green exterior
-  cx:15,cy:15,cw:190,ch:360,          // clay area
-  dl:15,dr:205,                        // doubles left/right x
-  sl:39,sr:181,                        // singles left/right x
-  tb:15,bb:375,                        // top/bottom baselines y
-  net:195,                             // net center y
-  svt:98,svb:292,                      // service lines y (top/bottom)
-  mid:110,                             // center service line x
+  cx:30,cy:35,cw:160,ch:320,          // clay area (30px side margins, 35px top/bottom)
+  dl:30,dr:190,                        // doubles left/right x
+  sl:50,sr:170,                        // singles left/right x  (160*0.125=20px alleys)
+  tb:35,bb:355,                        // top/bottom baselines y
+  net:195,                             // net center y  (35 + 320/2)
+  svt:109,svb:281,                     // service lines y  (35+74, 355-74)
+  mid:110,                             // center service line x  (30+80)
 };
 
 let _courtEl = [];
