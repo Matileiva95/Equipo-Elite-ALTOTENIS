@@ -371,8 +371,10 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
     </div>
     <input type="email" id="li-user" placeholder="Tu email" autocomplete="email" />
     <input type="password" id="li-pass" placeholder="Contraseña" />
-    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div id="li-magic-msg" style="display:none;font-size:12px;color:var(--g3);text-align:center;margin-bottom:8px;line-height:1.5;">Te enviaremos un link a tu email para entrar sin contraseña</div>
+    <button class="login-btn" id="login-btn-main" onclick="doLogin()">Ingresar</button>
     <div class="login-err" id="li-err"></div>
+    <div id="li-magic-ok" style="display:none;background:#eefaf3;border:1px solid #a7d7b8;border-radius:8px;padding:12px;font-size:13px;color:#1a7a3f;text-align:center;margin-top:8px;"></div>
     <p style="margin-top:20px; font-size:10px; color:#888; text-align:center; line-height:1.5;">
       © 2026 Matías Leiva. Todos los derechos reservados.<br>
       CourtIQ es un desarrollo propietario. Prohibida su reproducción,<br>distribución o uso comercial sin autorización escrita del autor.
@@ -503,43 +505,46 @@ function setLoginRole(r) {
   loginRole = r;
   document.getElementById('rbtn-coach').classList.toggle('active', r === 'coach');
   document.getElementById('rbtn-player').classList.toggle('active', r === 'player');
-  document.getElementById('li-user').placeholder = r === 'player' ? 'Tu email de jugador' : 'Tu email';
+  const isPlayer = r === 'player';
+  document.getElementById('li-user').placeholder = isPlayer ? 'Tu email de jugador' : 'Tu email';
+  document.getElementById('li-pass').style.display = isPlayer ? 'none' : '';
+  document.getElementById('li-magic-msg').style.display = isPlayer ? 'block' : 'none';
+  document.getElementById('login-btn-main').textContent = isPlayer ? 'Enviar link de acceso' : 'Ingresar';
+  document.getElementById('li-err').textContent = '';
+  document.getElementById('li-magic-ok').style.display = 'none';
 }
 
 async function doLogin() {
   const u = document.getElementById('li-user').value.trim();
-  const p = document.getElementById('li-pass').value;
   const errEl = document.getElementById('li-err');
-  const btn = document.querySelector('.login-btn');
+  const btn = document.getElementById('login-btn-main');
   if (!u) { errEl.textContent = 'Ingresa tu email'; return; }
-  if (!p) { errEl.textContent = 'Ingresa tu contraseña'; return; }
+  const pass = document.getElementById('li-pass').value;
+  if (loginRole === 'coach' && !pass) { errEl.textContent = 'Ingresa tu contraseña'; return; }
   btn.disabled = true;
   errEl.textContent = 'Conectando...';
   try { await fetch(`${BACKEND_URL}/health`, {signal: AbortSignal.timeout(25000)}); } catch(_) {}
-  errEl.textContent = loginRole === 'player' ? 'Cargando tu portal...' : 'Iniciando sesión...';
   try {
     if (loginRole === 'player') {
-      const res = await fetch(`${BACKEND_URL}/api/v1/auth/player-login`, {
+      // Magic link flow: request OTP email
+      errEl.textContent = 'Enviando link...';
+      const res = await fetch(`${BACKEND_URL}/api/v1/auth/request-magic-link`, {
         method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email: u, password: p}),
+        body: JSON.stringify({email: u}),
         signal: AbortSignal.timeout(15000)
       });
       const d = await res.json();
-      if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
-      sessionStorage.setItem('ciq_token', d.session.access_token);
-      sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
-      sessionStorage.setItem('ciq_player_id', d.playerId || '');
-      sessionStorage.setItem('ciq_role', 'player');
-      user = d.session?.user?.user_metadata?.full_name || u;
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app').style.display = 'none';
-      document.getElementById('player-panel').style.display = 'flex';
-      document.getElementById('pp-player-name').textContent = user;
-      loadPlayerPortal(d.playerId || '');
+      if (!res.ok) { errEl.textContent = d.error || 'No se pudo enviar el link'; btn.disabled = false; return; }
+      errEl.textContent = '';
+      const okEl = document.getElementById('li-magic-ok');
+      okEl.textContent = `✓ Link enviado a ${u}. Revisá tu email y hacé click en el enlace para ingresar.`;
+      okEl.style.display = 'block';
+      btn.disabled = false;
     } else {
+      errEl.textContent = 'Iniciando sesión...';
       const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
         method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email: u, password: p}),
+        body: JSON.stringify({email: u, password: pass}),
         signal: AbortSignal.timeout(15000)
       });
       const d = await res.json();
@@ -596,6 +601,8 @@ function doLogout() {
   document.getElementById('player-panel').style.display = 'none';
   document.getElementById('li-pass').value = '';
   document.getElementById('li-err').textContent = '';
+  document.getElementById('li-magic-ok').style.display = 'none';
+  sessionStorage.removeItem('ciq_role');
 }
 
 // ── SYNC ──────────────────────────────────────────────────
@@ -1575,7 +1582,10 @@ function renderPlayer(){
         ${p.equipamiento?.raqueta?`<div style="font-size:12px;color:var(--g3);margin-top:3px;">🎾 ${p.equipamiento.raqueta}${p.equipamiento.tension?' · '+p.equipamiento.tension:''}</div>`:''}
         ${p.equipoTrabajo?.fisico?`<div style="font-size:11px;color:var(--g3);margin-top:2px;">Físico: ${p.equipoTrabajo.fisico}</div>`:''}
       </div>
-      <button class="btn btn-g btn-sm" onclick="openEditPlayer(${pid})" style="flex-shrink:0;">Editar</button>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+        <button class="btn btn-g btn-sm" onclick="openEditPlayer(${pid})">Editar</button>
+        ${p.email?`<button class="btn btn-sm" style="background:#eef7fc;color:var(--bd);border:1px solid #b8d9f0;font-size:11px;" onclick="enviarMagicLink(${pid})">📧 Acceso portal</button>`:''}
+      </div>
     </div>
     <div class="tab-row">
       <button class="tab-btn${dtab==='perfil'?' active':''}" onclick="switchDtab('perfil')">Perfil</button>
@@ -2109,6 +2119,7 @@ function renderModalForm(p){
     <div class="fg"><label>Circuito</label><select id="m-circuit"><option value="atp" ${!p||p.circuit==='atp'?'selected':''}>ATP</option><option value="wta" ${p&&p.circuit==='wta'?'selected':''}>WTA</option><option value="itf" ${p&&p.circuit==='itf'?'selected':''}>ITF Junior</option></select></div>
     <div class="fg"><label>Género</label><select id="m-gender"><option value="M" ${!p||p.gender==='M'?'selected':''}>Masculino</option><option value="F" ${p&&p.gender==='F'?'selected':''}>Femenino</option></select></div>
     <div class="fg"><label>Mano dominante</label><select id="m-hand"><option value="Diestro" ${!p||p.hand==='Diestro'?'selected':''}>Diestro</option><option value="Zurdo" ${p&&p.hand==='Zurdo'?'selected':''}>Zurdo</option></select></div>
+    <div class="fg fg-full"><label>Email del jugador <span style="font-weight:400;color:var(--g3);">(opcional — para acceso al portal)</span></label><input id="m-email" type="email" value="${p?p.email||'':''}" placeholder="jugador@email.com" /></div>
   `;
 }
 
@@ -2130,6 +2141,7 @@ function openEditPlayer(i){
 function closePlayerModal(){document.getElementById('player-modal').classList.remove('open');}
 async function savePlayerModal(){
   const name=document.getElementById('m-name').value.trim();if(!name){alert('Ingresa el nombre del jugador');return;}
+  const emailVal = (document.getElementById('m-email')?.value||'').trim();
   const pd={
     name,
     age:parseInt(document.getElementById('m-age').value)||0,
@@ -2137,6 +2149,7 @@ async function savePlayerModal(){
     circuit:document.getElementById('m-circuit')?.value||'atp',
     gender:document.getElementById('m-gender').value,
     hand:document.getElementById('m-hand').value,
+    email:emailVal,
     style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]
   };
   if(editingPlayerId!==null){data.players[editingPlayerId]={...data.players[editingPlayerId],...pd,id:editingPlayerId};}
@@ -2148,6 +2161,22 @@ async function deletePlayer(){
   if(!confirm('¿Eliminar a '+data.players[editingPlayerId].name+'?'))return;
   data.players.splice(editingPlayerId,1);data.players.forEach((p,i)=>p.id=i);
   scheduleSync();closePlayerModal();pid=null;page='dashboard';renderAll();
+}
+
+async function enviarMagicLink(i) {
+  const p = data.players[i];
+  if (!p || !p.email) { alert('Este jugador no tiene email registrado. Agregá el email en Editar.'); return; }
+  const token = sessionStorage.getItem('ciq_token');
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/players/${p.id}/send-magic-link`, {
+      method: 'POST', headers: {'Authorization': `Bearer ${token}`}
+    });
+    const d = await res.json();
+    if (!res.ok) { alert(d.error || 'No se pudo enviar el link'); return; }
+    alert(`✓ Link de acceso enviado a ${p.email}`);
+  } catch(e) {
+    alert('Error de conexión al enviar el link');
+  }
 }
 
 // ── COACHING ──────────────────────────────────────────────
@@ -3969,6 +3998,68 @@ async function loadCoachPortalData(playerId) {
 function ini(n){return n.split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');}
 function weekKey(d){const m=new Date(d);m.setDate(d.getDate()-((d.getDay()+6)%7));return m.toISOString().slice(0,10);}
 function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDate(d.getDate()+6);return `${d.getDate()} ${MONTHS[d.getMonth()]} – ${e.getDate()} ${MONTHS[e.getMonth()]} ${e.getFullYear()}`;}
+
+// ── MAGIC LINK HANDLER ────────────────────────────────────
+// Runs on page load: if URL contains #access_token=... (Supabase magic link redirect),
+// auto-authenticate the player and show their portal.
+(async function handleMagicLink() {
+  const hash = window.location.hash;
+  if (!hash || !hash.includes('access_token=')) return;
+
+  // Parse hash params
+  const params = {};
+  hash.slice(1).split('&').forEach(part => {
+    const [k, v] = part.split('=');
+    if (k && v) params[k] = decodeURIComponent(v);
+  });
+
+  const accessToken = params['access_token'];
+  const refreshToken = params['refresh_token'];
+  const tokenType = params['type']; // 'magiclink' or 'recovery'
+
+  if (!accessToken) return;
+
+  // Clear the hash from the URL so the token is not visible or reusable from the address bar
+  if (history.replaceState) history.replaceState(null, '', window.location.pathname);
+
+  // Show loading state
+  document.getElementById('login-screen').style.display = 'flex';
+  const errEl = document.getElementById('li-err');
+  errEl.textContent = 'Verificando acceso...';
+
+  try {
+    // Use the token to fetch the user's profile
+    const res = await fetch(`${BACKEND_URL}/api/v1/auth/me`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (!res.ok) {
+      errEl.textContent = 'El link ha expirado o no es válido. Solicitá uno nuevo.';
+      return;
+    }
+    const profile = await res.json();
+
+    if (profile.role !== 'player') {
+      errEl.textContent = 'Este link es solo para jugadores.';
+      return;
+    }
+
+    // Store session
+    sessionStorage.setItem('ciq_token', accessToken);
+    if (refreshToken) sessionStorage.setItem('ciq_refresh', refreshToken);
+    sessionStorage.setItem('ciq_player_id', profile.player_id || '');
+    sessionStorage.setItem('ciq_role', 'player');
+    user = profile.full_name || profile.email || '';
+
+    // Show player panel
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('player-panel').style.display = 'flex';
+    document.getElementById('pp-player-name').textContent = user;
+    loadPlayerPortal(profile.player_id || '');
+  } catch(e) {
+    errEl.textContent = 'Error al verificar el link. Intentá de nuevo.';
+  }
+})();
 </script>
 </body>
 </html>
