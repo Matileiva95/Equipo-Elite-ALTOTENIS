@@ -275,6 +275,14 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 .bib-form-section{font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px;}
 @media(max-width:700px){.bib-grid{grid-template-columns:1fr!important;}}
 
+/* COURT DIAGRAM EDITOR */
+.court-wrap{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-top:6px;}
+.court-toolbar{display:flex;flex-direction:column;gap:3px;min-width:92px;}
+.crt-btn{padding:5px 8px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--g5);font-size:11px;cursor:pointer;text-align:left;font-family:inherit;color:var(--g2);line-height:1.3;white-space:nowrap;}
+.crt-btn.active{background:var(--orange);color:#fff;border-color:var(--od);}
+.crt-btn:hover:not(.active){background:var(--g4);}
+.court-canvas-col{flex:1;min-width:0;}
+.court-ro{display:block;border-radius:6px;}
 /* ASISTENCIA */
 .asist-estados{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
 .asist-legend{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--g2);}
@@ -682,7 +690,8 @@ function updateMobileNav(){
 }
 function toggleDrawer(){const dr=document.getElementById('player-drawer'),ov=document.getElementById('drawer-overlay');dr.classList.toggle('open');ov.classList.toggle('open');}
 function closeDrawer(){document.getElementById('player-drawer').classList.remove('open');document.getElementById('drawer-overlay').classList.remove('open');}
-function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='player')m.innerHTML=renderPlayer();}
+function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='player')m.innerHTML=renderPlayer();postRender();}
+function postRender(){document.querySelectorAll('canvas.court-ro').forEach(c=>{try{drawCourtReadOnly(c,JSON.parse(c.dataset.diagram||'[]'));}catch(e){}});if(document.getElementById('court-canvas'))initCourtEditor();}
 
 // ── DASHBOARD ─────────────────────────────────────────────
 function renderDashboard(){
@@ -2303,6 +2312,7 @@ function renderBibDetail(e, idx) {
     </div>
     ${e.objetivo?`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Objetivo</div><div style="font-size:13px;color:var(--gray);line-height:1.6;">${e.objetivo}</div></div>`:''}
     ${e.descripcion?`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Descripción</div><div style="font-size:13px;color:var(--gray);line-height:1.7;white-space:pre-line;">${e.descripcion}</div></div>`:''}
+    ${e.diagrama&&e.diagrama.length?`<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Diagrama</div><canvas class="court-ro" data-diagram='${JSON.stringify(e.diagrama)}' width="220" height="390" style="border-radius:6px;max-width:100%;"></canvas></div>`:''}
     ${e.tags&&e.tags.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;">${e.tags.map(t=>`<span class="bib-tag">${t}</span>`).join('')}</div>`:''}
   </div>`;
 }
@@ -2344,6 +2354,35 @@ function renderBibForm(idx) {
     <div class="fg" style="margin-bottom:14px;"><label>Etiquetas (separadas por coma)</label>
       <input id="bib-tags" value="${e&&e.tags?e.tags.join(', '):''}" placeholder="Ej: Fondo, Derecha, Ofensivo" />
     </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;font-weight:500;color:var(--g3);margin-bottom:6px;">Diagrama de cancha <span style="font-weight:400;">(opcional — click para colocar, arrastrá para mover)</span></label>
+      <div class="court-wrap">
+        <div class="court-toolbar">
+          <div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Herramienta</div>
+          <button class="crt-btn active" data-tool="select" onclick="setCourtTool('select')">↖ Mover</button>
+          <div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin:5px 0 2px;">Elementos</div>
+          <button class="crt-btn" data-tool="player" onclick="setCourtTool('player')">⚪ Jugador</button>
+          <button class="crt-btn" data-tool="rival" onclick="setCourtTool('rival')">🔵 Rival</button>
+          <button class="crt-btn" data-tool="coach" onclick="setCourtTool('coach')">🟢 Entrenador</button>
+          <button class="crt-btn" data-tool="ball" onclick="setCourtTool('ball')">🟡 Pelota</button>
+          <div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin:5px 0 2px;">Flechas</div>
+          <button class="crt-btn" data-tool="arrow" onclick="setCourtTool('arrow')">→ Trayectoria</button>
+          <button class="crt-btn" data-tool="movement" onclick="setCourtTool('movement')">⤳ Movimiento</button>
+          <div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin:5px 0 2px;">Zona</div>
+          <button class="crt-btn" data-tool="zone" onclick="setCourtTool('zone')">▭ Área</button>
+          <div style="display:flex;gap:3px;margin-top:8px;">
+            <button onclick="undoCourt()" class="crt-btn" style="flex:1;text-align:center;">↩</button>
+            <button onclick="clearCourt()" class="crt-btn" style="flex:1;text-align:center;">✕</button>
+          </div>
+          <div id="court-tool-hint" style="font-size:10px;color:var(--g3);margin-top:6px;line-height:1.4;min-height:28px;"></div>
+        </div>
+        <div class="court-canvas-col">
+          <canvas id="court-canvas" width="220" height="390" style="width:100%;max-width:220px;border-radius:6px;cursor:default;touch-action:none;display:block;"></canvas>
+        </div>
+      </div>
+    </div>
+
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-o btn-sm" onclick="saveBib(${isEdit?customIdx:null})">${isEdit?'Guardar cambios':'Agregar ejercicio'}</button>
       ${isEdit&&customIdx>=0?`<button class="btn btn-red btn-sm" onclick="deleteBib(${customIdx})">Eliminar</button>`:''}
@@ -2363,6 +2402,7 @@ function openBibForm(idx) {
 function cancelBibForm() {
   showBibForm = false;
   editingBibIdx = null;
+  _courtCanvas = null;
   renderMain();
 }
 
@@ -2370,6 +2410,8 @@ async function saveBib(customIdx) {
   const nombre = document.getElementById('bib-nombre')?.value?.trim();
   if(!nombre){alert('El nombre es obligatorio');return;}
   const tagsRaw = document.getElementById('bib-tags')?.value||'';
+  const allPrev = [...ITF_EJERCICIOS, ...(data.ejercicios||[])];
+  const prevE = (customIdx !== null && customIdx >= 0) ? allPrev[ITF_EJERCICIOS.length + customIdx] : null;
   const e = {
     nombre,
     tipo: document.getElementById('bib-tipo')?.value||'tecnico',
@@ -2381,7 +2423,8 @@ async function saveBib(customIdx) {
     tags: tagsRaw.split(',').map(t=>t.trim()).filter(Boolean),
     addedBy: user,
     fuente: 'Altotenis',
-    fecha: new Date().toLocaleDateString('es-CL')
+    fecha: new Date().toLocaleDateString('es-CL'),
+    diagrama: _courtEl.length > 0 ? JSON.parse(JSON.stringify(_courtEl)) : (prevE?.diagrama || null),
   };
   data.ejercicios = data.ejercicios || [];
   if(customIdx !== null && customIdx >= 0) {
@@ -2391,6 +2434,7 @@ async function saveBib(customIdx) {
   }
   showBibForm = false;
   editingBibIdx = null;
+  _courtCanvas = null;
   scheduleSync();
   renderMain();
 }
@@ -2400,6 +2444,7 @@ async function deleteBib(customIdx) {
   data.ejercicios.splice(customIdx, 1);
   showBibForm = false;
   editingBibIdx = null;
+  _courtCanvas = null;
   scheduleSync();
   renderMain();
 }
@@ -3992,6 +4037,365 @@ async function loadCoachPortalData(playerId) {
     const el = document.getElementById('dtab-content');
     if (el && dtab === 'portal') el.innerHTML = renderDtab();
   }
+}
+
+// ── COURT DIAGRAM ─────────────────────────────────────────
+const COURT_W = 220, COURT_H = 390;
+
+// Geometry in logical 220×390 space
+// Court interior: x=15,y=15, w=190,h=360
+// Doubles lines: x=15 (left), x=205 (right)
+// Baselines: y=15 (top), y=375 (bottom)
+// Singles lines: 1.37/10.97 of court width → 190*0.125=23.75≈24px from doubles
+//   Left singles x=39, Right singles x=181
+// Net center: y = 15 + 180 = 195
+// Service lines (6.40m from net, half=11.885m):
+//   5.485/11.885 × 180 = 83px from baseline
+//   Top service y=15+83=98, Bottom service y=375-83=292
+// Center service line: x=110 (midpoint of 15+205=220/2=110)
+
+const CRT_G = {
+  gx:0,gy:0,gw:220,gh:390,           // green exterior
+  cx:15,cy:15,cw:190,ch:360,          // clay area
+  dl:15,dr:205,                        // doubles left/right x
+  sl:39,sr:181,                        // singles left/right x
+  tb:15,bb:375,                        // top/bottom baselines y
+  net:195,                             // net center y
+  svt:98,svb:292,                      // service lines y (top/bottom)
+  mid:110,                             // center service line x
+};
+
+let _courtEl = [];
+let _courtTool = 'select';
+let _courtSelectedIdx = -1;
+let _courtArrowStart = null;
+let _courtZoneStart = null;
+let _courtZoneCur = null;
+let _courtCanvas = null;
+let _courtIsDrag = false;
+let _courtDragStart = null;
+let _courtDragOrig = null;
+
+function _crtScale(canvas) {
+  return { sx: canvas.width / COURT_W, sy: canvas.height / COURT_H };
+}
+
+function drawCourtBg(ctx, cw, ch) {
+  const sx = cw / COURT_W, sy = ch / COURT_H;
+  const g = CRT_G;
+  // Green exterior
+  ctx.fillStyle = '#1a9e1a';
+  ctx.fillRect(0, 0, cw, ch);
+  // Clay base
+  ctx.fillStyle = '#c4622d';
+  ctx.fillRect(g.cx*sx, g.cy*sy, g.cw*sx, g.ch*sy);
+  // Darker alleys
+  ctx.fillStyle = '#a8521f';
+  ctx.fillRect(g.dl*sx, g.cy*sy, (g.sl-g.dl)*sx, g.ch*sy);
+  ctx.fillRect(g.sr*sx, g.cy*sy, (g.dr-g.sr)*sx, g.ch*sy);
+  // White lines
+  const lw = Math.max(1, 1.5 * Math.min(sx, sy));
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = lw;
+  ctx.beginPath();
+  // Baselines
+  ctx.moveTo(g.dl*sx,g.tb*sy); ctx.lineTo(g.dr*sx,g.tb*sy);
+  ctx.moveTo(g.dl*sx,g.bb*sy); ctx.lineTo(g.dr*sx,g.bb*sy);
+  // Doubles sidelines
+  ctx.moveTo(g.dl*sx,g.tb*sy); ctx.lineTo(g.dl*sx,g.bb*sy);
+  ctx.moveTo(g.dr*sx,g.tb*sy); ctx.lineTo(g.dr*sx,g.bb*sy);
+  // Singles sidelines
+  ctx.moveTo(g.sl*sx,g.tb*sy); ctx.lineTo(g.sl*sx,g.bb*sy);
+  ctx.moveTo(g.sr*sx,g.tb*sy); ctx.lineTo(g.sr*sx,g.bb*sy);
+  // Service lines
+  ctx.moveTo(g.sl*sx,g.svt*sy); ctx.lineTo(g.sr*sx,g.svt*sy);
+  ctx.moveTo(g.sl*sx,g.svb*sy); ctx.lineTo(g.sr*sx,g.svb*sy);
+  // Center service line
+  ctx.moveTo(g.mid*sx,g.svt*sy); ctx.lineTo(g.mid*sx,g.svb*sy);
+  ctx.stroke();
+  // Net 3D effect
+  const ny = g.net;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.fillRect(g.dl*sx, (ny+3)*sy, g.cw*sx, 4*sy);
+  // Net body (dark)
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(g.dl*sx, (ny-2)*sy, g.cw*sx, 5*sy);
+  // Net mesh lines (thin horizontal)
+  ctx.strokeStyle = 'rgba(160,160,160,0.35)';
+  ctx.lineWidth = Math.max(0.5, 0.7*Math.min(sx,sy));
+  for (let i = 0; i < 4; i++) {
+    const my = (ny-1.5+i)*sy;
+    ctx.beginPath(); ctx.moveTo(g.dl*sx,my); ctx.lineTo(g.dr*sx,my); ctx.stroke();
+  }
+  // White top tape
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(g.dl*sx, (ny-2)*sy, g.cw*sx, 2*sy);
+  // Center vertical tape
+  ctx.fillStyle = '#fff';
+  ctx.fillRect((g.mid-1)*sx, (ny-4)*sy, 2*sx, 8*sy);
+}
+
+function drawCourtElement(ctx, el, selected, sx, sy) {
+  const R = 13 * Math.min(sx, sy);
+  ctx.save();
+  if (el.type === 'player' || el.type === 'rival' || el.type === 'coach' || el.type === 'ball') {
+    const x = el.x*sx, y = el.y*sy;
+    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI*2);
+    const fills = { player:'#fff', rival:'#1DA1D6', coach:'#27ae60', ball:'#f1c40f' };
+    ctx.fillStyle = fills[el.type];
+    ctx.fill();
+    ctx.strokeStyle = selected ? '#ff4500' : 'rgba(0,0,0,0.28)';
+    ctx.lineWidth = selected ? 2.5*Math.min(sx,sy) : 1.2*Math.min(sx,sy);
+    ctx.stroke();
+    const fz = 9.5 * Math.min(sx, sy);
+    ctx.font = `bold ${fz}px sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = el.type === 'player' ? '#111' : (el.type === 'ball' ? '#7a6000' : '#fff');
+    ctx.fillText(el.label || '', x, y);
+  } else if (el.type === 'arrow' || el.type === 'movement') {
+    const x1=el.x1*sx,y1=el.y1*sy,x2=el.x2*sx,y2=el.y2*sy;
+    const col = el.type === 'arrow' ? '#f1c40f' : '#00bcd4';
+    const lw = 2.5*Math.min(sx,sy);
+    ctx.strokeStyle = col; ctx.lineWidth = lw;
+    if (el.type === 'movement') ctx.setLineDash([6*Math.min(sx,sy),4*Math.min(sx,sy)]);
+    else ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.setLineDash([]);
+    // Arrowhead
+    const ang = Math.atan2(y2-y1,x2-x1);
+    const hl = 11*Math.min(sx,sy);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-hl*Math.cos(ang-0.42),y2-hl*Math.sin(ang-0.42));
+    ctx.lineTo(x2-hl*Math.cos(ang+0.42),y2-hl*Math.sin(ang+0.42));
+    ctx.closePath(); ctx.fill();
+    if (selected) {
+      ctx.strokeStyle='#ff4500'; ctx.lineWidth=lw+2;
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    }
+  } else if (el.type === 'zone') {
+    const x=el.x*sx,y=el.y*sy,w=el.w*sx,h=el.h*sy;
+    ctx.fillStyle = 'rgba(155,89,182,0.18)';
+    ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle = selected ? '#ff4500' : '#9b59b6';
+    ctx.lineWidth = 2*Math.min(sx,sy);
+    ctx.setLineDash([5,3]); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]);
+    ctx.fillStyle = '#7d3c98';
+    ctx.font = `bold ${9*Math.min(sx,sy)}px sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(el.label||'', x+4*sx, y+3*sy);
+  }
+  ctx.restore();
+}
+
+function redrawCourt() {
+  const canvas = document.getElementById('court-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cw = canvas.width, ch = canvas.height;
+  const {sx,sy} = _crtScale(canvas);
+  drawCourtBg(ctx, cw, ch);
+  _courtEl.forEach((el,i) => drawCourtElement(ctx, el, i===_courtSelectedIdx, sx, sy));
+  // Arrow pending start
+  if (_courtArrowStart) {
+    ctx.beginPath();
+    ctx.arc(_courtArrowStart.x*sx, _courtArrowStart.y*sy, 5*Math.min(sx,sy), 0, Math.PI*2);
+    ctx.fillStyle = _courtTool==='arrow' ? '#f1c40f' : '#00bcd4';
+    ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=1; ctx.stroke();
+  }
+  // Zone preview
+  if (_courtZoneStart && _courtZoneCur) {
+    const zx=Math.min(_courtZoneStart.x,_courtZoneCur.x)*sx;
+    const zy=Math.min(_courtZoneStart.y,_courtZoneCur.y)*sy;
+    const zw=Math.abs(_courtZoneCur.x-_courtZoneStart.x)*sx;
+    const zh=Math.abs(_courtZoneCur.y-_courtZoneStart.y)*sy;
+    ctx.fillStyle='rgba(155,89,182,0.12)';
+    ctx.fillRect(zx,zy,zw,zh);
+    ctx.strokeStyle='#9b59b6'; ctx.lineWidth=2;
+    ctx.setLineDash([5,3]); ctx.strokeRect(zx,zy,zw,zh); ctx.setLineDash([]);
+  }
+}
+
+function drawCourtReadOnly(canvas, elements) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const {sx,sy} = _crtScale(canvas);
+  drawCourtBg(ctx, canvas.width, canvas.height);
+  if (elements && elements.length) elements.forEach(el => drawCourtElement(ctx, el, false, sx, sy));
+}
+
+function _crtHint(msg) {
+  const h = document.getElementById('court-tool-hint');
+  if (h) h.textContent = msg;
+}
+
+function setCourtTool(t) {
+  _courtTool = t;
+  _courtArrowStart = null;
+  _courtZoneStart = null;
+  _courtZoneCur = null;
+  _courtSelectedIdx = -1;
+  document.querySelectorAll('.crt-btn[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool===t));
+  const canvas = document.getElementById('court-canvas');
+  if (canvas) canvas.style.cursor = t==='select' ? 'default' : 'crosshair';
+  const hints = {select:'Clickeá para seleccionar, arrastrá para mover.',player:'Clickeá en la cancha para colocar un jugador.',rival:'Clickeá en la cancha para colocar un rival.',coach:'Clickeá para colocar al entrenador.',ball:'Clickeá para colocar la pelota.',arrow:'Click inicial → click destino para dibujar trayectoria.',movement:'Click inicial → click destino para dibujar movimiento.',zone:'Clickeá y arrastrá para dibujar una zona.'};
+  _crtHint(hints[t]||'');
+  redrawCourt();
+}
+
+function undoCourt() {
+  if (!_courtEl.length) return;
+  _courtEl.pop();
+  _courtSelectedIdx = -1;
+  redrawCourt();
+}
+
+function clearCourt() {
+  if (!_courtEl.length) return;
+  if (!confirm('¿Limpiar el diagrama?')) return;
+  _courtEl = [];
+  _courtSelectedIdx = -1;
+  _courtArrowStart = null;
+  _courtZoneStart = null;
+  redrawCourt();
+}
+
+function _crtNextLabel(type) {
+  const counts = {};
+  _courtEl.forEach(el => { counts[el.type] = (counts[el.type]||0)+1; });
+  if (type==='player') return `J${(counts.player||0)+1}`;
+  if (type==='rival')  return `R${(counts.rival||0)+1}`;
+  if (type==='zone')   return `Z${(counts.zone||0)+1}`;
+  if (type==='coach')  return 'E';
+  if (type==='ball')   return '';
+  return '';
+}
+
+function _crtPos(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = COURT_W / rect.width;
+  const scaleY = COURT_H / rect.height;
+  const src = e.touches ? e.touches[0] : e;
+  return { x: (src.clientX - rect.left)*scaleX, y: (src.clientY - rect.top)*scaleY };
+}
+
+function _crtFindAt(x, y) {
+  for (let i = _courtEl.length-1; i >= 0; i--) {
+    const el = _courtEl[i];
+    if (['player','rival','coach','ball'].includes(el.type)) {
+      const dx=el.x-x, dy=el.y-y;
+      if (dx*dx+dy*dy <= 15*15) return i;
+    } else if (el.type==='zone') {
+      if (x>=el.x&&x<=el.x+el.w&&y>=el.y&&y<=el.y+el.h) return i;
+    } else if (['arrow','movement'].includes(el.type)) {
+      // Hit-test: distance from click to line segment
+      const dx=el.x2-el.x1, dy=el.y2-el.y1;
+      const len2=dx*dx+dy*dy;
+      if (len2===0) continue;
+      const t=Math.max(0,Math.min(1,((x-el.x1)*dx+(y-el.y1)*dy)/len2));
+      const px=el.x1+t*dx-x, py=el.y1+t*dy-y;
+      if (px*px+py*py<=100) return i;
+    }
+  }
+  return -1;
+}
+
+function _crtDown(e) {
+  e.preventDefault();
+  const canvas = document.getElementById('court-canvas');
+  if (!canvas) return;
+  const pos = _crtPos(canvas, e);
+
+  if (_courtTool==='select') {
+    const idx = _crtFindAt(pos.x, pos.y);
+    _courtSelectedIdx = idx;
+    if (idx>=0) {
+      _courtIsDrag = true;
+      _courtDragStart = pos;
+      const el = _courtEl[idx];
+      _courtDragOrig = { x:el.x, y:el.y, x1:el.x1, y1:el.y1, x2:el.x2, y2:el.y2, zx:el.x, zy:el.y };
+    }
+    redrawCourt(); return;
+  }
+  if (_courtTool==='zone') {
+    _courtZoneStart = pos; _courtZoneCur = pos; _courtIsDrag = true; return;
+  }
+  if (_courtTool==='arrow' || _courtTool==='movement') {
+    if (!_courtArrowStart) {
+      _courtArrowStart = pos; redrawCourt();
+    } else {
+      _courtEl.push({ type:_courtTool, x1:_courtArrowStart.x, y1:_courtArrowStart.y, x2:pos.x, y2:pos.y, label:'' });
+      _courtArrowStart = null; redrawCourt();
+    }
+    return;
+  }
+  if (['player','rival','coach','ball'].includes(_courtTool)) {
+    _courtEl.push({ type:_courtTool, x:pos.x, y:pos.y, label:_crtNextLabel(_courtTool) });
+    redrawCourt();
+  }
+}
+
+function _crtMove(e) {
+  if (!_courtIsDrag) return;
+  e.preventDefault();
+  const canvas = document.getElementById('court-canvas');
+  if (!canvas) return;
+  const pos = _crtPos(canvas, e);
+  if (_courtTool==='zone' && _courtZoneStart) {
+    _courtZoneCur = pos; redrawCourt(); return;
+  }
+  if (_courtTool==='select' && _courtSelectedIdx>=0 && _courtDragStart) {
+    const el = _courtEl[_courtSelectedIdx];
+    const dx=pos.x-_courtDragStart.x, dy=pos.y-_courtDragStart.y;
+    if (['player','rival','coach','ball'].includes(el.type)) {
+      el.x=_courtDragOrig.x+dx; el.y=_courtDragOrig.y+dy;
+    } else if (el.type==='zone') {
+      el.x=_courtDragOrig.zx+dx; el.y=_courtDragOrig.zy+dy;
+    } else if (['arrow','movement'].includes(el.type)) {
+      el.x1=_courtDragOrig.x1+dx; el.y1=_courtDragOrig.y1+dy;
+      el.x2=_courtDragOrig.x2+dx; el.y2=_courtDragOrig.y2+dy;
+    }
+    redrawCourt();
+  }
+}
+
+function _crtUp(e) {
+  if (_courtTool==='zone' && _courtZoneStart && _courtZoneCur) {
+    const x=Math.min(_courtZoneStart.x,_courtZoneCur.x), y=Math.min(_courtZoneStart.y,_courtZoneCur.y);
+    const w=Math.abs(_courtZoneCur.x-_courtZoneStart.x), h=Math.abs(_courtZoneCur.y-_courtZoneStart.y);
+    if (w>8 && h>8) _courtEl.push({ type:'zone', x, y, w, h, label:_crtNextLabel('zone') });
+    _courtZoneStart=null; _courtZoneCur=null; redrawCourt();
+  }
+  _courtIsDrag=false; _courtDragStart=null; _courtDragOrig=null;
+}
+
+function initCourtEditor() {
+  const canvas = document.getElementById('court-canvas');
+  if (!canvas) return;
+  if (canvas === _courtCanvas) { redrawCourt(); return; }  // already initialized for this canvas
+  _courtCanvas = canvas;
+  // Load existing diagram
+  const allE = [...ITF_EJERCICIOS, ...(data.ejercicios||[])];
+  _courtEl = (editingBibIdx !== null) ? JSON.parse(JSON.stringify(allE[editingBibIdx]?.diagrama || [])) : [];
+  _courtTool = 'select';
+  _courtSelectedIdx = -1;
+  _courtArrowStart = null;
+  _courtZoneStart = null;
+  _courtZoneCur = null;
+  // Attach events
+  canvas.addEventListener('mousedown', _crtDown);
+  canvas.addEventListener('mousemove', _crtMove);
+  canvas.addEventListener('mouseup', _crtUp);
+  canvas.addEventListener('touchstart', _crtDown, { passive:false });
+  canvas.addEventListener('touchmove', _crtMove, { passive:false });
+  canvas.addEventListener('touchend', _crtUp);
+  // Set cursor and hint
+  canvas.style.cursor = 'default';
+  _crtHint('Clickeá para seleccionar, arrastrá para mover.');
+  redrawCourt();
 }
 
 // ── UTILS ─────────────────────────────────────────────────
