@@ -475,6 +475,26 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
   </nav>
 </div>
 
+<!-- Modal: crear contraseña tras primer login con magic link -->
+<div id="set-password-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+    <div style="font-size:20px;text-align:center;margin-bottom:8px;">🔐</div>
+    <div style="font-size:16px;font-weight:600;text-align:center;margin-bottom:6px;">Crea tu contraseña</div>
+    <div style="font-size:13px;color:var(--g3);text-align:center;margin-bottom:20px;line-height:1.5;">Crea una contraseña para entrar sin necesitar el link cada vez</div>
+    <div class="fg" style="margin-bottom:12px;">
+      <label>Nueva contraseña</label>
+      <input type="password" id="sp-pass1" placeholder="Mínimo 6 caracteres" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:14px;outline:none;background:var(--g5);" />
+    </div>
+    <div class="fg" style="margin-bottom:6px;">
+      <label>Confirmar contraseña</label>
+      <input type="password" id="sp-pass2" placeholder="Repetí la contraseña" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:14px;outline:none;background:var(--g5);" />
+    </div>
+    <div id="sp-err" style="font-size:12px;color:#e74c3c;min-height:18px;margin-bottom:12px;"></div>
+    <button id="sp-save-btn" class="btn btn-o" style="width:100%;padding:12px;" onclick="saveNewPassword()">Guardar contraseña</button>
+    <button class="btn btn-g btn-sm" style="width:100%;margin-top:8px;" onclick="skipSetPassword()">Ahora no</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -515,9 +535,11 @@ function setLoginRole(r) {
   document.getElementById('rbtn-player').classList.toggle('active', r === 'player');
   const isPlayer = r === 'player';
   document.getElementById('li-user').placeholder = isPlayer ? 'Tu email de jugador' : 'Tu email';
-  document.getElementById('li-pass').style.display = isPlayer ? 'none' : '';
+  document.getElementById('li-pass').style.display = '';
+  document.getElementById('li-pass').placeholder = isPlayer ? 'Contraseña (si ya creaste una)' : 'Contraseña';
   document.getElementById('li-magic-msg').style.display = isPlayer ? 'block' : 'none';
-  document.getElementById('login-btn-main').textContent = isPlayer ? 'Enviar link de acceso' : 'Ingresar';
+  document.getElementById('li-magic-msg').textContent = isPlayer ? 'Sin contraseña aún? Dejá el campo en blanco y te enviamos un link.' : '';
+  document.getElementById('login-btn-main').textContent = 'Ingresar';
   document.getElementById('li-err').textContent = '';
   document.getElementById('li-magic-ok').style.display = 'none';
 }
@@ -534,20 +556,42 @@ async function doLogin() {
   try { await fetch(`${BACKEND_URL}/health`, {signal: AbortSignal.timeout(25000)}); } catch(_) {}
   try {
     if (loginRole === 'player') {
-      // Magic link flow: request OTP email
-      errEl.textContent = 'Enviando link...';
-      const res = await fetch(`${BACKEND_URL}/api/v1/auth/request-magic-link`, {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email: u}),
-        signal: AbortSignal.timeout(15000)
-      });
-      const d = await res.json();
-      if (!res.ok) { errEl.textContent = d.error || 'No se pudo enviar el link'; btn.disabled = false; return; }
-      errEl.textContent = '';
-      const okEl = document.getElementById('li-magic-ok');
-      okEl.textContent = `✓ Link enviado a ${u}. Revisá tu email y hacé click en el enlace para ingresar.`;
-      okEl.style.display = 'block';
-      btn.disabled = false;
+      if (pass) {
+        // Password login (jugador que ya creó su contraseña)
+        errEl.textContent = 'Iniciando sesión...';
+        const res = await fetch(`${BACKEND_URL}/api/v1/auth/player-login`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: u, password: pass}),
+          signal: AbortSignal.timeout(15000)
+        });
+        const d = await res.json();
+        if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
+        sessionStorage.setItem('ciq_token', d.session.access_token);
+        sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
+        sessionStorage.setItem('ciq_player_id', String(d.playerId || ''));
+        sessionStorage.setItem('ciq_role', 'player');
+        user = d.session.user?.user_metadata?.full_name || u;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('player-panel').style.display = 'flex';
+        document.getElementById('pp-player-name').textContent = user;
+        loadPlayerPortal(String(d.playerId || ''));
+      } else {
+        // Magic link flow: jugador sin contraseña aún
+        errEl.textContent = 'Enviando link...';
+        const res = await fetch(`${BACKEND_URL}/api/v1/auth/request-magic-link`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: u}),
+          signal: AbortSignal.timeout(15000)
+        });
+        const d = await res.json();
+        if (!res.ok) { errEl.textContent = d.error || 'No se pudo enviar el link'; btn.disabled = false; return; }
+        errEl.textContent = '';
+        const okEl = document.getElementById('li-magic-ok');
+        okEl.textContent = `✓ Link enviado a ${u}. Revisá tu email y hacé click en el enlace para ingresar.`;
+        okEl.style.display = 'block';
+        btn.disabled = false;
+      }
     } else {
       errEl.textContent = 'Iniciando sesión...';
       const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
@@ -4487,10 +4531,61 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
     document.getElementById('player-panel').style.display = 'flex';
     document.getElementById('pp-player-name').textContent = user;
     loadPlayerPortal(finalPlayerId);
+    // Primera vez via magic link → ofrecer crear contraseña
+    showSetPasswordModal();
   } catch(e) {
     errEl.textContent = 'Error al verificar el link. Intentá de nuevo.';
   }
 })();
+
+// ── SET PASSWORD MODAL ─────────────────────────────────────
+function showSetPasswordModal() {
+  const modal = document.getElementById('set-password-modal');
+  if (!modal) return;
+  document.getElementById('sp-pass1').value = '';
+  document.getElementById('sp-pass2').value = '';
+  document.getElementById('sp-err').textContent = '';
+  const btn = document.getElementById('sp-save-btn');
+  btn.disabled = false;
+  btn.textContent = 'Guardar contraseña';
+  modal.style.display = 'flex';
+}
+
+async function saveNewPassword() {
+  const p1 = document.getElementById('sp-pass1').value;
+  const p2 = document.getElementById('sp-pass2').value;
+  const errEl = document.getElementById('sp-err');
+  const btn = document.getElementById('sp-save-btn');
+  if (p1.length < 6) { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres'; return; }
+  if (p1 !== p2) { errEl.textContent = 'Las contraseñas no coinciden'; return; }
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  try {
+    const token = sessionStorage.getItem('ciq_token');
+    const res = await fetch(`${BACKEND_URL}/api/v1/auth/set-password`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+      body: JSON.stringify({password: p1})
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      errEl.textContent = d.error || 'Error al guardar la contraseña';
+      btn.disabled = false;
+      btn.textContent = 'Guardar contraseña';
+      return;
+    }
+    document.getElementById('set-password-modal').style.display = 'none';
+  } catch(e) {
+    errEl.textContent = 'Error de conexión. Intentá de nuevo.';
+    btn.disabled = false;
+    btn.textContent = 'Guardar contraseña';
+  }
+}
+
+function skipSetPassword() {
+  document.getElementById('set-password-modal').style.display = 'none';
+}
 </script>
 </body>
 </html>
