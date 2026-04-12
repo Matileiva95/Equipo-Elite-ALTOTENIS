@@ -642,6 +642,8 @@ async function loadData(){
   renderAll();setInterval(refreshData,30000);
 }
 async function refreshData(){
+  // No sobreescribir si hay un guardado pendiente (evita race condition)
+  if(saveTimer) return;
   try{
     const token = sessionStorage.getItem('ciq_token');
     const res = await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`, {
@@ -657,11 +659,12 @@ async function saveData(){
   setSS('syncing','Guardando...');
   try{
     const token = sessionStorage.getItem('ciq_token');
-    await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`, {
+    const res = await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
       body: JSON.stringify(data)
     });
+    if(!res.ok){const err=await res.text();setSS('error',`Error al guardar (${res.status})`);console.error('saveData error',res.status,err);return;}
     setSS('synced','Guardado · '+now());
   }catch(e){setSS('error','Error al guardar');}
 }
