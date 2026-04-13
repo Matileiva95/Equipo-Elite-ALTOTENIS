@@ -1667,7 +1667,6 @@ function renderPlayer(){
       <button class="tab-btn${dtab==='torneos'?' active':''}" onclick="switchDtab('torneos')">Torneos</button>
       <button class="tab-btn${dtab==='stats'?' active':''}" onclick="switchDtab('stats')">Estadísticas</button>
       <button class="tab-btn${dtab==='rivales'?' active':''}" onclick="switchDtab('rivales')">Rivales</button>
-      <button class="tab-btn${dtab==='notas'?' active':''}" onclick="switchDtab('notas')">Notas</button>
       <button class="tab-btn${dtab==='carga'?' active':''}" onclick="switchDtab('carga')">Carga</button>
       <button class="tab-btn${dtab==='portal'?' active':''}" onclick="switchDtab('portal')">Portal</button>
     </div>
@@ -1676,10 +1675,10 @@ function renderPlayer(){
 
 function switchDtab(t){
   dtab=t;selMode=false;selectedDays=new Set();
-  document.querySelectorAll('.tab-btn').forEach(b=>{const m={perfil:'Perfil',plan:'Plan semanal',calendario:'Calendario',notas:'Notas',carga:'Carga',torneos:'Torneos',stats:'Estadísticas',rivales:'Rivales',portal:'Portal'};b.classList.toggle('active',b.textContent===m[t]);});
+  document.querySelectorAll('.tab-btn').forEach(b=>{const m={perfil:'Perfil',plan:'Plan semanal',calendario:'Calendario',carga:'Carga',torneos:'Torneos',stats:'Estadísticas',rivales:'Rivales',portal:'Portal'};b.classList.toggle('active',b.textContent===m[t]);});
   const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
 }
-function renderDtab(){const p=data.players[pid];if(dtab==='perfil')return renderPerfil(p);if(dtab==='plan')return renderPlan(p);if(dtab==='calendario')return renderCal(p);if(dtab==='torneos')return renderTorneos(p);if(dtab==='stats')return renderStats(p);if(dtab==='rivales')return renderPlayerScouting(p);if(dtab==='notas')return renderNotas(p);if(dtab==='carga')return renderCarga(p);if(dtab==='portal')return renderCoachPortalView(p);return '';}
+function renderDtab(){const p=data.players[pid];if(dtab==='perfil')return renderPerfil(p);if(dtab==='plan')return renderPlan(p);if(dtab==='calendario')return renderCal(p);if(dtab==='torneos')return renderTorneos(p);if(dtab==='stats')return renderStats(p);if(dtab==='rivales')return renderPlayerScouting(p);if(dtab==='carga')return renderCarga(p);if(dtab==='portal')return renderCoachPortalView(p);return '';}
 
 // PERFIL
 function renderPerfil(p){
@@ -2067,28 +2066,6 @@ async function addEvent(){
   if(!data.players[pid].events)data.players[pid].events={};
   data.players[pid].events[date]={type,desc,addedBy:user};
   scheduleSync();dtab='calendario';const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
-}
-
-// NOTAS
-function renderNotas(p){
-  const notes=p.notes||[];
-  return `<div class="card">
-    <div class="input-row" style="margin-bottom:14px;">
-      <input type="text" id="note-input" placeholder="Nueva nota de entrenamiento..." />
-      <button class="btn btn-o btn-sm" onclick="addNote()">Agregar</button>
-    </div>
-    <div id="notes-list">
-      ${notes.length?notes.map(n=>`<div class="note-item"><div class="note-text">${n.text}</div><div class="note-meta">${n.date}${n.author?' · '+n.author:''}</div></div>`).join(''):'<div class="empty">Sin notas aún</div>'}
-    </div>
-  </div>`;
-}
-async function addNote(){
-  const input=document.getElementById('note-input'),text=input?.value?.trim();if(!text)return;
-  const date=new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'});
-  data.players[pid].notes=data.players[pid].notes||[];data.players[pid].notes.unshift({text,date,author:user});
-  scheduleSync();input.value='';
-  const list=document.getElementById('notes-list');
-  if(list)list.innerHTML=data.players[pid].notes.map(n=>`<div class="note-item"><div class="note-text">${n.text}</div><div class="note-meta">${n.date}${n.author?' · '+n.author:''}</div></div>`).join('');
 }
 
 // ── CARGA DE ENTRENAMIENTO ────────────────────────────────
@@ -4911,12 +4888,18 @@ async function saveNewPassword() {
       headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
       body: JSON.stringify({password: p1})
     });
+    const d = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
       errEl.textContent = d.error || 'Error al guardar la contraseña';
       btn.disabled = false;
       btn.textContent = 'Guardar contraseña';
       return;
+    }
+    // Si el backend devuelve una nueva sesión (Supabase rota el token al crear contraseña),
+    // guardarla para que los POSTs posteriores usen el token actualizado.
+    if (d.session?.access_token) {
+      sessionStorage.setItem('ciq_token', d.session.access_token);
+      if (d.session.refresh_token) sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
     }
     document.getElementById('set-password-modal').style.display = 'none';
   } catch(e) {
