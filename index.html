@@ -1812,7 +1812,11 @@ function renderPlan(p){
           <span style="font-size:15px;font-weight:600;">Plan grupal</span>
           <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:500;">Grupal</span>
         </div>
-        <span class="week-badge" style="background:var(--bl);color:var(--bd);">${wLbl}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
+          <span class="week-badge" style="background:var(--bl);color:var(--bd);">${wLbl}</span>
+          ${grupalEntry.dia?`<span class="week-badge" style="background:var(--bl);color:var(--bd);">${grupalEntry.dia}</span>`:''}
+          ${grupalEntry.sesion?`<span class="week-badge" style="background:var(--bl);color:var(--bd);">${grupalEntry.sesion}</span>`:''}
+        </div>
       </div>
       ${grupalEntry.desc?`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Descripción</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.desc}</div></div>`:''}
       ${grupalEntry.exercises?`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Ejercicios y drills</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.exercises}</div></div>`:''}
@@ -3711,9 +3715,11 @@ function renderPortalPlan() {
       <div class="pp-stat"><div class="pp-stat-num">${(p.trainingLoad || []).length}</div><div class="pp-stat-lbl">Sesiones reg.</div></div>
     </div>
     ${hasGrupal ? `<div class="pp-card" style="border-left:3px solid var(--blue);">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
         <div class="pp-label" style="margin-bottom:0;">Plan grupal</div>
         <span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:600;">Grupal</span>
+        ${grupalEntry.dia ? `<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:600;">${grupalEntry.dia}</span>` : ''}
+        ${grupalEntry.sesion ? `<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:600;">${grupalEntry.sesion}</span>` : ''}
       </div>
       ${grupalHtml || '<div class="pp-empty">Sin detalles</div>'}
     </div>` : ''}
@@ -4666,7 +4672,11 @@ function renderGrupal() {
             <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
               <div>
                 <div style="font-size:15px;font-weight:600;margin-bottom:4px;">${gp.title||'Plan grupal'}</div>
-                <span class="week-badge" style="background:var(--bl);color:var(--bd);">${wLbl}${isCurrentWeek?' · Esta semana':''}</span>
+                <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
+                  <span class="week-badge" style="background:var(--bl);color:var(--bd);">${wLbl}${isCurrentWeek?' · Esta semana':''}</span>
+                  ${gp.dia ? `<span class="week-badge" style="background:var(--bl);color:var(--bd);">${gp.dia}</span>` : ''}
+                  ${gp.sesion ? `<span class="week-badge" style="background:var(--bl);color:var(--bd);">${gp.sesion}</span>` : ''}
+                </div>
               </div>
               <div style="display:flex;gap:6px;">
                 <button class="btn btn-g btn-sm" onclick="editGroupPlan('${gp.id}')">Editar</button>
@@ -4718,6 +4728,19 @@ function renderGroupPlanForm(editId) {
         <label>Semana</label>
         <select id="gp-week" style="width:100%;">
           ${uniqueWeeks.map(k => `<option value="${k}" ${(gp ? gp.week : wKey) === k ? 'selected' : ''}>${weekLabel(k)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Día</label>
+        <select id="gp-dia" style="width:100%;">
+          ${['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'].map(d => `<option value="${d}" ${(gp&&gp.dia===d)?'selected':''}>${d}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Sesión</label>
+        <select id="gp-sesion" style="width:100%;">
+          <option value="Sesión 1" ${(!gp||gp.sesion==='Sesión 1')?'selected':''}>Sesión 1</option>
+          <option value="Sesión 2" ${(gp&&gp.sesion==='Sesión 2')?'selected':''}>Sesión 2</option>
         </select>
       </div>
     </div>
@@ -4778,6 +4801,8 @@ function cancelGroupPlanForm() {
 function saveGroupPlan(editId) {
   const title = document.getElementById('gp-title')?.value?.trim() || '';
   const week = document.getElementById('gp-week')?.value || weekKey(new Date());
+  const dia = document.getElementById('gp-dia')?.value || 'Lunes';
+  const sesion = document.getElementById('gp-sesion')?.value || 'Sesión 1';
   const desc = document.getElementById('gp-desc')?.value?.trim() || '';
   const exercises = document.getElementById('gp-exercises')?.value?.trim() || '';
   const observations = document.getElementById('gp-observations')?.value?.trim() || '';
@@ -4791,7 +4816,7 @@ function saveGroupPlan(editId) {
 
   if (!data.groupPlans) data.groupPlans = [];
 
-  const gpEntry = { desc, exercises, observations, grupal: true };
+  const gpEntry = { desc, exercises, observations, dia, sesion, grupal: true };
 
   if (editId) {
     const idx = data.groupPlans.findIndex(p => p.id === editId);
@@ -4817,10 +4842,10 @@ function saveGroupPlan(editId) {
       }
     });
 
-    data.groupPlans[idx] = { ...old, title, week, desc, exercises, observations, playerIds, updatedAt: new Date().toISOString() };
+    data.groupPlans[idx] = { ...old, title, week, dia, sesion, desc, exercises, observations, playerIds, updatedAt: new Date().toISOString() };
   } else {
     const id = 'gp_' + Date.now();
-    data.groupPlans.push({ id, title, week, desc, exercises, observations, playerIds, createdAt: new Date().toISOString() });
+    data.groupPlans.push({ id, title, week, dia, sesion, desc, exercises, observations, playerIds, createdAt: new Date().toISOString() });
     editId = id;
   }
 
