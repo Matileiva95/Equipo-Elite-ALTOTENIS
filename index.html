@@ -423,6 +423,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <button class="nav-btn" onclick="navTo('coaching')">★ &nbsp;Coaching</button>
       <button class="nav-btn" onclick="navTo('scouting')">◎ &nbsp;Scouting</button>
       <button class="nav-btn" onclick="navTo('asistencia')">✓ &nbsp;Asistencia</button>
+      <button class="nav-btn" onclick="navTo('grupal')">⊞ &nbsp;Grupal</button>
       <div class="nav-lbl" style="margin-top:14px;">Jugadores</div>
       <div id="player-nav"></div>
       <button class="nav-btn" style="margin-top:8px;color:var(--orange);" onclick="openAddPlayer()">+ Agregar jugador</button>
@@ -442,6 +443,7 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
       <button class="mnav-btn" id="mnav-players" onclick="toggleDrawer()"><span class="mnav-icon">👥</span>Jugadores</button>
       <button class="mnav-btn" id="mnav-scouting" onclick="navTo('scouting')"><span class="mnav-icon">◎</span>Scouting</button>
       <button class="mnav-btn" id="mnav-asistencia" onclick="navTo('asistencia')"><span class="mnav-icon">✓</span>Asist.</button>
+      <button class="mnav-btn" id="mnav-grupal" onclick="navTo('grupal')"><span class="mnav-icon">⊞</span>Grupal</button>
     </div>
   </nav>
 
@@ -538,7 +540,7 @@ const DEFAULT_PLAYERS=[
 let data={players:JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),reflections:[]};
 let user="",page="dashboard",pid=null,dtab="perfil";
 let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
-let saveTimer=null,editingPlayerId=null;
+let saveTimer=null,editingPlayerId=null,editingGroupPlanId=null;
 // Selección múltiple calendario
 let selMode=false,selectedDays=new Set();
 
@@ -691,7 +693,7 @@ async function loadData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d = await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];}
     setSS('synced','Sincronizado · '+now());
   }catch(e){
     const l=localStorage.getItem('at_data_elite');
@@ -709,7 +711,7 @@ async function refreshData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d=await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];}
     setSS('synced','Sincronizado · '+now());renderPlayerNav();renderDrawerList();
   }catch(e){setSS('error','Sin conexión');}
 }
@@ -740,19 +742,19 @@ function renderAll(){renderPlayerNav();renderDrawerList();renderMain();updateMob
 function renderPlayerNav(){
   const nav=document.getElementById('player-nav');if(!nav)return;
   nav.innerHTML=data.players.map((p,i)=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name.split(' ')[0]}</span></button>`).join('');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia'][i]===page));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal'][i]===page));
 }
 function renderDrawerList(){
   const dl=document.getElementById('drawer-list');if(!dl)return;
   dl.innerHTML=data.players.map((p,i)=>`<div class="drawer-item${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};width:36px;height:36px;font-size:12px;">${ini(p.name)}</div><div><div class="drawer-name">${p.name}</div><div class="drawer-rank">${p.ranking}</div></div></div>`).join('');
 }
 function updateMobileNav(){
-  ['dashboard','coaching','scouting','asistencia'].forEach(p=>{const b=document.getElementById('mnav-'+p);if(b)b.classList.toggle('active',page===p);});
+  ['dashboard','coaching','scouting','asistencia','grupal'].forEach(p=>{const b=document.getElementById('mnav-'+p);if(b)b.classList.toggle('active',page===p);});
   const pb=document.getElementById('mnav-players');if(pb)pb.classList.toggle('active',page==='player');
 }
 function toggleDrawer(){const dr=document.getElementById('player-drawer'),ov=document.getElementById('drawer-overlay');dr.classList.toggle('open');ov.classList.toggle('open');}
 function closeDrawer(){document.getElementById('player-drawer').classList.remove('open');document.getElementById('drawer-overlay').classList.remove('open');}
-function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='player')m.innerHTML=renderPlayer();postRender();}
+function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='grupal')m.innerHTML=renderGrupal();else if(page==='player')m.innerHTML=renderPlayer();postRender();}
 function postRender(){document.querySelectorAll('canvas.court-ro').forEach(c=>{try{drawCourtReadOnly(c,JSON.parse(c.dataset.diagram||'[]'));}catch(e){}});if(document.getElementById('court-canvas'))initCourtEditor();}
 
 // ── DASHBOARD ─────────────────────────────────────────────
@@ -1800,16 +1802,34 @@ const TURNOS = ['1er turno','2do turno'];
 function renderPlan(p){
   const today=new Date(),wKey=weekKey(today),wLbl=weekLabel(wKey);
   const plans=p.weekPlans||[];
-  const cur=plans.find(pl=>pl.week===wKey)||{week:wKey,dias:{}};
-  const hist=plans.filter(pl=>pl.week!==wKey).slice(0,8);
+  const cur=plans.find(pl=>pl.week===wKey&&!pl.grupal)||{week:wKey,dias:{}};
+  const grupalEntry=plans.find(pl=>pl.week===wKey&&pl.grupal)||null;
+  const hist=plans.filter(pl=>pl.week!==wKey&&!pl.grupal).slice(0,8);
+  const grupalSection=grupalEntry?`
+    <div class="card" style="margin-bottom:14px;border-left:3px solid var(--blue);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:15px;font-weight:600;">Plan grupal</span>
+          <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:500;">Grupal</span>
+        </div>
+        <span class="week-badge" style="background:var(--bl);color:var(--bd);">${wLbl}</span>
+      </div>
+      ${grupalEntry.desc?`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Descripción</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.desc}</div></div>`:''}
+      ${grupalEntry.exercises?`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Ejercicios y drills</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.exercises}</div></div>`:''}
+      ${grupalEntry.observations?`<div><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Observaciones</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.observations}</div></div>`:''}
+    </div>`:'';
+
 
   // Inicializar días si no existen
   if(!cur.dias) cur.dias={};
 
-  return `
+  return grupalSection+`
     <div class="card" style="margin-bottom:14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
-        <div style="font-size:15px;font-weight:600;">Plan semana actual</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:15px;font-weight:600;">Plan ${grupalEntry?'individual':'semana actual'}</div>
+          ${grupalEntry?'<span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--ol);color:var(--od);font-weight:500;">Individual</span>':''}
+        </div>
         <span class="week-badge">${wLbl}</span>
       </div>
 
@@ -1895,7 +1915,7 @@ function renderPlan(p){
 
 function getTurnoData(wKey, dia, turno, p) {
   const plans = p.weekPlans || [];
-  let cur = plans.find(pl => pl.week === wKey);
+  let cur = plans.find(pl => pl.week === wKey && !pl.grupal);
   if (!cur) { cur = {week:wKey, dias:{}}; p.weekPlans = [...plans, cur]; }
   if (!cur.dias) cur.dias = {};
   if (!cur.dias[dia]) cur.dias[dia] = {};
@@ -1933,9 +1953,9 @@ function setTurnoDesc(wKey, dia, turno, desc) {
 function toggleFoco(el,f){const cls=FOCO_CLS[f]||'fp-t';if(activeFocos.includes(f)){activeFocos=activeFocos.filter(x=>x!==f);el.className='fpill';}else{activeFocos.push(f);el.className='fpill '+cls;}}
 async function savePlan(wKey){
   const p=data.players[pid];p.weekPlans=p.weekPlans||[];
-  const existing=p.weekPlans.find(pl=>pl.week===wKey)||{week:wKey,dias:{}};
+  const existing=p.weekPlans.find(pl=>pl.week===wKey&&!pl.grupal)||{week:wKey,dias:{}};
   existing.updatedBy=user;existing.updatedAt=new Date().toLocaleString('es-CL');
-  const idx=p.weekPlans.findIndex(pl=>pl.week===wKey);
+  const idx=p.weekPlans.findIndex(pl=>pl.week===wKey&&!pl.grupal);
   if(idx>=0)p.weekPlans[idx]=existing;else p.weekPlans.unshift(existing);
   scheduleSync();const btn=event.target;btn.textContent='✓ Guardado';btn.style.background='#27ae60';setTimeout(()=>{btn.textContent='Guardar plan semanal';btn.style.background='';},1800);
 }
@@ -3646,15 +3666,17 @@ function renderPortalPlan() {
   const today = new Date(); today.setHours(0,0,0,0);
   const wKey = weekKey(today);
   const plans = p.weekPlans || [];
-  const cur = plans.find(pl => pl.week === wKey);
-  const recent = cur || plans.slice(-1)[0];
-  const dias = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+  const indCur  = plans.find(pl => pl.week === wKey && !pl.grupal);
+  const grupalEntry = plans.find(pl => pl.week === wKey && pl.grupal) || null;
+  const recentInd = indCur || plans.filter(pl => !pl.grupal).slice(-1)[0];
+  const dias   = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
   const turnos = ['1er turno','2do turno'];
 
-  let planHtml = '';
-  if (recent && recent.dias) {
+  // ── Individual plan HTML ────────────────────────────────
+  let indHtml = '';
+  if (recentInd && recentInd.dias) {
     dias.forEach(dia => {
-      const diaData = recent.dias[dia] || {};
+      const diaData = recentInd.dias[dia] || {};
       let sessions = '';
       turnos.forEach(turno => {
         const t = diaData[turno];
@@ -3667,23 +3689,41 @@ function renderPortalPlan() {
           ${isDescanso ? 'Descanso' : `${focos}${desc ? ' — ' + desc : ''}`}
         </div>`;
       });
-      if (sessions) {
-        planHtml += `<div class="pp-plan-day"><div class="pp-plan-day-head">${dia}</div>${sessions}</div>`;
-      }
+      if (sessions) indHtml += `<div class="pp-plan-day"><div class="pp-plan-day-head">${dia}</div>${sessions}</div>`;
     });
   }
 
-  const rankHist = (p.rankingHistory || []).slice(-1)[0];
+  // ── Group plan HTML ─────────────────────────────────────
+  let grupalHtml = '';
+  if (grupalEntry) {
+    if (grupalEntry.desc)        grupalHtml += `<div style="margin-bottom:9px;"><div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Descripción</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.desc}</div></div>`;
+    if (grupalEntry.exercises)   grupalHtml += `<div style="margin-bottom:9px;"><div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Ejercicios</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.exercises}</div></div>`;
+    if (grupalEntry.observations)grupalHtml += `<div><div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Observaciones</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.observations}</div></div>`;
+  }
+
+  const hasInd    = !!recentInd;
+  const hasGrupal = !!grupalEntry;
+
   return `
     <div class="pp-stat-row">
       <div class="pp-stat"><div class="pp-stat-num">${p.ranking || '—'}</div><div class="pp-stat-lbl">Ranking</div></div>
       <div class="pp-stat"><div class="pp-stat-num">${p.age || '—'}</div><div class="pp-stat-lbl">Años</div></div>
       <div class="pp-stat"><div class="pp-stat-num">${(p.trainingLoad || []).length}</div><div class="pp-stat-lbl">Sesiones reg.</div></div>
     </div>
-    <div class="pp-card">
-      <div class="pp-label">Plan semana actual${!cur && recent ? ' (más reciente)' : ''}</div>
-      ${planHtml || '<div class="pp-empty">Sin plan asignado esta semana</div>'}
-    </div>
+    ${hasGrupal ? `<div class="pp-card" style="border-left:3px solid var(--blue);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <div class="pp-label" style="margin-bottom:0;">Plan grupal</div>
+        <span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:600;">Grupal</span>
+      </div>
+      ${grupalHtml || '<div class="pp-empty">Sin detalles</div>'}
+    </div>` : ''}
+    ${(hasInd || !hasGrupal) ? `<div class="pp-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <div class="pp-label" style="margin-bottom:0;">Plan individual${!indCur && recentInd ? ' (más reciente)' : ''}</div>
+        ${hasGrupal ? '<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--ol);color:var(--od);font-weight:600;">Individual</span>' : ''}
+      </div>
+      ${indHtml || '<div class="pp-empty">Sin plan individual asignado esta semana</div>'}
+    </div>` : ''}
     ${p.goal ? `<div class="pp-card"><div class="pp-label">Objetivo del coach</div><div style="font-size:13px;color:var(--g2);">${p.goal}</div></div>` : ''}`;
 }
 
@@ -4595,6 +4635,226 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
   }
 
 })();
+
+// ── GRUPAL MODULE ──────────────────────────────────────────
+function renderGrupal() {
+  const plans = data.groupPlans || [];
+  const today = new Date();
+  const wKey = weekKey(today);
+
+  return `
+    <div class="page-header">
+      <div>
+        <div class="page-title">Planificación Grupal</div>
+        <div class="page-sub">Planes semanales asignados a múltiples jugadores</div>
+      </div>
+      <button class="btn btn-b btn-sm" onclick="showGroupPlanForm()">+ Nuevo plan grupal</button>
+    </div>
+
+    <div id="grupal-form-container"></div>
+
+    ${plans.length === 0
+      ? `<div class="card"><div class="empty">No hay planes grupales. Crea el primero.</div></div>`
+      : plans.slice().reverse().map(gp => {
+          const isCurrentWeek = gp.week === wKey;
+          const wLbl = weekLabel(gp.week);
+          const assignedNames = (gp.playerIds || []).map(pid => {
+            const p = data.players.find(pl => String(pl.id) === String(pid));
+            return p ? p.name.split(' ')[0] : null;
+          }).filter(Boolean);
+          return `<div class="card" style="margin-bottom:12px;border-left:3px solid var(--blue);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+              <div>
+                <div style="font-size:15px;font-weight:600;margin-bottom:4px;">${gp.title||'Plan grupal'}</div>
+                <span class="week-badge" style="background:var(--bl);color:var(--bd);">${wLbl}${isCurrentWeek?' · Esta semana':''}</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-g btn-sm" onclick="editGroupPlan('${gp.id}')">Editar</button>
+                <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:none;" onclick="deleteGroupPlan('${gp.id}')">Eliminar</button>
+              </div>
+            </div>
+            ${assignedNames.length > 0 ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">${assignedNames.map(n=>`<span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:500;">${n}</span>`).join('')}</div>` : '<div style="font-size:12px;color:var(--g3);margin-bottom:10px;">Sin jugadores asignados</div>'}
+            ${gp.desc ? `<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Descripción</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${gp.desc}</div></div>` : ''}
+            ${gp.exercises ? `<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Ejercicios y drills</div><div style="font-size:13px;color:var(--g2);line-height:1.5;white-space:pre-wrap;">${gp.exercises}</div></div>` : ''}
+            ${gp.observations ? `<div><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Observaciones</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${gp.observations}</div></div>` : ''}
+          </div>`;
+        }).join('')}
+  `;
+}
+
+function renderGroupPlanForm(editId) {
+  const gp = editId ? (data.groupPlans || []).find(p => p.id === editId) : null;
+  const today = new Date();
+  const wKey = weekKey(today);
+  // Build week options: current + 4 ahead + 4 behind
+  const weeks = [];
+  for (let i = -4; i <= 4; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i * 7);
+    const k = weekKey(d);
+    weeks.push(k);
+  }
+  // Deduplicate while preserving order
+  const uniqueWeeks = [...new Set(weeks)];
+
+  const playerCheckboxes = data.players.map((p, i) => {
+    const checked = gp && gp.playerIds && gp.playerIds.includes(String(p.id));
+    return `<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--rsm);border:1px solid var(--border);cursor:pointer;background:var(--white);">
+      <input type="checkbox" value="${p.id}" id="gp-player-${p.id}" ${checked ? 'checked' : ''} style="accent-color:var(--blue);width:15px;height:15px;">
+      <div class="pav" style="background:${COLORS[i%COLORS.length]};width:28px;height:28px;font-size:10px;flex-shrink:0;">${ini(p.name)}</div>
+      <span style="font-size:13px;">${p.name}</span>
+    </label>`;
+  }).join('');
+
+  return `<div class="card" style="margin-bottom:16px;border-top:3px solid var(--blue);">
+    <div style="font-size:15px;font-weight:600;margin-bottom:16px;">${editId ? 'Editar plan grupal' : 'Nuevo plan grupal'}</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <div class="fg" style="grid-column:1/-1;">
+        <label>Título del plan</label>
+        <input id="gp-title" value="${gp ? (gp.title||'') : ''}" placeholder="Ej: Semana de intensidad, Trabajo de defensa..." style="width:100%;" />
+      </div>
+      <div class="fg">
+        <label>Semana</label>
+        <select id="gp-week" style="width:100%;">
+          ${uniqueWeeks.map(k => `<option value="${k}" ${(gp ? gp.week : wKey) === k ? 'selected' : ''}>${weekLabel(k)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="fg" style="margin-bottom:12px;">
+      <label>Descripción general</label>
+      <textarea id="gp-desc" placeholder="Objetivo de la semana, enfoque general..." style="width:100%;min-height:70px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;">${gp ? (gp.desc||'') : ''}</textarea>
+    </div>
+
+    <div class="fg" style="margin-bottom:12px;">
+      <label>Ejercicios y drills</label>
+      <textarea id="gp-exercises" placeholder="Lista de ejercicios, drills técnicos, tácticos..." style="width:100%;min-height:90px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;">${gp ? (gp.exercises||'') : ''}</textarea>
+    </div>
+
+    <div class="fg" style="margin-bottom:16px;">
+      <label>Observaciones</label>
+      <textarea id="gp-observations" placeholder="Notas del entrenador, puntos de atención..." style="width:100%;min-height:60px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;">${gp ? (gp.observations||'') : ''}</textarea>
+    </div>
+
+    <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Asignar a jugadores</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:16px;">
+      ${playerCheckboxes}
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-b btn-sm" onclick="saveGroupPlan('${editId||''}')">
+        ${editId ? 'Guardar cambios' : 'Crear plan grupal'}
+      </button>
+      <button class="btn btn-g btn-sm" onclick="cancelGroupPlanForm()">Cancelar</button>
+    </div>
+  </div>`;
+}
+
+function showGroupPlanForm() {
+  editingGroupPlanId = null;
+  const container = document.getElementById('grupal-form-container');
+  if (container) {
+    container.innerHTML = renderGroupPlanForm(null);
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function editGroupPlan(id) {
+  editingGroupPlanId = id;
+  const container = document.getElementById('grupal-form-container');
+  if (container) {
+    container.innerHTML = renderGroupPlanForm(id);
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function cancelGroupPlanForm() {
+  editingGroupPlanId = null;
+  const container = document.getElementById('grupal-form-container');
+  if (container) container.innerHTML = '';
+}
+
+function saveGroupPlan(editId) {
+  const title = document.getElementById('gp-title')?.value?.trim() || '';
+  const week = document.getElementById('gp-week')?.value || weekKey(new Date());
+  const desc = document.getElementById('gp-desc')?.value?.trim() || '';
+  const exercises = document.getElementById('gp-exercises')?.value?.trim() || '';
+  const observations = document.getElementById('gp-observations')?.value?.trim() || '';
+
+  // Collect checked player IDs
+  const playerIds = data.players
+    .filter(p => document.getElementById(`gp-player-${p.id}`)?.checked)
+    .map(p => String(p.id));
+
+  if (!title) { alert('El título del plan es obligatorio'); return; }
+
+  if (!data.groupPlans) data.groupPlans = [];
+
+  const gpEntry = { desc, exercises, observations, grupal: true };
+
+  if (editId) {
+    const idx = data.groupPlans.findIndex(p => p.id === editId);
+    if (idx === -1) return;
+    const old = data.groupPlans[idx];
+    const oldWeek = old.week;
+    const oldPlayerIds = old.playerIds || [];
+
+    // Remove grupal entry from players that were previously assigned but now aren't
+    const removed = oldPlayerIds.filter(id => !playerIds.includes(id));
+    removed.forEach(pid => {
+      const p = data.players.find(pl => String(pl.id) === pid);
+      if (p && p.weekPlans) {
+        p.weekPlans = p.weekPlans.filter(pl => !(pl.grupal && pl.week === oldWeek && pl._gpId === editId));
+      }
+    });
+
+    // Remove old grupal entries from players that are still assigned (will re-add below)
+    playerIds.forEach(pid => {
+      const p = data.players.find(pl => String(pl.id) === pid);
+      if (p && p.weekPlans) {
+        p.weekPlans = p.weekPlans.filter(pl => !(pl.grupal && pl.week === oldWeek && pl._gpId === editId));
+      }
+    });
+
+    data.groupPlans[idx] = { ...old, title, week, desc, exercises, observations, playerIds, updatedAt: new Date().toISOString() };
+  } else {
+    const id = 'gp_' + Date.now();
+    data.groupPlans.push({ id, title, week, desc, exercises, observations, playerIds, createdAt: new Date().toISOString() });
+    editId = id;
+  }
+
+  // Push/update grupal entry in each assigned player's weekPlans
+  playerIds.forEach(pid => {
+    const p = data.players.find(pl => String(pl.id) === pid);
+    if (!p) return;
+    if (!p.weekPlans) p.weekPlans = [];
+    // Remove any existing grupal entry for this plan+week
+    p.weekPlans = p.weekPlans.filter(pl => !(pl.grupal && pl._gpId === editId));
+    p.weekPlans.push({ week, grupal: true, _gpId: editId, ...gpEntry });
+  });
+
+  cancelGroupPlanForm();
+  scheduleSync();
+  renderMain();
+}
+
+function deleteGroupPlan(id) {
+  if (!confirm('¿Eliminar este plan grupal? Se quitará de todos los jugadores asignados.')) return;
+  const gp = (data.groupPlans || []).find(p => p.id === id);
+  if (gp) {
+    const week = gp.week;
+    // Remove from all players
+    data.players.forEach(p => {
+      if (p.weekPlans) {
+        p.weekPlans = p.weekPlans.filter(pl => !(pl.grupal && pl._gpId === id));
+      }
+    });
+  }
+  data.groupPlans = (data.groupPlans || []).filter(p => p.id !== id);
+  scheduleSync();
+  renderMain();
+}
 
 // ── SET PASSWORD MODAL ─────────────────────────────────────
 function showSetPasswordModal() {
