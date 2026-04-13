@@ -4450,92 +4450,126 @@ function ini(n){return n.split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').j
 function weekKey(d){const m=new Date(d);m.setDate(d.getDate()-((d.getDay()+6)%7));return m.toISOString().slice(0,10);}
 function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDate(d.getDate()+6);return `${d.getDate()} ${MONTHS[d.getMonth()]} – ${e.getDate()} ${MONTHS[e.getMonth()]} ${e.getFullYear()}`;}
 
-// ── MAGIC LINK HANDLER ────────────────────────────────────
-// Runs on page load: if URL contains #access_token=... (Supabase magic link redirect),
-// auto-authenticate the player and show their portal.
-(async function handleMagicLink() {
-  const hash = window.location.hash;
-  if (!hash || !hash.includes('access_token=')) return;
+// ── INIT: session restore + magic link handler ─────────────
+// Single entry point on every page load. Order of priority:
+//   1. Magic link redirect (#access_token in URL) → authenticate player
+//   2. Existing session in sessionStorage          → restore panel silently
+//   3. Neither                                     → stay on login screen
+(async function init() {
 
-  // Use URLSearchParams for robust parsing (handles base64 '=' padding in tokens)
-  const hashParams = new URLSearchParams(hash.slice(1));
-  const accessToken = hashParams.get('access_token');
-  const refreshToken = hashParams.get('refresh_token');
+  // ── helpers ──────────────────────────────────────────────
+  function clearSession() {
+    ['ciq_token','ciq_refresh','ciq_player_id','ciq_role'].forEach(k => sessionStorage.removeItem(k));
+  }
 
-  if (!accessToken) return;
+  function showCoachPanel(name) {
+    user = name;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('player-panel').style.display = 'none';
+    document.getElementById('user-lbl').textContent = user;
+  }
 
-  // Read player_id and academy_id that send-magic-link embedded in the redirectTo URL
-  const searchParams = new URLSearchParams(window.location.search);
-  const urlPlayerId = searchParams.get('player_id');
-  const urlAcademyId = searchParams.get('academy_id');
-
-  // Clear hash and query params so the token is not visible or reusable from the address bar
-  if (history.replaceState) history.replaceState(null, '', window.location.pathname);
-
-  // Show loading state
-  document.getElementById('login-screen').style.display = 'flex';
-  const errEl = document.getElementById('li-err');
-  errEl.textContent = 'Verificando acceso...';
-
-  try {
-    // Fetch profile with the magic-link token
-    const res = await fetch(`${BACKEND_URL}/api/v1/auth/me`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-    if (!res.ok) {
-      errEl.textContent = 'El link ha expirado o no es válido. Solicitá uno nuevo.';
-      return;
-    }
-    const profile = await res.json();
-
-    if (profile.role !== 'player') {
-      errEl.textContent = 'Este link es solo para jugadores.';
-      return;
-    }
-
-    let finalPlayerId = profile.player_id || '';
-
-    // First login: profile exists (auto-created by DB trigger) but player_id is null.
-    // Use the player_id/academy_id embedded in the magic-link URL to link the profile.
-    if (!finalPlayerId && urlPlayerId && urlAcademyId) {
-      errEl.textContent = 'Configurando tu acceso...';
-      const linkRes = await fetch(`${BACKEND_URL}/api/v1/players/${urlPlayerId}/link-profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-        body: JSON.stringify({ academyId: urlAcademyId })
-      });
-      if (!linkRes.ok) {
-        const linkErr = await linkRes.json().catch(() => ({}));
-        errEl.textContent = linkErr.error || 'No se pudo vincular tu perfil. Contactá al entrenador.';
-        return;
-      }
-      const linkedProfile = await linkRes.json();
-      finalPlayerId = linkedProfile.player_id || urlPlayerId;
-    }
-
-    if (!finalPlayerId) {
-      errEl.textContent = 'No se encontró tu perfil de jugador. Contactá al entrenador.';
-      return;
-    }
-
-    // Store session
-    sessionStorage.setItem('ciq_token', accessToken);
-    if (refreshToken) sessionStorage.setItem('ciq_refresh', refreshToken);
-    sessionStorage.setItem('ciq_player_id', finalPlayerId);
-    sessionStorage.setItem('ciq_role', 'player');
-    user = profile.full_name || profile.email || '';
-
-    // Show player panel
+  function showPlayerPanel(name) {
+    user = name;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'none';
     document.getElementById('player-panel').style.display = 'flex';
     document.getElementById('pp-player-name').textContent = user;
-    loadPlayerPortal(finalPlayerId);
-    // Primera vez via magic link → ofrecer crear contraseña
-    showSetPasswordModal();
-  } catch(e) {
-    errEl.textContent = 'Error al verificar el link. Intentá de nuevo.';
   }
+
+  // ── 1. Magic link (#access_token in URL hash) ─────────────
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token=')) {
+    // Use URLSearchParams for robust parsing (handles base64 '=' padding in tokens)
+    const hashParams = new URLSearchParams(hash.slice(1));
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+
+    // Read player_id / academy_id embedded in the redirectTo query string
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlPlayerId  = searchParams.get('player_id');
+    const urlAcademyId = searchParams.get('academy_id');
+
+    // Clear hash + query so the token is not visible or reusable from the address bar
+    if (history.replaceState) history.replaceState(null, '', window.location.pathname);
+
+    if (!accessToken) return;
+
+    document.getElementById('login-screen').style.display = 'flex';
+    const errEl = document.getElementById('li-err');
+    errEl.textContent = 'Verificando acceso...';
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/v1/auth/me`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      if (!res.ok) { errEl.textContent = 'El link ha expirado o no es válido. Solicitá uno nuevo.'; return; }
+      const profile = await res.json();
+
+      if (profile.role !== 'player') { errEl.textContent = 'Este link es solo para jugadores.'; return; }
+
+      let finalPlayerId = profile.player_id || '';
+
+      // First login: profile exists (auto-created by DB trigger) but player_id is null.
+      // Use the player_id/academy_id embedded in the magic-link URL to link the profile.
+      if (!finalPlayerId && urlPlayerId && urlAcademyId) {
+        errEl.textContent = 'Configurando tu acceso...';
+        const linkRes = await fetch(`${BACKEND_URL}/api/v1/players/${urlPlayerId}/link-profile`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+          body: JSON.stringify({ academyId: urlAcademyId })
+        });
+        if (!linkRes.ok) {
+          const linkErr = await linkRes.json().catch(() => ({}));
+          errEl.textContent = linkErr.error || 'No se pudo vincular tu perfil. Contactá al entrenador.';
+          return;
+        }
+        const linkedProfile = await linkRes.json();
+        finalPlayerId = linkedProfile.player_id || urlPlayerId;
+      }
+
+      if (!finalPlayerId) { errEl.textContent = 'No se encontró tu perfil de jugador. Contactá al entrenador.'; return; }
+
+      sessionStorage.setItem('ciq_token', accessToken);
+      if (refreshToken) sessionStorage.setItem('ciq_refresh', refreshToken);
+      sessionStorage.setItem('ciq_player_id', finalPlayerId);
+      sessionStorage.setItem('ciq_role', 'player');
+
+      showPlayerPanel(profile.full_name || profile.email || '');
+      loadPlayerPortal(finalPlayerId);
+      showSetPasswordModal(); // primera vez → ofrecer crear contraseña
+    } catch(e) {
+      document.getElementById('li-err').textContent = 'Error al verificar el link. Intentá de nuevo.';
+    }
+    return; // magic link handled — don't fall through to session restore
+  }
+
+  // ── 2. Restore existing session from sessionStorage ────────
+  const token = sessionStorage.getItem('ciq_token');
+  const role  = sessionStorage.getItem('ciq_role');
+  if (!token || !role) return; // no stored session → stay on login screen
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) { clearSession(); return; } // token expired/invalid → show login
+    const profile = await res.json();
+
+    if (role === 'player') {
+      const playerId = sessionStorage.getItem('ciq_player_id');
+      if (!playerId) { clearSession(); return; }
+      showPlayerPanel(profile.full_name || profile.email || '');
+      loadPlayerPortal(playerId);
+    } else {
+      showCoachPanel(profile.full_name || profile.email || '');
+      loadData();
+    }
+  } catch(_) {
+    // Network error: leave session intact, stay on login so user can retry
+  }
+
 })();
 
 // ── SET PASSWORD MODAL ─────────────────────────────────────
