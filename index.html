@@ -7,6 +7,13 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--orange:#FF6B00;--ol:#FFF0E6;--od:#CC5500;--blue:#1DA1D6;--bl:#E3F4FB;--bd:#0E7AA3;--green:#27ae60;--gl:#eafaf1;--gd:#1e8449;--rest:#8e44ad;--restl:#f4eafb;--restd:#6c3483;--gray:#333;--g2:#555;--g3:#888;--g4:#bbb;--g5:#f6f6f4;--white:#fff;--border:#e5e5e5;--r:10px;--rsm:7px;--nav-h:60px;}
+/* Loading screen shown while session token is being verified */
+#app-loading{display:none;position:fixed;inset:0;background:#161616;z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:20px;}
+html.has-session #login-screen{display:none!important;}
+html.has-session #app-loading{display:flex!important;}
+.ald{width:9px;height:9px;border-radius:50%;background:#FF6B00;animation:aldot 1s ease-in-out infinite both;}
+.ald:nth-child(2){animation-delay:.16s;}.ald:nth-child(3){animation-delay:.32s;}
+@keyframes aldot{0%,80%,100%{opacity:.2;transform:scale(.75)}40%{opacity:1;transform:scale(1)}}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'DM Sans',sans-serif;background:#f4f3f1;color:var(--gray);min-height:100vh;}
 input,select,textarea,button{font-family:'DM Sans',sans-serif;}
@@ -359,8 +366,16 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 .role-btn.active.role-coach{border-color:var(--orange);background:#fff5eb;color:var(--od);}
 .role-btn.active.role-player{border-color:var(--blue);background:#eef7fc;color:var(--bd);}
 </style>
+<!-- Sync check: hide login instantly if a session token exists, before first paint -->
+<script>if(sessionStorage.getItem('ciq_token'))document.documentElement.classList.add('has-session');</script>
 </head>
 <body>
+
+<div id="app-loading">
+  <div class="balls" style="transform:scale(1.1);"><div class="bl b1"></div><div class="bl b2"></div><div class="bl b3"></div></div>
+  <span class="brand-name" style="color:#fff;font-size:20px;">ALTO<span style="color:#FF6B00;">TENIS</span></span>
+  <div style="display:flex;gap:7px;"><div class="ald"></div><div class="ald"></div><div class="ald"></div></div>
+</div>
 
 <div id="login-screen">
   <div class="login-box">
@@ -4458,12 +4473,19 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
 (async function init() {
 
   // ── helpers ──────────────────────────────────────────────
+  function hideLoading() {
+    document.documentElement.classList.remove('has-session');
+    document.getElementById('app-loading').style.display = 'none';
+  }
+
   function clearSession() {
     ['ciq_token','ciq_refresh','ciq_player_id','ciq_role'].forEach(k => sessionStorage.removeItem(k));
+    hideLoading();
   }
 
   function showCoachPanel(name) {
     user = name;
+    hideLoading();
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('player-panel').style.display = 'none';
@@ -4472,6 +4494,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
 
   function showPlayerPanel(name) {
     user = name;
+    hideLoading();
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'none';
     document.getElementById('player-panel').style.display = 'flex';
@@ -4540,6 +4563,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
       loadPlayerPortal(finalPlayerId);
       showSetPasswordModal(); // primera vez → ofrecer crear contraseña
     } catch(e) {
+      hideLoading();
       document.getElementById('li-err').textContent = 'Error al verificar el link. Intentá de nuevo.';
     }
     return; // magic link handled — don't fall through to session restore
