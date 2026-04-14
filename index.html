@@ -367,168 +367,28 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 .role-btn.active.role-player{border-color:var(--blue);background:#eef7fc;color:var(--bd);}
 
 /* ══════════════════════════════════════════
-   DARK THEME
+   LIGHT THEME
    ══════════════════════════════════════════ */
 :root{
-  --gray:#e6ede6; --g2:#b0c0b0; --g3:rgba(255,255,255,.38); --g4:rgba(255,255,255,.18);
-  --g5:#192619; --white:#162016; --border:rgba(255,255,255,.08);
-  --ol:rgba(255,107,0,.14); --od:#FF8C3A;
-  --bl:rgba(29,161,214,.14); --bd:#5abcd8;
-  --gl:rgba(39,174,96,.14); --gd:#5dd97a;
-  --restl:rgba(142,68,173,.14); --restd:#c090e0;
+  --gray:#1a1a1a; --g2:#555555; --g3:#888888; --g4:#cccccc;
+  --g5:#f5f2ed; --white:#ffffff; --border:#ece8e1;
+  --ol:#fff3eb; --od:#CC5500;
+  --bl:#e8f4fb; --bd:#0E7AA3;
 }
-body{background:#0f1a0f;color:#e6ede6;}
-
-/* ── Sidebar ─────────────────────────────────────── */
-.sidebar{background:#0f1a0f;border-right-color:rgba(255,255,255,.08);}
-.sb-head{border-bottom-color:rgba(255,255,255,.08);}
-.sb-foot{border-top-color:rgba(255,255,255,.08);}
-.nav-btn:hover{background:rgba(255,255,255,.05);}
-.nav-btn.active{background:rgba(255,107,0,.15);color:var(--orange);}
-.pnav:hover{background:rgba(255,255,255,.05);}
-.pnav.active{background:rgba(255,107,0,.15);color:var(--orange);}
-.logout-btn{color:rgba(255,255,255,.3);}
-.logout-btn:hover{color:rgba(255,255,255,.7);}
+body{background:#faf7f2;color:#1a1a1a;}
 
 /* ── Bottom nav (mobile) ─────────────────────────── */
-.mobile-nav{background:#0a120a!important;border-top:1px solid rgba(255,255,255,.08)!important;}
-.player-drawer{background:#0a120a;border-top-color:rgba(255,255,255,.08);}
-.drawer-overlay{background:rgba(0,0,0,.65);}
-.drawer-item:hover{background:rgba(255,255,255,.05);}
-.drawer-item.active{background:rgba(255,107,0,.15);}
-.drawer-name{color:#e6ede6;}
-.drawer-rank{color:rgba(255,255,255,.38);}
-.mnav-btn{color:rgba(255,255,255,.30);border-radius:10px;position:relative;transition:all .15s;}
-.mnav-btn.active{color:var(--orange);background:rgba(255,107,0,.15);}
-.mnav-btn.active::after{content:'';position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--orange);}
-
-/* ── Cards & surfaces ───────────────────────────── */
-.card{background:#162016;border-color:rgba(255,255,255,.08);}
-.modal{background:#162016;}
-.bib-card{background:#162016;border-color:rgba(255,255,255,.08);}
-.bib-card:hover{border-color:rgba(255,255,255,.2);box-shadow:0 2px 10px rgba(0,0,0,.35);}
-.bib-detail-modal{background:#162016;}
-.stat-card{background:#162016;border-color:rgba(255,255,255,.08);}
-.scout-card{background:#162016;border-color:rgba(255,255,255,.08);}
-.scout-card:hover{border-color:rgba(255,255,255,.18);}
-.login-box{background:#162016;border-color:rgba(255,255,255,.08);}
-.login-sub{color:rgba(255,255,255,.4);}
-.login-err{color:#f1948a;}
-.login-box input{background:#192619!important;color:#e6ede6!important;border-color:rgba(255,255,255,.12)!important;}
-.login-box input:focus{background:#1e2e1e!important;border-color:var(--blue)!important;}
-
-/* ── Forms & inputs ─────────────────────────────── */
-.fg label{color:rgba(255,255,255,.38);}
-.fg input,.fg select,.fg textarea{background:#192619!important;color:#e6ede6!important;border-color:rgba(255,255,255,.12)!important;}
-.fg input:focus,.fg select:focus,.fg textarea:focus{background:#1e2e1e!important;border-color:var(--blue)!important;}
-.input-row input{background:#192619!important;color:#e6ede6!important;border-color:rgba(255,255,255,.12)!important;}
-.input-row input:focus{background:#1e2e1e!important;border-color:var(--blue)!important;}
-.scout-search{background:#192619;color:#e6ede6;border-color:rgba(255,255,255,.12);}
-.scout-search:focus{background:#1e2e1e;border-color:var(--blue);}
-.sf-inp{background:#192619;color:#e6ede6;border-color:rgba(255,255,255,.12);}
-.sf-inp:focus{border-color:var(--blue);}
-
-/* ── Buttons ────────────────────────────────────── */
-.btn-g{background:#1e2e1e;color:#b0c0b0;border-color:rgba(255,255,255,.12);}
-.btn-g:hover{background:rgba(255,255,255,.08);}
-.btn-red{background:rgba(231,76,60,.15);color:#f1948a;border-color:rgba(231,76,60,.3);}
-.btn-red:hover{background:rgba(231,76,60,.25);}
-.asist-nav-btn{background:transparent;border-color:rgba(255,255,255,.12);color:rgba(255,255,255,.6);}
-.asist-nav-btn:hover{background:rgba(255,255,255,.06);}
-.crt-btn{background:#192619;border-color:rgba(255,255,255,.12);color:rgba(255,255,255,.6);}
-.crt-btn:hover:not(.active){background:rgba(255,255,255,.08);}
-.fpill{border-color:rgba(255,255,255,.12);background:transparent;color:rgba(255,255,255,.38);}
-.bib-filter-btn{border-color:rgba(255,255,255,.12);color:rgba(255,255,255,.38);}
-.bib-filter-btn.active{border-color:var(--orange);background:rgba(255,107,0,.14);color:var(--od);}
-.set-tab{border-color:rgba(255,255,255,.12);color:rgba(255,255,255,.38);}
-.step-back{background:none;border-color:rgba(255,255,255,.12);color:rgba(255,255,255,.4);}
-.step-back:hover{background:rgba(255,255,255,.05);}
-
-/* ── Tables ─────────────────────────────────────── */
-.asist-table th{background:#192619;border-color:rgba(255,255,255,.08);color:rgba(255,255,255,.4);}
-.asist-table td{border-color:rgba(255,255,255,.08);}
-.stat-set-table th{background:#192619;border-color:rgba(255,255,255,.08);color:rgba(255,255,255,.4);}
-.stat-set-table td{border-color:rgba(255,255,255,.08);}
-
-/* ── Calendar ───────────────────────────────────── */
-.cal-day{background:#162016;border-color:rgba(255,255,255,.08);}
-.cal-day:hover{border-color:rgba(255,255,255,.18);}
-.cal-day.selecting{background:rgba(29,161,214,.15);border-color:var(--blue);}
-.cdn{color:#e6ede6;}
-.mes-day{background:#162016;border-color:rgba(255,255,255,.08);}
-.mes-day-num{color:#e6ede6;}
-.wk-title{color:rgba(255,255,255,.35);}
-
-/* ── Misc ────────────────────────────────────────── */
-.rank-bar-bg{background:#192619;border-color:rgba(255,255,255,.08);}
-.note-item{background:#192619;border-color:rgba(255,255,255,.08);}
-.hist-item{border-color:rgba(255,255,255,.08);}
-.stat-hist-card{background:#192619;border-color:rgba(255,255,255,.08);}
-.scout-detail{border-top-color:rgba(255,255,255,.08);}
-.scout-hist-row{border-color:rgba(255,255,255,.08);}
-.multi-bar{background:rgba(29,161,214,.12);border-color:rgba(29,161,214,.25);}
-.asist-stat{background:#192619;}
-.set-col-head{background:#192619;color:rgba(255,255,255,.4);}
-.bib-tag{background:#192619;color:rgba(255,255,255,.38);border-color:rgba(255,255,255,.08);}
-.ai-result{background:#192619;border-color:rgba(255,255,255,.08);color:#b0c0b0;}
-.ai-result h1,.ai-result h2,.ai-result h3{color:#e6ede6;}
-.ai-result strong{color:#e6ede6;}
-.modal-overlay{background:rgba(0,0,0,.6);}
-.modal-close{color:rgba(255,255,255,.4);}
-.modal-close:hover{color:#e6ede6;}
-.week-badge{background:rgba(255,107,0,.14);color:var(--od);}
-.group-btn{background:#162016;border-color:rgba(255,255,255,.1);}
-.group-btn:hover{border-color:rgba(255,255,255,.22);}
-.group-btn.selected{background:rgba(255,107,0,.1);}
-.group-name{color:#e6ede6;}
-.group-desc{color:rgba(255,255,255,.38);}
-
-/* ── Page headers ────────────────────────────────── */
-.page-title{color:#e6ede6;}
-.page-sub{color:rgba(255,255,255,.38);}
-.nav-lbl{color:rgba(255,255,255,.25);}
+.mobile-nav{background:#ffffff!important;border-top:1px solid #ece8e1!important;}
+.mnav-btn{color:#aaaaaa;border-radius:10px;position:relative;transition:all .15s;}
+.mnav-btn.active{color:#FF6B00;}
+.mnav-btn.active::after{content:'';position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#FF6B00;}
 
 /* ── Player profile TABS → horizontal scroll pills ─ */
 .tab-row{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto!important;width:100%!important;padding:0 0 10px 0!important;margin-bottom:10px!important;background:transparent!important;border:none!important;scrollbar-width:none!important;-ms-overflow-style:none!important;}
 .tab-row::-webkit-scrollbar{display:none;}
-.tab-btn{padding:7px 18px!important;border-radius:20px!important;font-size:12px!important;font-weight:500!important;cursor:pointer!important;border:none!important;background:rgba(255,255,255,.06)!important;color:rgba(255,255,255,.45)!important;white-space:nowrap!important;flex-shrink:0!important;transition:all .15s!important;box-shadow:none!important;}
-.tab-btn:hover:not(.active){background:rgba(255,255,255,.10)!important;color:rgba(255,255,255,.75)!important;}
-.tab-btn.active{background:#FF6B00!important;color:#fff!important;font-weight:600!important;box-shadow:0 2px 8px rgba(255,107,0,.30)!important;}
-
-/* ── Player portal ───────────────────────────────── */
-#player-panel{background:#0f1a0f;}
-.pp-header{background:#0f1a0f;border-bottom-color:rgba(255,255,255,.08);}
-.pp-nav{background:#0a120a!important;border-top-color:rgba(255,255,255,.08)!important;}
-.pp-nav-btn{color:rgba(255,255,255,.30);}
-.pp-nav-btn.active{color:var(--orange);font-weight:600;}
-.pp-card{background:#162016;border-color:rgba(255,255,255,.08);}
-.pp-section-title{color:#e6ede6;}
-.pp-label{color:rgba(255,255,255,.38);}
-.pp-plan-day{background:#192619;border-color:rgba(255,255,255,.08);}
-.pp-plan-day-head{background:#162016;border-bottom-color:rgba(255,255,255,.08);}
-.pp-stat{background:#192619;}
-.pp-obj-item{border-bottom-color:rgba(255,255,255,.08);}
-.pp-analysis-item{border-bottom-color:rgba(255,255,255,.08);}
-.pp-empty{color:rgba(255,255,255,.38);}
-.pp-mood-btn{border-color:rgba(255,255,255,.12);}
-.pp-mood-btn.active{border-color:var(--orange);background:rgba(255,107,0,.12);}
-
-/* ── Foco pills ──────────────────────────────────── */
-.fp-f{border-color:#27ae60;background:rgba(39,174,96,.14);color:#5dd97a;}
-.fp-m{border-color:#8e44ad;background:rgba(142,68,173,.14);color:#c090e0;}
-
-/* ── Scout tags ──────────────────────────────────── */
-.tag-style{background:rgba(59,109,17,.2);color:#8bc34a;}
-.tag-strong{background:rgba(255,107,0,.14);color:var(--od);}
-.tag-weak{background:rgba(231,76,60,.14);color:#f1948a;}
-
-/* ── Library card type badges ────────────────────── */
-.bib-type-tecnico{background:rgba(230,81,0,.15);color:#FF8C3A;}
-.bib-type-canasto{background:rgba(46,125,50,.15);color:#5dd97a;}
-.bib-type-tactico{background:rgba(21,101,192,.15);color:#5abcd8;}
-
-/* ── Body override (ensure dark bg wins) ─────────── */
-body{background:#0f1a0f!important;}
+.tab-btn{padding:7px 18px!important;border-radius:20px!important;font-size:12px!important;font-weight:500!important;cursor:pointer!important;border:1px solid #e0dbd4!important;background:#f0ede8!important;color:#888888!important;white-space:nowrap!important;flex-shrink:0!important;transition:all .15s!important;box-shadow:none!important;}
+.tab-btn:hover:not(.active){background:#e8e4de!important;color:#555555!important;border-color:#d6d0c8!important;}
+.tab-btn.active{background:#FF6B00!important;color:#fff!important;border-color:#FF6B00!important;font-weight:600!important;box-shadow:0 2px 6px rgba(255,107,0,.22)!important;}
 </style>
 <!-- Sync check: hide login instantly if a session token exists, before first paint -->
 <script>if(sessionStorage.getItem('ciq_token'))document.documentElement.classList.add('has-session');</script>
@@ -953,29 +813,28 @@ function renderDashboard(){
       const redA=alerts.filter(a=>a.level==='red');
       const blueA=alerts.filter(a=>a.level==='blue');
       if(!redA.length&&!blueA.length) return '';
-      const mkGroup=(title,items,dotColor,badgeBg,showMsg)=>`
-        <div style="background:#162016;border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;">
-          <div style="padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.06);">
-            <div style="width:7px;height:7px;border-radius:50%;background:${dotColor};flex-shrink:0;"></div>
-            <span style="font-size:13px;font-weight:600;color:#e6ede6;flex:1;">${title}</span>
-            <span style="background:${badgeBg};color:#fff;border-radius:20px;padding:1px 9px;font-size:11px;font-weight:700;">${items.length}</span>
+      const mkGroup=(title,items,accentColor,showMsg)=>`
+        <div style="background:#ffffff;border:1px solid #ece8e1;border-left:3px solid ${accentColor};border-radius:10px;overflow:hidden;">
+          <div style="padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f5f2ee;">
+            <span style="font-size:13px;font-weight:600;color:#1a1a1a;flex:1;">${title}</span>
+            <span style="background:${accentColor};color:#fff;border-radius:20px;padding:1px 9px;font-size:11px;font-weight:700;">${items.length}</span>
           </div>
           ${items.map(a=>`
-            <div onclick="navTo('player',${a.pid})" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;transition:background .13s;" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
-              <div class="pav" style="background:${COLORS[a.pid%COLORS.length]};width:24px;height:24px;font-size:9px;flex-shrink:0;">${ini(a.fullName)}</div>
+            <div onclick="navTo('player',${a.pid})" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #f9f7f5;cursor:pointer;transition:background .13s;" onmouseover="this.style.background='#faf7f2'" onmouseout="this.style.background=''">
+              <div style="width:8px;height:8px;border-radius:50%;background:${accentColor};flex-shrink:0;"></div>
               <div style="flex:1;min-width:0;">
-                <div style="font-size:13px;color:#b0c0b0;">${a.fullName}</div>
-                ${showMsg?`<div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:1px;">${a.msg}</div>`:''}
+                <span style="font-size:13px;color:#1a1a1a;">${a.fullName}</span>
+                ${showMsg?`<div style="font-size:11px;color:#888;margin-top:1px;">${a.msg}</div>`:''}
               </div>
-              <span style="font-size:11px;color:rgba(255,255,255,.22);flex-shrink:0;">→</span>
+              <span style="font-size:11px;color:#ccc;flex-shrink:0;">→</span>
             </div>
           `).join('')}
         </div>`;
       return `<div style="margin-bottom:20px;">
-        <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,.28);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Alertas del equipo</div>
+        <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Alertas del equipo</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;">
-          ${redA.length?mkGroup('Sin plan esta semana',redA,'#e74c3c','#e74c3c',false):''}
-          ${blueA.length?mkGroup('En torneo esta semana',blueA,'#1DA1D6','#1DA1D6',true):''}
+          ${redA.length?mkGroup('Sin plan esta semana',redA,'#e74c3c',false):''}
+          ${blueA.length?mkGroup('En torneo esta semana',blueA,'#1DA1D6',true):''}
         </div>
       </div>`;
     })()}
@@ -1017,25 +876,25 @@ function renderDashboard(){
                     const key=d.toISOString().slice(0,10);
                     const ev=p.events&&p.events[key];
                     const isToday=d.getTime()===today.getTime();
-                    let cellBg=isToday?'rgba(255,107,0,.06)':'';
+                    let cellBg=isToday?'#fffaf6':'';
                     let cellContent='';
                     if(ev){
                       if(ev.type==='training'){
-                        cellBg='rgba(255,107,0,.10)';
+                        cellBg='#fff5ee';
                         cellContent=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
                           <div style="width:8px;height:8px;border-radius:50%;background:var(--orange);"></div>
                           <span style="font-size:9px;font-weight:600;color:var(--od);">Entr.</span>
                           ${ev.desc?`<span style="font-size:8px;color:var(--od);text-align:center;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ev.desc}</span>`:''}
                         </div>`;
                       } else if(ev.type==='competition'){
-                        cellBg='rgba(29,161,214,.10)';
+                        cellBg='#eef7fc';
                         cellContent=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
                           <div style="width:8px;height:8px;border-radius:50%;background:var(--blue);"></div>
                           <span style="font-size:9px;font-weight:600;color:var(--bd);">Comp.</span>
                           ${ev.desc?`<span style="font-size:8px;color:var(--bd);text-align:center;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ev.desc}</span>`:''}
                         </div>`;
                       } else if(ev.type==='rest'){
-                        cellBg='rgba(142,68,173,.10)';
+                        cellBg='#f9f4fe';
                         cellContent=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
                           <div style="width:8px;height:8px;border-radius:50%;background:var(--rest);"></div>
                           <span style="font-size:9px;font-weight:600;color:var(--restd);">Desc.</span>
@@ -1804,7 +1663,7 @@ function renderPlayer(){
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
         <button class="btn btn-g btn-sm" onclick="openEditPlayer(${pid})">Editar</button>
-        ${p.email?`<button class="btn btn-sm" style="background:var(--bl);color:var(--bd);border:1px solid rgba(29,161,214,.25);font-size:11px;" onclick="enviarMagicLink(${pid})">📧 Acceso portal</button>`:''}
+        ${p.email?`<button class="btn btn-sm" style="background:#eef7fc;color:var(--bd);border:1px solid #b8d9f0;font-size:11px;" onclick="enviarMagicLink(${pid})">📧 Acceso portal</button>`:''}
       </div>
     </div>
     <div class="tab-row">
