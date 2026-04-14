@@ -536,6 +536,25 @@ body{background:#faf7f2;color:#1a1a1a;}
   </div>
 </div>
 
+<!-- Modal: invitar coach -->
+<div id="invite-coach-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:16px;padding:28px 24px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+    <div style="font-size:16px;font-weight:600;margin-bottom:4px;">Invitar entrenador</div>
+    <div style="font-size:13px;color:var(--g3);margin-bottom:20px;">Le enviaremos un link de acceso por email.</div>
+    <div class="fg" style="margin-bottom:12px;">
+      <label>Nombre completo</label>
+      <input type="text" id="ic-name" placeholder="Nombre del entrenador" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:14px;outline:none;background:var(--g5);" />
+    </div>
+    <div class="fg" style="margin-bottom:6px;">
+      <label>Email</label>
+      <input type="email" id="ic-email" placeholder="email@ejemplo.com" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:14px;outline:none;background:var(--g5);" />
+    </div>
+    <div id="ic-err" style="font-size:12px;color:#e74c3c;min-height:18px;margin-bottom:12px;"></div>
+    <button id="ic-save-btn" class="btn btn-o" style="width:100%;padding:12px;" onclick="submitInviteCoach()">Enviar invitación</button>
+    <button class="btn btn-g btn-sm" style="width:100%;margin-top:8px;" onclick="document.getElementById('invite-coach-modal').style.display='none'">Cancelar</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -577,9 +596,11 @@ function setLoginRole(r) {
   const isPlayer = r === 'player';
   document.getElementById('li-user').placeholder = isPlayer ? 'Tu email de jugador' : 'Tu email';
   document.getElementById('li-pass').style.display = '';
-  document.getElementById('li-pass').placeholder = isPlayer ? 'Contraseña (si ya creaste una)' : 'Contraseña';
-  document.getElementById('li-magic-msg').style.display = isPlayer ? 'block' : 'none';
-  document.getElementById('li-magic-msg').textContent = isPlayer ? 'Sin contraseña aún? Dejá el campo en blanco y te enviamos un link.' : '';
+  document.getElementById('li-pass').placeholder = isPlayer ? 'Contraseña (si ya creaste una)' : 'Contraseña (dejá en blanco para recibir un link)';
+  document.getElementById('li-magic-msg').style.display = 'block';
+  document.getElementById('li-magic-msg').textContent = isPlayer
+    ? 'Sin contraseña aún? Dejá el campo en blanco y te enviamos un link.'
+    : 'Dejá la contraseña en blanco para recibir un link de acceso a tu email.';
   document.getElementById('login-btn-main').textContent = 'Ingresar';
   document.getElementById('li-err').textContent = '';
   document.getElementById('li-magic-ok').style.display = 'none';
@@ -591,7 +612,7 @@ async function doLogin() {
   const btn = document.getElementById('login-btn-main');
   if (!u) { errEl.textContent = 'Ingresa tu email'; return; }
   const pass = document.getElementById('li-pass').value;
-  if (loginRole === 'coach' && !pass) { errEl.textContent = 'Ingresa tu contraseña'; return; }
+  // coach blank password → magic link (handled below in the else branch)
   btn.disabled = true;
   errEl.textContent = 'Conectando...';
   try { await fetch(`${BACKEND_URL}/health`, {signal: AbortSignal.timeout(25000)}); } catch(_) {}
@@ -634,31 +655,48 @@ async function doLogin() {
         btn.disabled = false;
       }
     } else {
-      errEl.textContent = 'Iniciando sesión...';
-      const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email: u, password: pass}),
-        signal: AbortSignal.timeout(15000)
-      });
-      const d = await res.json();
-      if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
-      const detectedRole = d.user?.user_metadata?.role || 'coach';
-      // Bloqueo de seguridad: un jugador no puede acceder al panel de entrenadores
-      if (detectedRole === 'player') {
-        errEl.textContent = 'Esta cuenta es de jugador. Usá el acceso de jugador.';
+      if (!pass) {
+        // Coach blank password → send magic link
+        errEl.textContent = 'Enviando link...';
+        const res = await fetch(`${BACKEND_URL}/api/v1/auth/request-coach-magic-link`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: u}),
+          signal: AbortSignal.timeout(15000)
+        });
+        const d = await res.json();
+        if (!res.ok) { errEl.textContent = d.error || 'No se pudo enviar el link'; btn.disabled = false; return; }
+        errEl.textContent = '';
+        const okEl = document.getElementById('li-magic-ok');
+        okEl.textContent = `✓ Link enviado a ${u}. Revisá tu email y hacé click en el enlace para ingresar.`;
+        okEl.style.display = 'block';
         btn.disabled = false;
-        return;
+      } else {
+        errEl.textContent = 'Iniciando sesión...';
+        const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: u, password: pass}),
+          signal: AbortSignal.timeout(15000)
+        });
+        const d = await res.json();
+        if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
+        const detectedRole = d.user?.user_metadata?.role || 'coach';
+        // Bloqueo de seguridad: un jugador no puede acceder al panel de entrenadores
+        if (detectedRole === 'player') {
+          errEl.textContent = 'Esta cuenta es de jugador. Usá el acceso de jugador.';
+          btn.disabled = false;
+          return;
+        }
+        sessionStorage.setItem('ciq_token', d.session.access_token);
+        sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
+        sessionStorage.setItem('ciq_role', detectedRole);
+        user = d.user?.user_metadata?.full_name || u;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('player-panel').style.display = 'none';
+        document.getElementById('user-lbl').textContent = user;
+        if (history.pushState) history.pushState({page: 'dashboard'}, '', '');
+        loadData();
       }
-      sessionStorage.setItem('ciq_token', d.session.access_token);
-      sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
-      sessionStorage.setItem('ciq_role', detectedRole);
-      user = d.user?.user_metadata?.full_name || u;
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
-      document.getElementById('player-panel').style.display = 'none';
-      document.getElementById('user-lbl').textContent = user;
-      if (history.pushState) history.pushState({page: 'dashboard'}, '', '');
-      loadData();
     }
   } catch(e) {
     errEl.textContent = e.name === 'TimeoutError' ? 'El servidor tardó demasiado. Intenta de nuevo.' : 'Error de conexión';
@@ -700,6 +738,89 @@ function doLogout() {
 
 // ── SYNC ──────────────────────────────────────────────────
 function setSS(s,l){const d=document.getElementById('sync-dot'),lb=document.getElementById('sync-lbl');if(d)d.className='sync-dot '+s;if(lb)lb.textContent=l;}
+// ── Coach team management ─────────────────────────────────────
+let _coachTeamCache = null;
+async function loadCoachTeam() {
+  const token = sessionStorage.getItem('ciq_token');
+  if (!token) return;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const d = await res.json();
+    _coachTeamCache = d.data || d || [];
+    if (page === 'coaching') renderMain();
+  } catch(e) {
+    _coachTeamCache = [];
+  }
+}
+function renderCoachTeamList(coaches) {
+  if (!coaches) return `<div class="empty" style="padding:12px 0;">Cargando...</div>`;
+  if (!coaches.length) return `<div class="empty" style="padding:12px 0;">Sin entrenadores registrados aún.</div>`;
+  return coaches.map(c => {
+    const name = c.profiles?.full_name || '—';
+    const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <div style="width:36px;height:36px;border-radius:50%;background:#FF6B00;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--gray);">${name}</div>
+          <div style="font-size:11px;color:var(--g3);">${c.specialization?.join(', ') || 'Entrenador'}</div>
+        </div>
+        <button class="btn btn-g btn-sm" style="font-size:11px;padding:5px 10px;" onclick="resendCoachInvite('${c.id}','${name.replace(/'/g,"\\'")}')">Reenviar inv.</button>
+      </div>`;
+  }).join('');
+}
+function showInviteCoachModal() {
+  document.getElementById('ic-name').value = '';
+  document.getElementById('ic-email').value = '';
+  document.getElementById('ic-err').textContent = '';
+  const btn = document.getElementById('ic-save-btn');
+  btn.disabled = false; btn.textContent = 'Enviar invitación';
+  document.getElementById('invite-coach-modal').style.display = 'flex';
+}
+async function submitInviteCoach() {
+  const name = document.getElementById('ic-name').value.trim();
+  const email = document.getElementById('ic-email').value.trim();
+  const errEl = document.getElementById('ic-err');
+  const btn = document.getElementById('ic-save-btn');
+  if (!name) { errEl.textContent = 'Ingresá el nombre'; return; }
+  if (!email) { errEl.textContent = 'Ingresá el email'; return; }
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const token = sessionStorage.getItem('ciq_token');
+    const res = await fetch(`${BACKEND_URL}/api/v1/coaches/invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ fullName: name, email, academyId: ACADEMY_ID })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { errEl.textContent = d.error || 'No se pudo enviar la invitación'; btn.disabled = false; btn.textContent = 'Enviar invitación'; return; }
+    document.getElementById('invite-coach-modal').style.display = 'none';
+    _coachTeamCache = null;
+    await loadCoachTeam();
+    renderAll();
+  } catch(e) {
+    errEl.textContent = 'Error de conexión'; btn.disabled = false; btn.textContent = 'Enviar invitación';
+  }
+}
+async function resendCoachInvite(coachId, name) {
+  if (!confirm(`¿Reenviar invitación a ${name}?`)) return;
+  const token = sessionStorage.getItem('ciq_token');
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches/${coachId}/resend-invite`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(d.error || 'No se pudo reenviar la invitación'); return; }
+    alert(`Invitación reenviada a ${name}.`);
+  } catch(e) {
+    alert('Error de conexión');
+  }
+}
+
 async function loadData(){
   // Guardia de seguridad: si el rol guardado es player, no cargar el panel coach
   if (sessionStorage.getItem('ciq_role') === 'player') {
@@ -724,6 +845,7 @@ async function loadData(){
     if(l)try{data=JSON.parse(l);}catch(e){}
     setSS('error','Sin conexión — datos locales');
   }
+  loadCoachTeam(); // non-blocking, will trigger re-render when done
   renderAll();setInterval(refreshData,30000);
 }
 async function refreshData(){
@@ -2300,7 +2422,16 @@ function renderCoaching() {
     return matchFilter && matchSearch;
   });
 
+  const role = sessionStorage.getItem('ciq_role');
   return `
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:600;color:var(--gray);">Equipo de entrenadores</div>
+        ${role === 'admin' ? `<button class="btn btn-o btn-sm" onclick="showInviteCoachModal()">+ Invitar coach</button>` : ''}
+      </div>
+      ${renderCoachTeamList(_coachTeamCache)}
+    </div>
+
     <div class="page-header">
       <div><div class="page-title">Biblioteca de ejercicios</div>
       <div class="page-sub">Ejercicios técnicos, drills y patrones tácticos del equipo</div></div>
@@ -4559,7 +4690,23 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
       if (!res.ok) { errEl.textContent = 'El link ha expirado o no es válido. Solicitá uno nuevo.'; return; }
       const profile = await res.json();
 
-      if (profile.role !== 'player') { errEl.textContent = 'Este link es solo para jugadores.'; return; }
+      if (profile.role === 'coach' || profile.role === 'admin') {
+        // Coach/admin magic link login
+        sessionStorage.setItem('ciq_token', accessToken);
+        if (refreshToken) sessionStorage.setItem('ciq_refresh', refreshToken);
+        sessionStorage.setItem('ciq_role', profile.role);
+        user = profile.full_name || profile.email || '';
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('player-panel').style.display = 'none';
+        document.getElementById('user-lbl').textContent = user;
+        if (history.pushState) history.pushState({page: 'dashboard'}, '', '');
+        loadData();
+        showSetPasswordModal(); // primera vez → ofrecer crear contraseña
+        return;
+      }
+
+      if (profile.role !== 'player') { errEl.textContent = 'Este link no es válido para esta cuenta.'; return; }
 
       let finalPlayerId = profile.player_id || '';
 
