@@ -470,8 +470,16 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button class="mnav-btn" id="mnav-scouting" onclick="navTo('scouting')"><span class="mnav-icon">◎</span>Scouting</button>
       <button class="mnav-btn" id="mnav-asistencia" onclick="navTo('asistencia')"><span class="mnav-icon">✓</span>Asist.</button>
       <button class="mnav-btn" id="mnav-grupal" onclick="navTo('grupal')"><span class="mnav-icon">⊞</span>Grupal</button>
+      <button class="mnav-btn" id="mnav-mas" onclick="openMasMenu()"><span class="mnav-icon">⚙️</span>Más</button>
     </div>
   </nav>
+
+  <div id="mas-overlay" onclick="closeMasMenu()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:150;"></div>
+  <div id="mas-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--white);border-radius:16px 16px 0 0;padding:16px;z-index:151;border-top:1px solid var(--border);">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;"></div>
+    <button class="mnav-btn" style="width:100%;flex-direction:row;gap:12px;justify-content:flex-start;padding:12px 16px;font-size:14px;" onclick="closeMasMenu();openChangePassword()"><span class="mnav-icon">🔑</span>Cambiar contraseña</button>
+    <button class="mnav-btn" style="width:100%;flex-direction:row;gap:12px;justify-content:flex-start;padding:12px 16px;font-size:14px;color:#e74c3c;" onclick="closeMasMenu();doLogout()"><span class="mnav-icon">↩</span>Salir</button>
+  </div>
 
   <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
   <div class="player-drawer" id="player-drawer">
@@ -5161,6 +5169,16 @@ async function saveNewPassword() {
 
 function skipSetPassword() {
   document.getElementById('set-password-modal').style.display = 'none';
+}
+
+function openMasMenu(){
+  document.getElementById('mas-overlay').style.display='block';
+  const p=document.getElementById('mas-panel');
+  p.style.display='flex';p.style.flexDirection='column';
+}
+function closeMasMenu(){
+  document.getElementById('mas-overlay').style.display='none';
+  document.getElementById('mas-panel').style.display='none';
 }
 
 function openChangePassword(){
