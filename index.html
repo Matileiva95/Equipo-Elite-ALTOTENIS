@@ -1836,6 +1836,12 @@ function switchDtab(t){
 }
 function renderDtab(){const p=data.players[pid];if(dtab==='perfil')return renderPerfil(p);if(dtab==='plan')return renderPlan(p);if(dtab==='calendario')return renderCal(p);if(dtab==='torneos')return renderTorneos(p);if(dtab==='stats')return renderStats(p);if(dtab==='rivales')return renderPlayerScouting(p);if(dtab==='carga')return renderCarga(p);if(dtab==='portal')return renderCoachPortalView(p);return '';}
 
+function changePlayerGroup(playerIndex, groupId) {
+  data.players[playerIndex].group_id = groupId;
+  scheduleSync();
+  renderGroupFilter();
+}
+
 // PERFIL
 function renderPerfil(p){
   const history=p.rankingHistory||[];
@@ -1853,6 +1859,12 @@ function renderPerfil(p){
       <div class="fg"><label>Objetivo próximo</label><input id="f-goal" value="${p.goal||''}" placeholder="Ej: Top 300 ITF" /></div>
       <div class="fg fg-full"><label>Nivel general</label>
         <div class="stars">${[1,2,3,4,5].map(n=>`<span class="star${activeStars>=n?' on':''}" onclick="setStar(${n})">★</span>`).join('')}</div>
+      </div>
+      <div class="fg"><label>Grupo</label>
+        <select onchange="changePlayerGroup(${pid}, this.value)">
+          <option value="">Sin grupo</option>
+          ${(window._groups||[]).map(g=>`<option value="${g.id}" ${p.group_id===g.id?'selected':''}>${g.name}</option>`).join('')}
+        </select>
       </div>
     </div>
 
