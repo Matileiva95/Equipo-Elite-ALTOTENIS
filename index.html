@@ -475,6 +475,7 @@ body{background:#faf7f2;color:#1a1a1a;}
   <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
   <div class="player-drawer" id="player-drawer">
     <div class="drawer-title">Seleccionar jugador</div>
+    <div id="group-filter-mobile" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 8px 8px;"></div>
     <div id="drawer-list"></div>
   </div>
 </div>
@@ -907,6 +908,7 @@ function renderGroupFilter() {
     return '<button onclick="activeGroup=\''+gid+'\';renderAll();" style="font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);cursor:pointer;background:var(--white);color:var(--g2);font-weight:500;">'+name+'</button>';
   }).join('');
   gf.innerHTML = allBtn + groupBtns;
+  const gfm = document.getElementById('group-filter-mobile'); if(gfm) gfm.innerHTML = gf.innerHTML;
 }
 function renderAll(){renderGroupFilter();renderPlayerNav();renderDrawerList();renderMain();updateMobileNav();}
 function renderPlayerNav(){
