@@ -940,7 +940,7 @@ function renderDashboard(){
   const players = activeGroup ? data.players.filter(p => p.group_id === activeGroup) : data.players;
 
   // ── Alertas automáticas ──
-  const alerts = buildAlerts(today, wKey);
+  const alerts = buildAlerts(today, wKey, players);
 
   // ── Vista semanal: 7 días desde hoy ──
   const weekDays = [];
@@ -1753,10 +1753,10 @@ async function leerStatsImagenesSet(input, pName, setNum) {
   }
 }
 
-function buildAlerts(today, wKey) {
+function buildAlerts(today, wKey, players) {
   const alerts = [];
 
-  data.players.forEach((p, i) => {
+  players.forEach((p, i) => {
     // ROJO — Sin plan esta semana
     const hasPlan = p.weekPlans && p.weekPlans.find(pl => pl.week === wKey);
     if (!hasPlan) {
