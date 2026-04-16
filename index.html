@@ -5183,9 +5183,9 @@ async function saveChangePassword(){
   if(newPass!==confirm){errEl.textContent='Las contraseñas nuevas no coinciden.';return;}
   if(newPass.length<6){errEl.textContent='La nueva contraseña debe tener al menos 6 caracteres.';return;}
   try{
-    const res=await fetch(`${SUPABASE_URL}/auth/v1/user`,{
-      method:'PUT',
-      headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+sessionStorage.getItem('ciq_token')},
+    const res=await fetch(`${BACKEND_URL}/api/v1/auth/set-password`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionStorage.getItem('ciq_token')},
       body:JSON.stringify({password:newPass})
     });
     if(!res.ok){const d=await res.json().catch(()=>({}));errEl.textContent=d.message||'Error al cambiar la contraseña.';return;}
