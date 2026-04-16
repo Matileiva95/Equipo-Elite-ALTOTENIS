@@ -902,10 +902,10 @@ function renderGroupFilter() {
   const gf = document.getElementById('group-filter');
   if (!gf) return;
   const groups = [...new Set(data.players.map(p => p.group_id).filter(Boolean))];
-  const allBtn = '<button onclick="activeGroup=null;renderAll();" style="font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);cursor:pointer;background:var(--orange);color:#fff;font-weight:500;">Todos</button>';
+  const allBtn = '<button onclick="activeGroup=null;renderAll();" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);cursor:pointer;background:var(--orange);color:#fff;font-weight:500;">Todos</button>';
   const groupBtns = groups.map(gid => {
     const name = (window._groups||[]).find(g=>g.id===gid)?.name || gid.slice(0,4);
-    return '<button onclick="activeGroup=\''+gid+'\';renderAll();" style="font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid var(--border);cursor:pointer;background:var(--white);color:var(--g2);font-weight:500;">'+name+'</button>';
+    return '<button onclick="activeGroup=\''+gid+'\';renderAll();" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);cursor:pointer;background:var(--white);color:var(--g2);font-weight:500;">'+name+'</button>';
   }).join('');
   gf.innerHTML = allBtn + groupBtns;
   const gfm = document.getElementById('group-filter-mobile'); if(gfm) gfm.innerHTML = gf.innerHTML;
@@ -914,7 +914,7 @@ function renderAll(){renderGroupFilter();renderPlayerNav();renderDrawerList();re
 function renderPlayerNav(){
   const nav=document.getElementById('player-nav');if(!nav)return;
   const filtered=data.players.map((p,i)=>({p,i})).filter(({p})=>!activeGroup||p.group_id===activeGroup);
-  nav.innerHTML=filtered.map(({p,i})=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name.split(' ')[0]}</span></button>`).join('');
+  nav.innerHTML=filtered.map(({p,i})=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span></button>`).join('');
   document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal'][i]===page));
 }
 function renderDrawerList(){
