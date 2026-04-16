@@ -937,6 +937,7 @@ function renderDashboard(){
   const todayKey=today.toISOString().slice(0,10);
   const wKey=weekKey(today);
   const wLabel_str=weekLabel(wKey);
+  const players = activeGroup ? data.players.filter(p => p.group_id === activeGroup) : data.players;
 
   // ── Alertas automáticas ──
   const alerts = buildAlerts(today, wKey);
@@ -949,9 +950,9 @@ function renderDashboard(){
   }
 
   // ── Stats rápidas ──
-  const conPlan=data.players.filter(p=>p.weekPlans&&p.weekPlans.find(pl=>pl.week===wKey)).length;
+  const conPlan=players.filter(p=>p.weekPlans&&p.weekPlans.find(pl=>pl.week===wKey)).length;
   let trainHoy=0,compHoy=0;
-  data.players.forEach(p=>{const ev=p.events&&p.events[todayKey];if(ev){if(ev.type==='training')trainHoy++;else if(ev.type==='competition')compHoy++;}});
+  players.forEach(p=>{const ev=p.events&&p.events[todayKey];if(ev){if(ev.type==='training')trainHoy++;else if(ev.type==='competition')compHoy++;}});
 
   return `
     <div class="page-header">
@@ -1011,7 +1012,7 @@ function renderDashboard(){
               </tr>
             </thead>
             <tbody>
-              ${data.players.map((p,i)=>{
+              ${players.map((p,i)=>{
                 return `<tr style="border-bottom:1px solid var(--border);" onclick="navTo('player',${i})" style="cursor:pointer;">
                   <td style="padding:8px 14px;cursor:pointer;" onclick="navTo('player',${i})">
                     <div style="display:flex;align-items:center;gap:8px;">
@@ -1071,7 +1072,7 @@ function renderDashboard(){
     <div class="g2">
       <div class="card">
         <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Planes de la semana</div>
-        ${data.players.map((p,i)=>{
+        ${players.map((p,i)=>{
           const plan=p.weekPlans&&p.weekPlans.find(pl=>pl.week===wKey);
           return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="navTo('player',${i})">
             <div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div>
@@ -1089,7 +1090,7 @@ function renderDashboard(){
         <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Resumen del equipo</div>
         <div class="g3" style="margin-bottom:14px;">
           <div style="text-align:center;padding:10px;background:var(--g5);border-radius:var(--rsm);">
-            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;">${data.players.length}</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;">${players.length}</div>
             <div style="font-size:11px;color:var(--g3);">Jugadores</div>
           </div>
           <div style="text-align:center;padding:10px;background:var(--g5);border-radius:var(--rsm);">
@@ -1102,7 +1103,7 @@ function renderDashboard(){
           </div>
         </div>
         <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Rendimiento 2026</div>
-        ${data.players.map((p,i)=>{
+        ${players.map((p,i)=>{
           const allM=[...(p.matches||[]),...(getPlayerMatches(p.name)||[])];
           const w=allM.filter(m=>m.resultado&&m.resultado.toUpperCase()==='G').length;
           const l=allM.filter(m=>m.resultado&&m.resultado.toUpperCase()==='P').length;
