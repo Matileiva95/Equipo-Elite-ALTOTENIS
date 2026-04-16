@@ -742,6 +742,37 @@ function doLogout() {
 function setSS(s,l){const d=document.getElementById('sync-dot'),lb=document.getElementById('sync-lbl');if(d)d.className='sync-dot '+s;if(lb)lb.textContent=l;}
 // ── Coach team management ─────────────────────────────────────
 let _coachTeamCache = null;
+async function loadUserPermissions() {
+  const token = sessionStorage.getItem('ciq_token');
+  if (!token) { window._userPermissions = { role: 'admin', canEdit: [], canView: [] }; return; }
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/users/me/permissions`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('permissions fetch failed');
+    const d = await res.json();
+    window._userPermissions = {
+      role: d.role || 'coach',
+      canEdit: d.canEdit || [],
+      canView: d.canView || []
+    };
+  } catch(e) {
+    window._userPermissions = { role: 'admin', canEdit: [], canView: [] };
+  }
+}
+
+function canEditGroup(groupId) {
+  const p = window._userPermissions;
+  if (!p || p.role === 'admin') return true;
+  return p.canEdit.includes(groupId);
+}
+
+function canViewGroup(groupId) {
+  const p = window._userPermissions;
+  if (!p || p.role === 'admin') return true;
+  return p.canEdit.includes(groupId) || p.canView.includes(groupId);
+}
+
 async function loadGroups() {
   const token = sessionStorage.getItem('ciq_token');
   if (!token) return;
@@ -859,6 +890,7 @@ async function loadData(){
   }
   loadCoachTeam(); // non-blocking, will trigger re-render when done
   loadGroups();
+  loadUserPermissions();
   renderAll();setInterval(refreshData,30000);
 }
 async function refreshData(){
@@ -903,7 +935,7 @@ function renderGroupFilter() {
   if (!gf) return;
   const groups = [...new Set(data.players.map(p => p.group_id).filter(Boolean))];
   const allBtn = '<button onclick="activeGroup=null;renderAll();" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);cursor:pointer;background:var(--orange);color:#fff;font-weight:500;">Todos</button>';
-  const groupBtns = groups.map(gid => {
+  const groupBtns = groups.filter(gid => canViewGroup(gid)).map(gid => {
     const name = (window._groups||[]).find(g=>g.id===gid)?.name || gid.slice(0,4);
     return '<button onclick="activeGroup=\''+gid+'\';renderAll();" style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);cursor:pointer;background:var(--white);color:var(--g2);font-weight:500;">'+name+'</button>';
   }).join('');
@@ -913,13 +945,13 @@ function renderGroupFilter() {
 function renderAll(){renderGroupFilter();renderPlayerNav();renderDrawerList();renderMain();updateMobileNav();}
 function renderPlayerNav(){
   const nav=document.getElementById('player-nav');if(!nav)return;
-  const filtered=data.players.map((p,i)=>({p,i})).filter(({p})=>!activeGroup||p.group_id===activeGroup);
+  const filtered=data.players.map((p,i)=>({p,i})).filter(({p})=>(!activeGroup||p.group_id===activeGroup)&&canViewGroup(p.group_id));
   nav.innerHTML=filtered.map(({p,i})=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span></button>`).join('');
   document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal'][i]===page));
 }
 function renderDrawerList(){
   const dl=document.getElementById('drawer-list');if(!dl)return;
-  const filtered=data.players.map((p,i)=>({p,i})).filter(({p})=>!activeGroup||p.group_id===activeGroup);
+  const filtered=data.players.map((p,i)=>({p,i})).filter(({p})=>(!activeGroup||p.group_id===activeGroup)&&canViewGroup(p.group_id));
   dl.innerHTML=filtered.map(({p,i})=>`<div class="drawer-item${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};width:36px;height:36px;font-size:12px;">${ini(p.name)}</div><div><div class="drawer-name">${p.name}</div><div class="drawer-rank">${p.ranking}</div></div></div>`).join('');
 }
 function updateMobileNav(){
@@ -1899,7 +1931,7 @@ function renderPerfil(p){
       <div class="fg"><label>Médico / Kinesiólogo</label><input id="f-medico" value="${team.medico||''}" placeholder="Nombre y contacto" /></div>
     </div>
 
-    <button class="btn btn-o btn-sm" onclick="saveProfile()">Guardar perfil</button>
+    ${canEditGroup(data.players[pid]?.group_id)?`<button class="btn btn-o btn-sm" onclick="saveProfile()">Guardar perfil</button>`:''}
   </div>
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
@@ -2050,7 +2082,7 @@ function renderPlan(p){
 
       ${cur.updatedBy?`<div class="updated-by">Última edición: ${cur.updatedBy} · ${cur.updatedAt||''}</div>`:''}
       <div class="btn-row" style="margin-top:14px;">
-        <button class="btn btn-o" onclick="savePlan('${wKey}')">Guardar plan semanal</button>
+        ${canEditGroup(data.players[pid]?.group_id)?`<button class="btn btn-o" onclick="savePlan('${wKey}')">Guardar plan semanal</button>`:''}
       </div>
     </div>
 
@@ -2182,10 +2214,11 @@ function renderCal(p){
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
         <span style="font-size:12px;color:var(--g3);">Asignar como:</span>
+        ${canEditGroup(data.players[pid]?.group_id)?`
         <button class="btn btn-sm" style="background:var(--ol);color:var(--od);border:1px solid var(--orange);" onclick="applyMultiDesc('training')">Entrenamiento</button>
         <button class="btn btn-sm" style="background:var(--bl);color:var(--bd);border:1px solid var(--blue);" onclick="applyMultiDesc('competition')">Competencia</button>
         <button class="btn btn-sm" style="background:var(--restl);color:var(--restd);border:1px solid var(--rest);" onclick="applyMultiDesc('rest')">Descanso</button>
-        <button class="btn btn-sm btn-red" onclick="applyMultiDesc('delete')">Borrar días</button>
+        <button class="btn btn-sm btn-red" onclick="applyMultiDesc('delete')">Borrar días</button>`:''}
         <button class="btn btn-g btn-sm" onclick="clearSel()">Cancelar</button>
       </div>
     </div>`:`
@@ -2199,7 +2232,7 @@ function renderCal(p){
         <div class="fg"><label>Fecha</label><input type="date" id="ev-date" /></div>
         <div class="fg"><label>Tipo</label><select id="ev-type"><option value="training">Entrenamiento</option><option value="competition">Competencia</option><option value="rest">Descanso</option></select></div>
         <div class="fg"><label>Descripción</label><input type="text" id="ev-desc" placeholder="Ej: ITF Chile G3..." style="width:140px;" /></div>
-        <button class="btn btn-o btn-sm" onclick="addEvent()">Agregar</button>
+        ${canEditGroup(data.players[pid]?.group_id)?`<button class="btn btn-o btn-sm" onclick="addEvent()">Agregar</button>`:''}
       </div>
     </div>
     ${weeksHtml}
@@ -2968,7 +3001,7 @@ function renderAddMatchForm(p, editIdx) {
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-o btn-sm" onclick="saveMatch()">${isEdit?'Guardar cambios':'Guardar partido'}</button>
+      ${canEditGroup(data.players[pid]?.group_id)?`<button class="btn btn-o btn-sm" onclick="saveMatch()">${isEdit?'Guardar cambios':'Guardar partido'}</button>`:''}
       ${isEdit?`<button class="btn btn-red btn-sm" onclick="deleteMatch(${editIdx})">Eliminar partido</button>
       <button class="btn btn-g btn-sm" onclick="cancelEditMatch()">Cancelar</button>`:''}
     </div>
@@ -3188,7 +3221,7 @@ function renderStatsForm(p, editIdx) {
       <textarea id="sf-obs" placeholder="Notas tácticas, mentales, físicas del partido..." style="min-height:70px;width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;">${s?s.observaciones||'':''}</textarea>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-b btn-sm" onclick="saveStats()">${isEdit?'Guardar cambios':'Guardar estadísticas'}</button>
+      ${canEditGroup(data.players[pid]?.group_id)?`<button class="btn btn-b btn-sm" onclick="saveStats()">${isEdit?'Guardar cambios':'Guardar estadísticas'}</button>`:''}
       ${isEdit?`<button class="btn btn-red btn-sm" onclick="event.stopPropagation();deleteStats(${editIdx})">Eliminar</button>
       <button class="btn btn-g btn-sm" onclick="cancelEditStats()">Cancelar</button>`:''}
     </div>
