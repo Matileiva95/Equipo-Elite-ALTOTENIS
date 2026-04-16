@@ -1845,7 +1845,7 @@ function renderPlayer(){
         ${p.equipoTrabajo?.fisico?`<div style="font-size:11px;color:var(--g3);margin-top:2px;">Físico: ${p.equipoTrabajo.fisico}</div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-        <button class="btn btn-g btn-sm" onclick="openEditPlayer(${pid})">Editar</button>
+        ${canEditGroup(data.players[pid]?.group_id)?`<button class="btn btn-g btn-sm" onclick="openEditPlayer(${pid})">Editar</button>`:''}
         ${p.email?`<button class="btn btn-sm" style="background:#eef7fc;color:var(--bd);border:1px solid #b8d9f0;font-size:11px;" onclick="enviarMagicLink(${pid})">📧 Acceso portal</button>`:''}
       </div>
     </div>
@@ -1894,10 +1894,12 @@ function renderPerfil(p){
         <div class="stars">${[1,2,3,4,5].map(n=>`<span class="star${activeStars>=n?' on':''}" onclick="setStar(${n})">★</span>`).join('')}</div>
       </div>
       <div class="fg"><label>Grupo</label>
-        <select onchange="changePlayerGroup(${pid}, this.value)">
+        ${canEditGroup(data.players[pid]?.group_id)
+          ? `<select onchange="changePlayerGroup(${pid}, this.value)">
           <option value="">Sin grupo</option>
           ${(window._groups||[]).map(g=>`<option value="${g.id}" ${p.group_id===g.id?'selected':''}>${g.name}</option>`).join('')}
-        </select>
+        </select>`
+          : `<span style="font-size:13px;color:var(--gray);">${(window._groups||[]).find(g=>g.id===p.group_id)?.name||'Sin grupo'}</span>`}
       </div>
     </div>
 
@@ -2050,29 +2052,30 @@ function renderPlan(p){
               const dotColor = ti===0 ? 'var(--orange)' : 'var(--blue)';
               const labelColor = ti===0 ? 'var(--od)' : 'var(--bd)';
               const borderStyle = ti===0 ? 'border-right:1px solid var(--border);' : '';
+              const _canEdit = canEditGroup(data.players[pid]?.group_id);
               return `<div style="padding:12px 14px;${borderStyle}${isDescanso?'background:var(--restl);':''}">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                   <div style="display:flex;align-items:center;gap:5px;">
                     <div style="width:7px;height:7px;border-radius:50%;background:${isDescanso?'var(--rest)':dotColor};"></div>
                     <span style="font-size:11px;font-weight:600;color:${isDescanso?'var(--restd)':labelColor};text-transform:uppercase;letter-spacing:.04em;">${turno}</span>
                   </div>
-                  <div style="display:flex;gap:4px;">
-                    <button onclick="setTurnoTipo('${wKey}','${dia}','${turno}','entrenamiento')" 
+                  ${_canEdit?`<div style="display:flex;gap:4px;">
+                    <button onclick="setTurnoTipo('${wKey}','${dia}','${turno}','entrenamiento')"
                       style="font-size:9px;padding:2px 7px;border-radius:20px;cursor:pointer;border:1px solid ${!isDescanso?'var(--orange)':'var(--border)'};background:${!isDescanso?'var(--ol)':'transparent'};color:${!isDescanso?'var(--od)':'var(--g3)'};">Entr.</button>
                     <button onclick="setTurnoTipo('${wKey}','${dia}','${turno}','descanso')"
                       style="font-size:9px;padding:2px 7px;border-radius:20px;cursor:pointer;border:1px solid ${isDescanso?'var(--rest)':'var(--border)'};background:${isDescanso?'var(--restl)':'transparent'};color:${isDescanso?'var(--restd)':'var(--g3)'};">Desc.</button>
-                  </div>
+                  </div>`:''}
                 </div>
                 ${isDescanso
                   ? `<div style="font-size:12px;color:var(--restd);font-style:italic;">Día de descanso</div>`
-                  : `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">
-                      ${FOCOS.map(f=>`<button class="fpill${(turnoData.focos||[]).includes(f)?' '+FOCO_CLS[f]:''}" 
+                  : `${_canEdit?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">
+                      ${FOCOS.map(f=>`<button class="fpill${(turnoData.focos||[]).includes(f)?' '+FOCO_CLS[f]:''}"
                         style="font-size:10px;padding:2px 8px;"
                         onclick="toggleTurnoFoco('${wKey}','${dia}','${turno}','${f}')">${f}</button>`).join('')}
-                    </div>
+                    </div>`:''}
                     <textarea placeholder="Descripción de la sesión..."
-                      style="width:100%;min-height:65px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;"
-                      oninput="setTurnoDesc('${wKey}','${dia}','${turno}',this.value)">${turnoData.descripcion||''}</textarea>`
+                      style="width:100%;min-height:65px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:${_canEdit?'#fff':'var(--g5)'};resize:${_canEdit?'vertical':'none'};font-family:'DM Sans',sans-serif;"
+                      ${_canEdit?`oninput="setTurnoDesc('${wKey}','${dia}','${turno}',this.value)"`:'readonly'}>${turnoData.descripcion||''}</textarea>`
                 }
               </div>`;
             }).join('')}
