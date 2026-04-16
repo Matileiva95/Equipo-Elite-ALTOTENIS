@@ -455,6 +455,7 @@ body{background:#faf7f2;color:#1a1a1a;}
     </div>
     <div class="sb-foot">
       <div class="sync-row"><div class="sync-dot" id="sync-dot"></div><span id="sync-lbl">Conectando...</span></div>
+      <button class="logout-btn" onclick="openChangePassword()">🔑 Cambiar contraseña</button>
       <button class="logout-btn" onclick="doLogout()">↩ Salir (<span id="user-lbl"></span>)</button>
     </div>
   </div>
@@ -477,6 +478,25 @@ body{background:#faf7f2;color:#1a1a1a;}
     <div class="drawer-title">Seleccionar jugador</div>
     <div id="group-filter-mobile" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 8px 8px;"></div>
     <div id="drawer-list"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="change-password-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Cambiar contraseña</div>
+      <button class="modal-close" onclick="closeChangePassword()">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="fg fg-full"><label>Contraseña actual</label><input type="password" id="cp-current" placeholder="Contraseña actual" /></div>
+      <div class="fg fg-full"><label>Nueva contraseña</label><input type="password" id="cp-new" placeholder="Nueva contraseña" /></div>
+      <div class="fg fg-full"><label>Confirmar nueva contraseña</label><input type="password" id="cp-confirm" placeholder="Confirmar nueva contraseña" /></div>
+    </div>
+    <div id="cp-err" style="font-size:12px;color:#e74c3c;min-height:18px;margin:8px 0;"></div>
+    <div class="btn-row">
+      <button class="btn btn-o" onclick="saveChangePassword()">Guardar</button>
+      <button class="btn btn-g" onclick="closeChangePassword()">Cancelar</button>
+    </div>
   </div>
 </div>
 
@@ -5141,6 +5161,37 @@ async function saveNewPassword() {
 
 function skipSetPassword() {
   document.getElementById('set-password-modal').style.display = 'none';
+}
+
+function openChangePassword(){
+  document.getElementById('cp-current').value='';
+  document.getElementById('cp-new').value='';
+  document.getElementById('cp-confirm').value='';
+  document.getElementById('cp-err').textContent='';
+  document.getElementById('change-password-modal').classList.add('open');
+}
+function closeChangePassword(){
+  document.getElementById('change-password-modal').classList.remove('open');
+}
+async function saveChangePassword(){
+  const current=document.getElementById('cp-current').value;
+  const newPass=document.getElementById('cp-new').value;
+  const confirm=document.getElementById('cp-confirm').value;
+  const errEl=document.getElementById('cp-err');
+  errEl.textContent='';
+  if(!current||!newPass||!confirm){errEl.textContent='Completá todos los campos.';return;}
+  if(newPass!==confirm){errEl.textContent='Las contraseñas nuevas no coinciden.';return;}
+  if(newPass.length<6){errEl.textContent='La nueva contraseña debe tener al menos 6 caracteres.';return;}
+  try{
+    const res=await fetch(`${SUPABASE_URL}/auth/v1/user`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+sessionStorage.getItem('ciq_token')},
+      body:JSON.stringify({password:newPass})
+    });
+    if(!res.ok){const d=await res.json().catch(()=>({}));errEl.textContent=d.message||'Error al cambiar la contraseña.';return;}
+    closeChangePassword();
+    alert('Contraseña cambiada correctamente.');
+  }catch(e){errEl.textContent='Error de conexión.';}
 }
 </script>
 </body>
