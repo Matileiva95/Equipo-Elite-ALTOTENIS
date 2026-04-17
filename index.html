@@ -1224,12 +1224,13 @@ function renderAsistencia() {
 let asistModalIdx = null;
 
 function renderAsistDia() {
+  const players = activeGroup ? data.players.filter(p => p.group_id === activeGroup) : data.players;
   const dateKey = asistFecha.toISOString().slice(0,10);
   const isToday = dateKey === new Date().toISOString().slice(0,10);
   const dayName = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][asistFecha.getDay()];
   const dateLabel = dayName + ' ' + asistFecha.getDate() + ' de ' + ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][asistFecha.getMonth()] + ' ' + asistFecha.getFullYear();
 
-  const presentes = data.players.filter(p => (p.asistencia||{})[dateKey]?.t1 === 'p' && (p.asistencia||{})[dateKey]?.t2 === 'p').length;
+  const presentes = players.filter(p => (p.asistencia||{})[dateKey]?.t1 === 'p' && (p.asistencia||{})[dateKey]?.t2 === 'p').length;
 
   return `
     <div class="card" style="margin-bottom:14px;">
@@ -1252,7 +1253,7 @@ function renderAsistDia() {
       </div>
 
       <div style="display:flex;flex-direction:column;gap:6px;">
-        ${data.players.map((p,i) => {
+        ${players.map((p,i) => {
           const asist = p.asistencia || {};
           const dayData = asist[dateKey] || {};
           const t1 = dayData['t1'] || '';
@@ -1365,9 +1366,11 @@ function limpiarDia(dateKey) {
 }
 
 function renderAsistMes() {
+  const players = activeGroup ? data.players.filter(p => p.group_id === activeGroup) : data.players;
   const mesNombre = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][asistMes.getMonth()];
   const año = asistMes.getFullYear();
-  const p = data.players[asistPlayerIdx];
+  if(asistPlayerIdx >= players.length) asistPlayerIdx = 0;
+  const p = players[asistPlayerIdx];
   if(!p) return '<div class="card"><div class="empty">Sin jugadores</div></div>';
 
   const asist = p.asistencia || {};
@@ -1403,7 +1406,7 @@ function renderAsistMes() {
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <select onchange="asistPlayerIdx=parseInt(this.value);renderMain();"
             style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;background:var(--g5);outline:none;">
-            ${data.players.map((pl,i)=>`<option value="${i}" ${i===asistPlayerIdx?'selected':''}>${pl.name}</option>`).join('')}
+            ${players.map((pl,i)=>`<option value="${i}" ${i===asistPlayerIdx?'selected':''}>${pl.name}</option>`).join('')}
           </select>
           <button class="btn btn-sm" style="background:#eaf2ff;color:#1a5bc4;border:1px solid #b0c9f5;" onclick="generarReporteJugador()">📄 Reporte jugador</button>
         </div>
