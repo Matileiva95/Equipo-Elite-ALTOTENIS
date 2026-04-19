@@ -1256,6 +1256,7 @@ function renderAsistDia() {
 
       <div style="display:flex;flex-direction:column;gap:6px;">
         ${players.map((p,i) => {
+          const realIdx = data.players.indexOf(p);
           const asist = p.asistencia || {};
           const dayData = asist[dateKey] || {};
           const t1 = dayData['t1'] || '';
@@ -1264,7 +1265,7 @@ function renderAsistDia() {
           const e2 = ESTADOS.find(e=>e.id===t2);
           const ambosPresentes = t1==='p' && t2==='p';
           return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${ambosPresentes?'#f0fbf4':'var(--g5)'};border:1px solid ${ambosPresentes?'#a9dfbf':'var(--border)'};border-radius:var(--rsm);cursor:pointer;"
-            onclick="abrirAsistModal(${i},'${dateKey}')">
+            onclick="abrirAsistModal(${realIdx},'${dateKey}')">
             <div class="pav" style="background:${COLORS[i%COLORS.length]};width:32px;height:32px;font-size:11px;flex-shrink:0;">${ini(p.name)}</div>
             <div style="flex:1;min-width:0;">
               <div style="font-size:13px;font-weight:500;color:var(--gray);">${p.name}</div>
