@@ -710,8 +710,8 @@ async function doLogin() {
         const d = await res.json();
         if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
         const detectedRole = d.user?.user_metadata?.role || 'coach';
-        // Bloqueo de seguridad: un jugador no puede acceder al panel de entrenadores
-        if (detectedRole === 'player') {
+        // Bloqueo de seguridad: solo admin, coach y viewer pueden acceder al panel
+        if (!['admin', 'coach', 'viewer'].includes(detectedRole)) {
           errEl.textContent = 'Esta cuenta es de jugador. Usá el acceso de jugador.';
           btn.disabled = false;
           return;
@@ -792,12 +792,14 @@ async function loadUserPermissions() {
 function canEditGroup(groupId) {
   const p = window._userPermissions;
   if (!p || p.role === 'admin') return true;
+  if (p.role === 'viewer') return false;
   return p.canEdit.includes(groupId);
 }
 
 function canViewGroup(groupId) {
   const p = window._userPermissions;
   if (!p || p.role === 'admin') return true;
+  if (p.role === 'viewer') return p.canView.includes(groupId);
   return p.canEdit.includes(groupId) || p.canView.includes(groupId);
 }
 
