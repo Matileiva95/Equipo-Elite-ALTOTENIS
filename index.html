@@ -3955,7 +3955,7 @@ function renderPortalPerfil() {
       </div>
       <textarea id="pp-obj-corto" rows="3"
         style="width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:9px;font-size:13px;color:#333;resize:none;font-family:inherit;box-sizing:border-box;margin-bottom:14px;"
-        placeholder="Ej: Ganar el próximo torneo ITF...">${corto}</textarea>
+        placeholder="Ej: Clasificar al ITF de mayo">${corto}</textarea>
 
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
         <div style="width:9px;height:9px;border-radius:50%;background:#1DA1D6;flex-shrink:0;"></div>
@@ -3963,7 +3963,7 @@ function renderPortalPerfil() {
       </div>
       <textarea id="pp-obj-mediano" rows="3"
         style="width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:9px;font-size:13px;color:#333;resize:none;font-family:inherit;box-sizing:border-box;margin-bottom:14px;"
-        placeholder="Ej: Entrar al top 500 antes de junio...">${mediano}</textarea>
+        placeholder="Ej: Llegar al top 500 este año">${mediano}</textarea>
 
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
         <div style="width:9px;height:9px;border-radius:50%;background:#27ae60;flex-shrink:0;"></div>
@@ -3971,7 +3971,7 @@ function renderPortalPerfil() {
       </div>
       <textarea id="pp-obj-largo" rows="3"
         style="width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:9px;font-size:13px;color:#333;resize:none;font-family:inherit;box-sizing:border-box;margin-bottom:16px;"
-        placeholder="Ej: Llegar al top 100 ATP/WTA...">${largo}</textarea>
+        placeholder="Ej: Jugar torneos ATP/WTA en 2027">${largo}</textarea>
 
       <button onclick="ppGuardarObjetivos()"
         style="width:100%;padding:13px;background:#FF6B00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
@@ -4366,7 +4366,19 @@ function renderPortalHoy() {
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const fechaStr = `${diasSemana[now.getDay()]} ${now.getDate()} de ${meses[now.getMonth()]}`;
   const nombre = (document.getElementById('pp-player-name')?.textContent || '').trim().split(' ')[0] || 'jugador';
-  const msg = p.coachMessage || 'Enfócate en el proceso, cada punto con intención.';
+  const mensajes = [
+    'Enfócate en el proceso, cada punto con intención.',
+    'El trabajo de hoy es la victoria de mañana.',
+    'Sé el jugador que quieres ser en cancha.',
+    'Cada entrenamiento cuenta, aunque no lo parezca.',
+    'La consistencia supera al talento sin disciplina.',
+    'Hoy entrenas para el jugador que serás mañana.',
+    'Compite contra la mejor versión de ti mismo.',
+    'Un buen entrenamiento empieza con la actitud correcta.',
+    'El éxito es la suma de pequeños esfuerzos repetidos cada día.',
+    'Confía en el proceso, los resultados llegarán.'
+  ];
+  const msg = p.coachMessage || mensajes[Math.floor(Math.random() * mensajes.length)];
 
   const diaKey = diasSemana[now.getDay()];
   const wKey = weekKey(now);
