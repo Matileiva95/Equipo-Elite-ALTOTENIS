@@ -2323,24 +2323,28 @@ function buildCargaChart(loads) {
     const d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
     const key = d.toISOString().slice(0,10);
     const sessions = loads.filter(l => l.date === key);
-    const avgRpe = sessions.length ? sessions.reduce((a,b)=>a+b.rpe,0)/sessions.length : null;
-    chartDays.push({ key, avgRpe, label: String(d.getDate()) });
+    const avgRpe   = sessions.length ? sessions.reduce((a,b)=>a+b.rpe,0)/sessions.length : null;
+    const notaSess = sessions.filter(s=>s.session_nota);
+    const avgNota  = notaSess.length ? notaSess.reduce((a,b)=>a+b.session_nota,0)/notaSess.length : null;
+    chartDays.push({ key, avgRpe, avgNota, label: String(d.getDate()) });
   }
   const last5vals = chartDays.slice(-5).filter(d=>d.avgRpe!==null).map(d=>d.avgRpe);
   const avg5 = last5vals.length ? last5vals.reduce((a,b)=>a+b,0)/last5vals.length : 0;
   const highLoad = avg5 >= 4;
   const W=440, H=72, pX=18, pY=8, iW=440-2*18, iH=72-2*8;
   const pts = chartDays.map((d,i)=>({
-    x: pX + i*(iW/13),
-    y: d.avgRpe!=null ? pY + iH - ((d.avgRpe-1)/4)*iH : null,
-    avgRpe: d.avgRpe, label: d.label
+    x:     pX + i*(iW/13),
+    y:     d.avgRpe  != null ? pY + iH - ((d.avgRpe-1)/4)*iH  : null,
+    yNota: d.avgNota != null ? pY + iH - ((d.avgNota-1)/6)*iH : null,
+    avgRpe: d.avgRpe, avgNota: d.avgNota, label: d.label
   }));
   const validPts = pts.filter(pt=>pt.y!=null);
   const pathD = validPts.map((pt,i)=>`${i===0?'M':'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
-  const circles = pts.map(pt=>pt.y!=null?`<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${RPE_COLORS[Math.round(pt.avgRpe)]}" stroke="#fff" stroke-width="1.5"/>`:'').join('');
+  const circles     = pts.map(pt=>pt.y    !=null?`<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}"     r="4" fill="${RPE_COLORS[Math.round(pt.avgRpe)]}" stroke="#fff" stroke-width="1.5"/>`:'').join('');
+  const circlesNota = pts.map(pt=>pt.yNota!=null?`<circle cx="${pt.x.toFixed(1)}" cy="${pt.yNota.toFixed(1)}" r="3" fill="#FF6B00" stroke="#fff" stroke-width="1.5" opacity="0.85"/>`:'').join('');
   const labels = pts.map(pt=>`<text x="${pt.x.toFixed(1)}" y="${H+10}" font-size="8" text-anchor="middle" fill="#bbb">${pt.label}</text>`).join('');
   const yLines = [1,2,3,4,5].map(v=>{const y=(pY+iH-((v-1)/4)*iH).toFixed(1);return `<line x1="${pX}" y1="${y}" x2="${W-pX}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/><text x="${pX-4}" y="${parseFloat(y)+3}" font-size="7" text-anchor="end" fill="#ccc">${v}</text>`;}).join('');
-  const svg = `<svg viewBox="0 0 ${W} ${H+14}" width="100%" style="display:block;overflow:visible;">${yLines}${pathD?`<path d="${pathD}" fill="none" stroke="#1DA1D6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`:''}${circles}${labels}</svg>`;
+  const svg = `<svg viewBox="0 0 ${W} ${H+14}" width="100%" style="display:block;overflow:visible;">${yLines}${pathD?`<path d="${pathD}" fill="none" stroke="#1DA1D6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`:''}${circles}${circlesNota}${labels}</svg>`;
   return { svg, highLoad, avg5 };
 }
 
@@ -2366,6 +2370,7 @@ function renderCarga(p) {
           <span style="font-size:17px;">${MOOD_ICONS[s.mood]||''}</span>
           <span style="font-size:12px;color:var(--g3);">${s.duration} min</span>
           <span style="font-size:12px;color:var(--g2);flex:1;">${(s.tipos||[]).join(', ')||'—'}</span>
+          ${s.session_nota?`<span style="padding:2px 9px;border-radius:20px;background:#fff3e0;color:#FF6B00;font-size:12px;font-weight:700;">Nota: ${s.session_nota}/7</span>`:''}
           ${s.notas?`<div style="font-size:11px;color:var(--g3);width:100%;margin-top:2px;">📝 ${s.notas}</div>`:''}
           <button onclick="eliminarCarga(${i})" style="padding:2px 8px;border:1px solid var(--border);border-radius:var(--rsm);background:transparent;color:var(--g3);font-size:11px;cursor:pointer;">✕</button>
         </div>`).join('')
