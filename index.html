@@ -4497,9 +4497,13 @@ async function ppGuardarEval() {
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error();
+    if (portalPlayer) {
+      if (!portalPlayer.trainingLoad) portalPlayer.trainingLoad = [];
+      portalPlayer.trainingLoad.unshift(payload);
+    }
     alert('¡Evaluación guardada!');
     _ppNota = 0; _ppRpe = 0; _ppMood = 0;
-    switchPortalSection('hoy');
+    switchPortalSection('progreso');
   } catch { alert('Error al guardar. Intentá de nuevo.'); }
 }
 
