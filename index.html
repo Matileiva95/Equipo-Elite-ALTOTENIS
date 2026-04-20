@@ -4071,6 +4071,7 @@ function renderPortalScouting() {
             style="margin-top:10px;width:100%;padding:11px;background:#FF6B00;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">
             Guardar notas
           </button>
+          <div id="scout-feedback-${idx}" style="font-size:12px;font-weight:600;margin-top:6px;min-height:16px;"></div>
         </div>` : '';
 
       rivalHtml += `
@@ -4115,18 +4116,29 @@ async function ppGuardarScoutingNotas(nombreRival, idx) {
   const plan     = document.getElementById(`scout-plan-${idx}`)?.value || '';
   const playerId = sessionStorage.getItem('ciq_player_id');
   const token    = sessionStorage.getItem('ciq_token');
+  const feedbackEl = document.getElementById(`scout-feedback-${idx}`);
+
   if (!portalPlayer.scoutingNotas) portalPlayer.scoutingNotas = {};
   portalPlayer.scoutingNotas[nombreRival] = { misNotas, plan };
+
   try {
     const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/scouting-notas`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ rival: nombreRival, misNotas, plan })
     });
-    if (!res.ok) throw new Error();
-    alert('¡Notas guardadas!');
-  } catch {
-    alert('Notas guardadas localmente (sin conexión).');
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(d.error || `Error ${res.status}`);
+    if (feedbackEl) {
+      feedbackEl.textContent = '✓ Notas guardadas';
+      feedbackEl.style.color = '#27ae60';
+      setTimeout(() => { feedbackEl.textContent = ''; }, 3000);
+    }
+  } catch(e) {
+    if (feedbackEl) {
+      feedbackEl.textContent = e.message || 'Error al guardar';
+      feedbackEl.style.color = '#e74c3c';
+    }
   }
 }
 
