@@ -538,11 +538,11 @@ body{background:#faf7f2;color:#1a1a1a;}
     <div class="pp-empty">Cargando...</div>
   </div>
   <nav class="pp-nav">
-    <button class="pp-nav-btn" id="ppnav-plan" onclick="switchPortalSection('plan')"><span class="pp-nav-icon">📋</span>Mi plan</button>
-    <button class="pp-nav-btn" id="ppnav-session" onclick="switchPortalSection('session')"><span class="pp-nav-icon">💪</span>Sesión</button>
-    <button class="pp-nav-btn" id="ppnav-matches" onclick="switchPortalSection('matches')"><span class="pp-nav-icon">🎾</span>Partidos</button>
-    <button class="pp-nav-btn" id="ppnav-objectives" onclick="switchPortalSection('objectives')"><span class="pp-nav-icon">🎯</span>Objetivos</button>
-    <button class="pp-nav-btn" id="ppnav-analysis" onclick="switchPortalSection('analysis')"><span class="pp-nav-icon">📝</span>Análisis</button>
+    <button class="pp-nav-btn" id="ppnav-hoy"      onclick="switchPortalSection('hoy')">      <span class="pp-nav-icon">🟠</span>Hoy</button>
+    <button class="pp-nav-btn" id="ppnav-semana"   onclick="switchPortalSection('semana')">   <span class="pp-nav-icon">📅</span>Semana</button>
+    <button class="pp-nav-btn" id="ppnav-progreso" onclick="switchPortalSection('progreso')"> <span class="pp-nav-icon">📈</span>Progreso</button>
+    <button class="pp-nav-btn" id="ppnav-scouting" onclick="switchPortalSection('scouting')"> <span class="pp-nav-icon">🔍</span>Scouting</button>
+    <button class="pp-nav-btn" id="ppnav-perfil"   onclick="switchPortalSection('perfil')">   <span class="pp-nav-icon">👤</span>Perfil</button>
   </nav>
 </div>
 
@@ -3869,7 +3869,7 @@ async function loadPlayerPortal(playerId) {
   } catch(e) {
     portalPlayer = null;
   }
-  switchPortalSection('plan');
+  switchPortalSection('hoy');
 }
 
 function switchPortalSection(s) {
@@ -3884,12 +3884,132 @@ function switchPortalSection(s) {
 
 function renderPortalSection() {
   if (!portalPlayer) return `<div class="pp-empty">No se pudo cargar tu información.<br><button class="btn btn-o btn-sm" style="margin-top:12px;" onclick="loadPlayerPortal(sessionStorage.getItem('ciq_player_id'))">Reintentar</button></div>`;
-  if (portalSection === 'plan') return renderPortalPlan();
-  if (portalSection === 'session') return renderPortalSession();
-  if (portalSection === 'matches') return renderPortalMatches();
-  if (portalSection === 'objectives') return renderPortalObjectives();
-  if (portalSection === 'analysis') return renderPortalAnalysis();
+  if (portalSection === 'hoy')       return renderPortalHoy();
+  if (portalSection === 'plan')      return renderPortalPlan();
+  if (portalSection === 'semana')    return renderPortalPlan();
+  if (portalSection === 'progreso')  return renderPortalSession();
+  if (portalSection === 'scouting')  return renderPortalMatches();
+  if (portalSection === 'perfil')    return renderPortalObjectives();
+  if (portalSection === 'session')   return renderPortalSession();
+  if (portalSection === 'matches')   return renderPortalMatches();
+  if (portalSection === 'objectives')return renderPortalObjectives();
+  if (portalSection === 'analysis')  return renderPortalAnalysis();
   return '';
+}
+
+function renderPortalHoy() {
+  const p = portalPlayer;
+  const now = new Date();
+  const diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const fechaStr = `${diasSemana[now.getDay()]} ${now.getDate()} de ${meses[now.getMonth()]}`;
+  const nombre = (document.getElementById('pp-player-name')?.textContent || '').trim().split(' ')[0] || 'jugador';
+  const msg = p.coachMessage || 'Enfócate en el proceso, cada punto con intención.';
+
+  const diaKey = diasSemana[now.getDay()];
+  const wKey = weekKey(now);
+  const plans = p.weekPlans || [];
+  const planSemana = plans.find(pl => pl.week === wKey && !pl.grupal);
+  const diaData = planSemana?.dias?.[diaKey] || {};
+  const turnos = Object.entries(diaData).filter(([, t]) => t && t.tipo !== 'descanso');
+
+  let entrenamientoHtml = '';
+  if (turnos.length === 0) {
+    entrenamientoHtml = `<div style="text-align:center;color:#999;padding:18px 0;font-size:13px;">Sin entrenamiento programado hoy</div>`;
+  } else {
+    turnos.forEach(([turnoNombre, t]) => {
+      const focos = (t.focos || []).join(' · ') || '';
+      const desc  = t.descripcion || '';
+      entrenamientoHtml += `
+        <div style="border:1px solid #e8e8e8;border-radius:10px;padding:13px 14px;margin-bottom:9px;background:#fff;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:10px;font-weight:700;color:#FF6B00;text-transform:uppercase;letter-spacing:.05em;">${turnoNombre}</span>
+            ${t.hora ? `<span style="font-size:11px;color:#999;">${t.hora}</span>` : ''}
+          </div>
+          ${focos ? `<div style="font-size:13px;font-weight:600;color:#222;margin-bottom:3px;">${focos}</div>` : ''}
+          ${desc  ? `<div style="font-size:12px;color:#666;line-height:1.4;">${desc}</div>` : ''}
+        </div>`;
+    });
+  }
+
+  return `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;">${fechaStr}</div>
+      <div style="font-size:22px;font-weight:700;color:#222;">Hola, ${nombre} 👋</div>
+    </div>
+
+    <div style="background:#E3F4FB;border-radius:12px;padding:14px 16px;margin-bottom:18px;">
+      <div style="font-size:13px;color:#1a6080;line-height:1.55;font-style:italic;">"${msg}"</div>
+      <div style="font-size:10px;font-weight:600;color:#5a99b0;margin-top:7px;text-transform:uppercase;letter-spacing:.06em;">· mensaje del día</div>
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Entrenamiento de hoy</div>
+    ${entrenamientoHtml}
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 12px;">Evalúa tu entrenamiento</div>
+    <div class="pp-card" style="background:#fff;">
+      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Nota de sesión</div>
+      <div style="display:flex;gap:6px;justify-content:space-between;margin-bottom:16px;">
+        ${[1,2,3,4,5,6,7].map(n => `<button id="ppnota-${n}" onclick="ppSelNota(${n})" style="width:38px;height:38px;border-radius:50%;border:2px solid #e0e0e0;background:#fff;font-size:13px;font-weight:700;color:#555;cursor:pointer;transition:all .13s;flex-shrink:0;">${n}</button>`).join('')}
+      </div>
+      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Esfuerzo percibido (RPE)</div>
+      <div style="display:flex;gap:5px;margin-bottom:16px;">
+        ${[1,2,3,4,5].map(n => `<button id="pprpe-${n}" onclick="ppSelRpeHoy(${n})" style="flex:1;padding:9px 2px;border-radius:8px;border:2px solid #e0e0e0;background:#fff;font-size:12px;font-weight:700;color:#555;cursor:pointer;transition:all .13s;">${n}</button>`).join('')}
+      </div>
+      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Estado de ánimo</div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;">
+        ${[['😔',1],['😐',2],['😊',3]].map(([ico,v]) => `<button id="ppmood-${v}" onclick="ppSelMoodHoy(${v})" style="flex:1;padding:10px;border-radius:10px;border:2px solid #e0e0e0;background:#fff;font-size:22px;cursor:pointer;transition:all .13s;">${ico}</button>`).join('')}
+      </div>
+      <button onclick="ppGuardarEval()" style="width:100%;padding:13px;background:#FF6B00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.02em;">Guardar evaluación</button>
+    </div>`;
+}
+
+let _ppNota = 0;
+function ppSelNota(n) {
+  _ppNota = n;
+  [1,2,3,4,5,6,7].forEach(i => {
+    const b = document.getElementById('ppnota-' + i);
+    if (!b) return;
+    b.style.background  = i === n ? '#FF6B00' : '#fff';
+    b.style.borderColor = i === n ? '#FF6B00' : '#e0e0e0';
+    b.style.color       = i === n ? '#fff'    : '#555';
+  });
+}
+function ppSelRpeHoy(n) {
+  _ppRpe = n;
+  const rpeColors = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
+  [1,2,3,4,5].forEach(i => {
+    const b = document.getElementById('pprpe-' + i);
+    if (!b) return;
+    b.style.background  = i === n ? rpeColors[i] : '#fff';
+    b.style.borderColor = i === n ? rpeColors[i] : '#e0e0e0';
+    b.style.color       = i === n ? '#fff'       : '#555';
+  });
+}
+function ppSelMoodHoy(n) {
+  _ppMood = n;
+  [1,2,3].forEach(i => {
+    const b = document.getElementById('ppmood-' + i);
+    if (!b) return;
+    b.style.borderColor = i === n ? '#FF6B00' : '#e0e0e0';
+    b.style.background  = i === n ? '#fff5eb' : '#fff';
+  });
+}
+async function ppGuardarEval() {
+  if (!_ppNota || !_ppRpe || !_ppMood) { alert('Completá todos los campos antes de guardar.'); return; }
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const token    = sessionStorage.getItem('ciq_token');
+  const payload  = { date: new Date().toISOString().slice(0,10), nota: _ppNota, rpe: _ppRpe, mood: _ppMood };
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
+      method: 'POST', headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error();
+    alert('¡Evaluación guardada!');
+    _ppNota = 0; _ppRpe = 0; _ppMood = 0;
+    switchPortalSection('hoy');
+  } catch { alert('Error al guardar. Intentá de nuevo.'); }
 }
 
 function renderPortalPlan() {
