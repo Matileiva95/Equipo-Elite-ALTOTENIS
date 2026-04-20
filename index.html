@@ -3886,15 +3886,477 @@ function renderPortalSection() {
   if (!portalPlayer) return `<div class="pp-empty">No se pudo cargar tu información.<br><button class="btn btn-o btn-sm" style="margin-top:12px;" onclick="loadPlayerPortal(sessionStorage.getItem('ciq_player_id'))">Reintentar</button></div>`;
   if (portalSection === 'hoy')       return renderPortalHoy();
   if (portalSection === 'plan')      return renderPortalPlan();
-  if (portalSection === 'semana')    return renderPortalPlan();
-  if (portalSection === 'progreso')  return renderPortalSession();
-  if (portalSection === 'scouting')  return renderPortalMatches();
-  if (portalSection === 'perfil')    return renderPortalObjectives();
+  if (portalSection === 'semana')    return renderPortalSemana();
+  if (portalSection === 'progreso')  return renderPortalProgreso();
+  if (portalSection === 'scouting')  return renderPortalScouting();
+  if (portalSection === 'perfil')    return renderPortalPerfil();
   if (portalSection === 'session')   return renderPortalSession();
   if (portalSection === 'matches')   return renderPortalMatches();
   if (portalSection === 'objectives')return renderPortalObjectives();
   if (portalSection === 'analysis')  return renderPortalAnalysis();
   return '';
+}
+
+function renderPortalPerfil() {
+  const p = portalPlayer;
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const limite = new Date(today); limite.setDate(today.getDate() + 28);
+  const events = p.events || {};
+
+  const competencias = Object.entries(events)
+    .filter(([key, ev]) => {
+      if (ev.type !== 'competition') return false;
+      const d = new Date(key + 'T12:00:00');
+      return d >= today && d <= limite;
+    })
+    .sort(([a],[b]) => a > b ? 1 : -1)
+    .map(([key, ev]) => {
+      const d = new Date(key + 'T12:00:00');
+      const diff = Math.round((d - today) / 86400000);
+      const diasStr = diff === 0 ? 'Hoy' : diff === 1 ? 'Mañana' : `en ${diff} días`;
+      const dia = d.getDate();
+      const mes = MONTHS[d.getMonth()].toUpperCase();
+      return `
+        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:14px;">
+          <div style="text-align:center;min-width:40px;flex-shrink:0;">
+            <div style="font-size:20px;font-weight:800;color:#FF6B00;line-height:1;">${dia}</div>
+            <div style="font-size:9px;font-weight:700;color:#FF6B00;letter-spacing:.05em;">${mes}</div>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ev.desc || 'Competencia'}</div>
+            <div style="font-size:11px;color:#aaa;margin-top:2px;">${diasStr}</div>
+          </div>
+        </div>`;
+    });
+
+  const competenciasHtml = competencias.length > 0
+    ? competencias.join('')
+    : `<div style="font-size:13px;color:#bbb;text-align:center;padding:16px 0;">Sin competencias próximas registradas</div>`;
+
+  const objGuardados = p.playerObjectives || {};
+  const corto   = objGuardados.corto   || (p.goal || '');
+  const mediano = objGuardados.mediano || '';
+  const largo   = objGuardados.largo   || '';
+
+  return `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:22px;font-weight:700;color:#222;">Mi perfil</div>
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Próximas competencias</div>
+    ${competenciasHtml}
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">Mis objetivos</div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
+        <div style="width:9px;height:9px;border-radius:50%;background:#FF6B00;flex-shrink:0;"></div>
+        <span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.05em;">Corto plazo</span>
+      </div>
+      <textarea id="pp-obj-corto" rows="3"
+        style="width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:9px;font-size:13px;color:#333;resize:none;font-family:inherit;box-sizing:border-box;margin-bottom:14px;"
+        placeholder="Ej: Ganar el próximo torneo ITF...">${corto}</textarea>
+
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
+        <div style="width:9px;height:9px;border-radius:50%;background:#1DA1D6;flex-shrink:0;"></div>
+        <span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.05em;">Mediano plazo</span>
+      </div>
+      <textarea id="pp-obj-mediano" rows="3"
+        style="width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:9px;font-size:13px;color:#333;resize:none;font-family:inherit;box-sizing:border-box;margin-bottom:14px;"
+        placeholder="Ej: Entrar al top 500 antes de junio...">${mediano}</textarea>
+
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
+        <div style="width:9px;height:9px;border-radius:50%;background:#27ae60;flex-shrink:0;"></div>
+        <span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.05em;">Largo plazo</span>
+      </div>
+      <textarea id="pp-obj-largo" rows="3"
+        style="width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:9px;font-size:13px;color:#333;resize:none;font-family:inherit;box-sizing:border-box;margin-bottom:16px;"
+        placeholder="Ej: Llegar al top 100 ATP/WTA...">${largo}</textarea>
+
+      <button onclick="ppGuardarObjetivos()"
+        style="width:100%;padding:13px;background:#FF6B00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+        Guardar objetivos
+      </button>
+    </div>`;
+}
+
+async function ppGuardarObjetivos() {
+  const corto   = document.getElementById('pp-obj-corto')?.value   || '';
+  const mediano = document.getElementById('pp-obj-mediano')?.value || '';
+  const largo   = document.getElementById('pp-obj-largo')?.value   || '';
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const token    = sessionStorage.getItem('ciq_token');
+  if (!portalPlayer.playerObjectives) portalPlayer.playerObjectives = {};
+  portalPlayer.playerObjectives = { corto, mediano, largo };
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/player-objectives`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ corto, mediano, largo })
+    });
+    if (!res.ok) throw new Error();
+    alert('¡Objetivos guardados!');
+  } catch {
+    alert('Objetivos guardados localmente (sin conexión).');
+  }
+}
+
+let _scoutingExpandido = null;
+
+function renderPortalScouting() {
+  const p = portalPlayer;
+  const allMatches = [...(p.matches || []), ...(getPlayerMatches(p.name) || [])];
+
+  const rivalesMap = {};
+  allMatches.forEach(m => {
+    const key = (m.rival || 'Desconocido').trim();
+    if (!rivalesMap[key]) rivalesMap[key] = { nombre: key, partidos: [] };
+    rivalesMap[key].partidos.push(m);
+  });
+
+  const rivales = Object.values(rivalesMap).sort((a,b) => b.partidos.length - a.partidos.length);
+  const scoutingNotas = p.scoutingNotas || {};
+  const rivalColors = ['#FF6B00','#1DA1D6','#2ecc71','#9b59b6','#e74c3c','#f39c12','#1abc9c'];
+
+  function initials(nombre) {
+    return nombre.split(' ').slice(0,2).map(w => w[0]?.toUpperCase() || '').join('');
+  }
+
+  let rivalHtml = '';
+  if (rivales.length === 0) {
+    rivalHtml = `<div style="font-size:13px;color:#bbb;text-align:center;padding:24px 0;">Sin rivales registrados aún</div>`;
+  } else {
+    rivales.forEach((r, idx) => {
+      const color = rivalColors[idx % rivalColors.length];
+      const wins  = r.partidos.filter(m => m.resultado?.toUpperCase() === 'G').length;
+      const loss  = r.partidos.filter(m => m.resultado?.toUpperCase() === 'P').length;
+      const expandido = _scoutingExpandido === r.nombre;
+      const notas = scoutingNotas[r.nombre] || {};
+
+      const historialHtml = r.partidos
+        .sort((a,b) => (a.fecha > b.fecha ? -1 : 1))
+        .map(m => {
+          const gano   = m.resultado?.toUpperCase() === 'G';
+          const perdio = m.resultado?.toUpperCase() === 'P';
+          const bg2    = gano ? '#e8f8ef' : perdio ? '#fdecea' : '#f6f6f6';
+          const col2   = gano ? '#27ae60' : perdio ? '#e74c3c' : '#aaa';
+          const label  = gano ? 'G' : perdio ? 'P' : m.resultado || '?';
+          return `
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;">
+              <span style="font-size:11px;color:#bbb;min-width:72px;">${m.fecha || '—'}</span>
+              <span style="flex:1;font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.torneo || 'Torneo'}</span>
+              ${m.score ? `<span style="font-size:11px;color:#888;">${m.score}</span>` : ''}
+              <span style="font-size:11px;font-weight:700;color:${col2};background:${bg2};padding:2px 7px;border-radius:20px;flex-shrink:0;">${label}</span>
+            </div>`;
+        }).join('');
+
+      const rivalKey = r.nombre.replace(/'/g,"\\'");
+      const detalleHtml = expandido ? `
+        <div style="border-top:1px solid #f0f0f0;margin-top:10px;padding-top:10px;">
+          <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Historial</div>
+          ${historialHtml}
+          <div style="margin-top:14px;">
+            <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Mis notas</div>
+            <textarea id="scout-notas-${idx}" rows="3"
+              style="width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:9px;font-size:13px;color:#333;resize:none;font-family:inherit;box-sizing:border-box;"
+              placeholder="Ej: Tiene revés flojo bajo presión...">${notas.misNotas || ''}</textarea>
+          </div>
+          <div style="margin-top:10px;">
+            <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Plan para la próxima vez</div>
+            <textarea id="scout-plan-${idx}" rows="3"
+              style="width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:9px;font-size:13px;color:#333;resize:none;font-family:inherit;box-sizing:border-box;"
+              placeholder="Ej: Atacar con slice al revés y subir a la red...">${notas.plan || ''}</textarea>
+          </div>
+          <button onclick="ppGuardarScoutingNotas('${rivalKey}', ${idx})"
+            style="margin-top:10px;width:100%;padding:11px;background:#FF6B00;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">
+            Guardar notas
+          </button>
+        </div>` : '';
+
+      rivalHtml += `
+        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:13px 14px;margin-bottom:9px;">
+          <div style="display:flex;align-items:center;gap:12px;cursor:pointer;"
+               onclick="_scoutingExpandido = _scoutingExpandido === '${rivalKey}' ? null : '${rivalKey}'; switchPortalSection('scouting');">
+            <div style="width:40px;height:40px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">
+              ${initials(r.nombre)}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:700;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.nombre}</div>
+              <div style="font-size:12px;color:#aaa;margin-top:1px;">${r.partidos.length} partido${r.partidos.length !== 1 ? 's' : ''}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <div style="font-size:12px;font-weight:700;">
+                ${wins > 0 ? `<span style="color:#27ae60;">${wins}V</span>` : ''}
+                ${wins > 0 && loss > 0 ? `<span style="color:#ccc;"> · </span>` : ''}
+                ${loss > 0 ? `<span style="color:#e74c3c;">${loss}D</span>` : ''}
+                ${wins === 0 && loss === 0 ? '<span style="color:#aaa;">—</span>' : ''}
+              </div>
+              <div style="font-size:16px;color:#ccc;margin-top:2px;">${expandido ? '▲' : '▼'}</div>
+            </div>
+          </div>
+          ${detalleHtml}
+        </div>`;
+    });
+  }
+
+  return `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:22px;font-weight:700;color:#222;">Scouting de rivales</div>
+    </div>
+    ${rivalHtml}
+    <button onclick="ppAgregarRival()"
+      style="width:100%;padding:13px;background:#fff;color:#FF6B00;border:2px dashed #FF6B00;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">
+      + Agregar rival
+    </button>`;
+}
+
+async function ppGuardarScoutingNotas(nombreRival, idx) {
+  const misNotas = document.getElementById(`scout-notas-${idx}`)?.value || '';
+  const plan     = document.getElementById(`scout-plan-${idx}`)?.value || '';
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const token    = sessionStorage.getItem('ciq_token');
+  if (!portalPlayer.scoutingNotas) portalPlayer.scoutingNotas = {};
+  portalPlayer.scoutingNotas[nombreRival] = { misNotas, plan };
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/scouting-notas`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rival: nombreRival, misNotas, plan })
+    });
+    if (!res.ok) throw new Error();
+    alert('¡Notas guardadas!');
+  } catch {
+    alert('Notas guardadas localmente (sin conexión).');
+  }
+}
+
+function ppAgregarRival() {
+  const nombre = prompt('Nombre del rival:');
+  if (!nombre?.trim()) return;
+  if (!portalPlayer.matches) portalPlayer.matches = [];
+  portalPlayer.matches.push({ rival: nombre.trim(), fecha: '', torneo: '', resultado: '', score: '' });
+  _scoutingExpandido = nombre.trim();
+  switchPortalSection('scouting');
+}
+
+function renderPortalProgreso() {
+  const p = portalPlayer;
+
+  // ── Calidad esta semana ───────────────────────────────────
+  const today = new Date(); today.setHours(0,0,0,0);
+  const wKey  = weekKey(today);
+  const lunes = new Date(wKey + 'T12:00:00');
+  const loads  = p.trainingLoad || [];
+
+  const diasNombres = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+  const notasPorDia = diasNombres.map((_, i) => {
+    const fecha = new Date(lunes); fecha.setDate(lunes.getDate() + i);
+    const key   = fecha.toISOString().slice(0,10);
+    const sess  = loads.filter(l => l.date === key && l.nota);
+    return sess.length ? sess.reduce((a,b) => a + b.nota, 0) / sess.length : null;
+  });
+
+  const notasValidas = notasPorDia.filter(n => n !== null);
+  const promedio = notasValidas.length
+    ? (notasValidas.reduce((a,b) => a+b, 0) / notasValidas.length).toFixed(1)
+    : null;
+
+  const mensajeMotiv = !promedio ? 'Sin evaluaciones esta semana aún'
+    : promedio >= 6 ? 'Sigue así, estás en tu mejor nivel 🔥'
+    : promedio >= 4 ? 'Puedes más, sigue empujando 💪'
+    : 'Esta semana fue difícil, la próxima es tuya';
+
+  const barrasPorDia = diasNombres.map((dia, i) => {
+    const nota = notasPorDia[i];
+    const pct  = nota ? Math.round((nota / 7) * 100) : 0;
+    const color = nota >= 6 ? '#27ae60' : nota >= 4 ? '#FF6B00' : nota ? '#e74c3c' : '#e8e8e8';
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;">
+        <div style="width:100%;height:60px;background:#f0f0f0;border-radius:6px;display:flex;align-items:flex-end;overflow:hidden;">
+          <div style="width:100%;height:${pct}%;background:${color};border-radius:6px;transition:height .3s;"></div>
+        </div>
+        <span style="font-size:9px;font-weight:600;color:#aaa;">${dia.slice(0,3).toUpperCase()}</span>
+        <span style="font-size:10px;font-weight:700;color:${nota ? '#333' : '#ccc'};">${nota ? Number(nota).toFixed(1) : '—'}</span>
+      </div>`;
+  }).join('');
+
+  const promedioBar = promedio ? Math.round((promedio / 7) * 100) : 0;
+  const promedioColor = promedio >= 6 ? '#27ae60' : promedio >= 4 ? '#FF6B00' : promedio ? '#e74c3c' : '#e0e0e0';
+
+  // ── Ranking ───────────────────────────────────────────────
+  const hist = (p.rankingHistory || []).slice(-6);
+  const rankActual = p.ranking || '—';
+  let rankDelta = '';
+  if (hist.length >= 2) {
+    const hace3m = hist[Math.max(0, hist.length - 4)];
+    const actual = hist[hist.length - 1];
+    const diff = (hace3m?.pos || 0) - (actual?.pos || 0);
+    if (diff > 0) rankDelta = `<span style="color:#27ae60;font-size:13px;font-weight:700;">▲ ${diff} pos</span>`;
+    else if (diff < 0) rankDelta = `<span style="color:#e74c3c;font-size:13px;font-weight:700;">▼ ${Math.abs(diff)} pos</span>`;
+    else rankDelta = `<span style="color:#aaa;font-size:13px;">= sin cambio</span>`;
+  }
+
+  let rankGrafico = '';
+  if (hist.length >= 2) {
+    const poss = hist.map(h => h.pos || 0);
+    const maxP = Math.max(...poss); const minP = Math.min(...poss);
+    const rng  = maxP - minP || 1;
+    const W = 280; const H = 60;
+    const pts = hist.map((h, i) => {
+      const x = Math.round((i / (hist.length - 1)) * W);
+      const y = Math.round(H - ((maxP - (h.pos||0)) / rng) * (H - 10) - 5);
+      return `${x},${y}`;
+    }).join(' ');
+    const labels = hist.map((h, i) => {
+      const x = Math.round((i / (hist.length - 1)) * W);
+      return `<text x="${x}" y="${H + 14}" text-anchor="middle" font-size="9" fill="#bbb">${h.label || ''}</text>`;
+    }).join('');
+    rankGrafico = `
+      <svg viewBox="0 0 ${W} ${H + 20}" style="width:100%;margin-top:10px;">
+        <polyline points="${pts}" fill="none" stroke="#FF6B00" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${hist.map((h,i) => { const x=Math.round((i/(hist.length-1))*W); const y=Math.round(H-((maxP-(h.pos||0))/rng)*(H-10)-5); return `<circle cx="${x}" cy="${y}" r="3.5" fill="#FF6B00"/>`; }).join('')}
+        ${labels}
+      </svg>`;
+  } else {
+    rankGrafico = `<div style="font-size:12px;color:#bbb;padding:12px 0;">Sin historial de ranking registrado</div>`;
+  }
+
+  // ── Últimos partidos ──────────────────────────────────────
+  const allMatches = [...(p.matches || []), ...(getPlayerMatches(p.name) || [])]
+    .sort((a,b) => (a.fecha > b.fecha ? -1 : 1))
+    .slice(0, 5);
+
+  const partidosHtml = allMatches.length === 0
+    ? `<div style="font-size:12px;color:#bbb;padding:12px 0;text-align:center;">Sin partidos registrados</div>`
+    : allMatches.map(m => {
+        const gano   = m.resultado?.toUpperCase() === 'G';
+        const perdio = m.resultado?.toUpperCase() === 'P';
+        const bg     = gano ? '#e8f8ef' : perdio ? '#fdecea' : '#f6f6f6';
+        const color  = gano ? '#27ae60' : perdio ? '#e74c3c' : '#aaa';
+        const label  = gano ? 'Victoria' : perdio ? 'Derrota' : m.resultado || '—';
+        const badgeBg = gano ? '#c7f0d8' : perdio ? '#fcd4d0' : '#ebebeb';
+        return `
+          <div style="background:${bg};border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;">${m.torneo || 'Torneo'}</span>
+              <span style="font-size:10px;font-weight:700;color:${color};padding:2px 8px;border-radius:20px;background:${badgeBg};">${label}</span>
+            </div>
+            <div style="font-size:14px;font-weight:600;color:#222;">vs ${m.rival || '—'}</div>
+            ${m.score  ? `<div style="font-size:12px;color:#888;margin-top:2px;">${m.score}</div>`  : ''}
+            ${m.fecha  ? `<div style="font-size:10px;color:#bbb;margin-top:3px;">${m.fecha}</div>`  : ''}
+          </div>`;
+      }).join('');
+
+  return `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:22px;font-weight:700;color:#222;">Mi progreso</div>
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Calidad esta semana</div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:28px;font-weight:800;color:${promedioColor};">${promedio ?? '—'}<span style="font-size:14px;color:#ccc;font-weight:400;">/7</span></span>
+        <span style="font-size:12px;color:#666;text-align:right;max-width:55%;line-height:1.4;">${mensajeMotiv}</span>
+      </div>
+      <div style="background:#f0f0f0;border-radius:20px;height:8px;margin-bottom:14px;overflow:hidden;">
+        <div style="height:100%;width:${promedioBar}%;background:${promedioColor};border-radius:20px;transition:width .4s;"></div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:flex-end;">${barrasPorDia}</div>
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Ranking</div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:11px;color:#aaa;margin-bottom:2px;">Posición actual</div>
+          <div style="font-size:22px;font-weight:800;color:#222;">${rankActual}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:#aaa;margin-bottom:2px;">vs hace 3 meses</div>
+          ${rankDelta || '<span style="font-size:12px;color:#ccc;">Sin datos</span>'}
+        </div>
+      </div>
+      ${rankGrafico}
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Últimos partidos</div>
+    ${partidosHtml}`;
+}
+
+function renderPortalSemana() {
+  const p = portalPlayer;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const wKey = weekKey(today);
+  const plans = p.weekPlans || [];
+  const plan  = plans.find(pl => pl.week === wKey && !pl.grupal);
+
+  const lunes = new Date(wKey + 'T12:00:00');
+  const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
+  const rango = `${lunes.getDate()} – ${domingo.getDate()} ${MONTHS[domingo.getMonth()]}`;
+
+  const diasNombres = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+  const turnos = ['1er turno','2do turno'];
+
+  let html = '';
+  diasNombres.forEach((dia, i) => {
+    const fecha = new Date(lunes); fecha.setDate(lunes.getDate() + i);
+    const esHoy = fecha.getTime() === today.getTime();
+    const esPasado = fecha < today;
+    const diaNum = `${fecha.getDate()} ${MONTHS[fecha.getMonth()]}`;
+
+    const diaData = plan?.dias?.[dia] || {};
+    const turnosActivos = turnos.map(t => diaData[t]).filter(Boolean);
+    const esDescanso = turnosActivos.length > 0 && turnosActivos.every(t => t.tipo === 'descanso');
+    const libre = turnosActivos.length === 0;
+
+    let badge = '';
+    if (esHoy)
+      badge = `<span style="background:#FF6B00;color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.04em;">HOY</span>`;
+    else if (esPasado && !libre && !esDescanso)
+      badge = `<span style="background:#e8f8ef;color:#27ae60;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;">HECHO ✓</span>`;
+    else if (esDescanso)
+      badge = `<span style="background:#f3eafd;color:#8e44ad;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;">DESC.</span>`;
+    else
+      badge = `<span style="background:#f0f0f0;color:#aaa;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;">LIBRE</span>`;
+
+    let turnosHtml = '';
+    if (libre || esDescanso) {
+      turnosHtml = `<div style="font-size:12px;color:#bbb;margin-top:6px;">${esDescanso ? 'Descanso' : 'Sin entrenamiento'}</div>`;
+    } else {
+      turnosActivos.forEach((t, ti) => {
+        const focos = (t.focos || []).join(' · ') || '';
+        const desc  = t.descripcion || '';
+        turnosHtml += `
+          <div style="margin-top:8px;${ti > 0 ? 'padding-top:8px;border-top:1px solid #f0f0f0;' : ''}">
+            <div style="font-size:9px;font-weight:700;color:#FF6B00;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">${turnos[ti]}</div>
+            ${focos ? `<div style="font-size:13px;font-weight:600;color:#222;">${focos}</div>` : ''}
+            ${desc  ? `<div style="font-size:11px;color:#888;margin-top:1px;line-height:1.4;">${desc}</div>` : ''}
+          </div>`;
+      });
+    }
+
+    const borderLeft = esHoy ? 'border-left:3px solid #FF6B00;' : (esDescanso ? 'border-left:3px solid #8e44ad;' : '');
+
+    html += `
+      <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:13px 14px;margin-bottom:9px;${borderLeft}">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <span style="font-size:14px;font-weight:700;color:${esHoy ? '#FF6B00' : '#222'};">${dia}</span>
+            <span style="font-size:11px;color:#bbb;margin-left:6px;">${diaNum}</span>
+          </div>
+          ${badge}
+        </div>
+        ${turnosHtml}
+      </div>`;
+  });
+
+  return `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;">${rango}</div>
+      <div style="font-size:22px;font-weight:700;color:#222;">Mi semana</div>
+    </div>
+    ${html}
+    ${!plan ? `<div style="font-size:12px;color:#bbb;text-align:center;padding:8px 0;">No hay plan asignado para esta semana</div>` : ''}`;
 }
 
 function renderPortalHoy() {
