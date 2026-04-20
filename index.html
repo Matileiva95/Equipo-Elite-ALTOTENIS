@@ -4485,7 +4485,7 @@ async function ppGuardarEval() {
   if (!_ppNota || !_ppRpe || !_ppMood) { alert('Completá todos los campos antes de guardar.'); return; }
   const playerId = sessionStorage.getItem('ciq_player_id');
   const token    = sessionStorage.getItem('ciq_token');
-  const payload  = { date: new Date().toISOString().slice(0,10), nota: _ppNota, rpe: _ppRpe, mood: _ppMood };
+  const payload  = { date: new Date().toISOString().slice(0,10), rpe: parseInt(_ppRpe), mood: parseInt(_ppMood), duration: 90, tipos: [], session_nota: parseInt(_ppNota) };
   try {
     const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
       method: 'POST', headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
