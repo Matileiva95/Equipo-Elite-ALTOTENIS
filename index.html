@@ -4169,8 +4169,8 @@ function renderPortalProgreso() {
   const notasPorDia = diasNombres.map((_, i) => {
     const fecha = new Date(lunes); fecha.setDate(lunes.getDate() + i);
     const key   = fecha.toISOString().slice(0,10);
-    const sess  = loads.filter(l => l.date === key && l.nota);
-    return sess.length ? sess.reduce((a,b) => a + b.nota, 0) / sess.length : null;
+    const sess  = loads.filter(l => l.date === key && l.session_nota);
+    return sess.length ? sess.reduce((a,b) => a + b.session_nota, 0) / sess.length : null;
   });
 
   const notasValidas = notasPorDia.filter(n => n !== null);
