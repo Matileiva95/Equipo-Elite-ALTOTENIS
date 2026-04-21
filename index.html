@@ -3566,6 +3566,7 @@ function renderScouting() {
   const categorias = ['Todos','ATP','WTA','ITF','ITF W','COSAT','RUN','Menores Nacional'];
   const filteredByCat = scoutCategoria
     ? filtered.filter(s => {
+        if (s.categoria === scoutCategoria) return true;
         const hist = matchHistory[s.nombre] || [];
         return hist.some(h => h.categoria === scoutCategoria);
       })
@@ -3695,10 +3696,14 @@ function renderScoutForm(idx) {
       <div class="fg"><label>Ranking</label><input type="number" id="sc-ranking" value="${s&&s.ranking?s.ranking:''}" placeholder="Ej: 546" /></div>
       <div class="fg"><label>Circuito</label>
         <select id="sc-circuito">
-          <option value="ATP" ${!s||s.circuito==='ATP'?'selected':''}>ATP</option>
-          <option value="WTA" ${s&&s.circuito==='WTA'?'selected':''}>WTA</option>
-          <option value="ITF" ${s&&s.circuito==='ITF'?'selected':''}>ITF</option>
-          <option value="Challenger" ${s&&s.circuito==='Challenger'?'selected':''}>Challenger</option>
+          <option value="ATP"              ${!s||s.circuito==='ATP'?'selected':''}>ATP</option>
+          <option value="WTA"              ${s&&s.circuito==='WTA'?'selected':''}>WTA</option>
+          <option value="ITF"              ${s&&s.circuito==='ITF'?'selected':''}>ITF</option>
+          <option value="ITF W"            ${s&&s.circuito==='ITF W'?'selected':''}>ITF W</option>
+          <option value="COSAT"            ${s&&s.circuito==='COSAT'?'selected':''}>COSAT</option>
+          <option value="RUN"              ${s&&s.circuito==='RUN'?'selected':''}>RUN</option>
+          <option value="Menores Nacional" ${s&&s.circuito==='Menores Nacional'?'selected':''}>Menores Nacional</option>
+          <option value="Otro"             ${s&&s.circuito==='Otro'?'selected':''}>Otro</option>
         </select>
       </div>
       <div class="fg"><label>Mano dominante</label>
@@ -3777,7 +3782,8 @@ async function saveScout(idx) {
   const scout = {
     nombre,
     ranking: parseInt(document.getElementById('sc-ranking')?.value) || null,
-    circuito: document.getElementById('sc-circuito')?.value || '',
+    circuito:  document.getElementById('sc-circuito')?.value || '',
+    categoria: document.getElementById('sc-circuito')?.value || '',
     mano: document.getElementById('sc-mano')?.value || '',
     estilo: document.getElementById('sc-estilo')?.value || '',
     golpeFuerte: document.getElementById('sc-fuerte')?.value || '',
