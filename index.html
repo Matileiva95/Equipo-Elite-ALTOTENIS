@@ -3022,6 +3022,19 @@ function renderAddMatchForm(p, editIdx) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;" class="match-form-grid">
       <div class="fg"><label>Fecha</label><input type="date" id="mf-fecha" value="${m?m.fecha:today}" /></div>
       <div class="fg"><label>Torneo</label><input type="text" id="mf-torneo" value="${m?m.torneo:''}" placeholder="Ej: ITF M25, Challenger 75..." /></div>
+      <div class="fg"><label>Categoría</label>
+        <select id="mf-categoria">
+          <option value="">Seleccionar...</option>
+          <option value="ATP" ${m&&m.categoria==='ATP'?'selected':''}>ATP</option>
+          <option value="WTA" ${m&&m.categoria==='WTA'?'selected':''}>WTA</option>
+          <option value="ITF" ${m&&m.categoria==='ITF'?'selected':''}>ITF</option>
+          <option value="ITF W" ${m&&m.categoria==='ITF W'?'selected':''}>ITF W</option>
+          <option value="COSAT" ${m&&m.categoria==='COSAT'?'selected':''}>COSAT</option>
+          <option value="RUN" ${m&&m.categoria==='RUN'?'selected':''}>RUN</option>
+          <option value="Menores Nacional" ${m&&m.categoria==='Menores Nacional'?'selected':''}>Menores Nacional</option>
+          <option value="Otro" ${m&&m.categoria==='Otro'?'selected':''}>Otro</option>
+        </select>
+      </div>
       <div class="fg"><label>Rival</label><input type="text" id="mf-rival" value="${m?m.rival:''}" placeholder="Ej: J. Pérez" /></div>
       <div class="fg"><label>Ranking rival</label><input type="number" id="mf-ranking" value="${m&&m.rankingRival?m.rankingRival:''}" placeholder="Ej: 450" /></div>
       <div class="fg"><label>Resultado</label>
@@ -3059,6 +3072,7 @@ async function saveMatch() {
   const match = {
     fecha, rival,
     torneo: document.getElementById('mf-torneo')?.value || '',
+    categoria: document.getElementById('mf-categoria')?.value || '',
     rankingRival: parseInt(document.getElementById('mf-ranking')?.value) || null,
     resultado: document.getElementById('mf-resultado')?.value || 'G',
     marcador: document.getElementById('mf-marcador')?.value || '',
@@ -3536,6 +3550,7 @@ function renderStatHistCard(s, idx) {
 
 // ── SCOUTING DE RIVALES ───────────────────────────────────
 let scoutSearch = '';
+let scoutCategoria = null;
 let editingScoutIdx = null;
 let showScoutForm = false;
 
@@ -3547,6 +3562,14 @@ function renderScouting() {
 
   // Construir historial cruzado desde torneos
   const matchHistory = buildMatchHistory();
+
+  const categorias = ['Todos','ATP','WTA','ITF','ITF W','COSAT','RUN','Menores Nacional'];
+  const filteredByCat = scoutCategoria
+    ? filtered.filter(s => {
+        const hist = matchHistory[s.nombre] || [];
+        return hist.some(h => h.categoria === scoutCategoria);
+      })
+    : filtered;
 
   return `
     <div class="page-header">
@@ -3560,9 +3583,17 @@ function renderScouting() {
     <input type="text" class="scout-search" placeholder="Buscar rival por nombre..."
       value="${scoutSearch}" oninput="scoutSearch=this.value;renderMain();" />
 
-    ${filtered.length === 0
-      ? `<div class="card"><div class="empty">${scoutSearch?'Sin resultados para "'+scoutSearch+'"':'No hay rivales registrados aún. Agrega el primero.'}</div></div>`
-      : filtered.map((s, i) => {
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+      ${categorias.map(c => {
+        const activo = (c === 'Todos' && !scoutCategoria) || c === scoutCategoria;
+        return `<button onclick="scoutCategoria=${c==='Todos'?'null':`'${c}'`};renderMain();"
+          style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid ${activo?'var(--orange)':'var(--g4)'};background:${activo?'var(--orange)':'transparent'};color:${activo?'#fff':'var(--g2)'};">${c}</button>`;
+      }).join('')}
+    </div>
+
+    ${filteredByCat.length === 0
+      ? `<div class="card"><div class="empty">${scoutSearch||scoutCategoria?'Sin resultados para el filtro aplicado.':'No hay rivales registrados aún. Agrega el primero.'}</div></div>`
+      : filteredByCat.map((s, i) => {
           const realIdx = scouts.indexOf(s);
           const hist = matchHistory[s.nombre] || [];
           return renderScoutCard(s, realIdx, hist);
@@ -3583,6 +3614,7 @@ function buildMatchHistory() {
         playerColor: COLORS[data.players.indexOf(p) % COLORS.length],
         fecha: m.fecha,
         torneo: m.torneo,
+        categoria: m.categoria || '',
         resultado: m.resultado,
         marcador: m.marcador
       });
