@@ -614,7 +614,7 @@ let data={players:JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),reflections:[]};
 let user="",page="dashboard",pid=null,dtab="perfil";
 let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
 let saveTimer=null,editingPlayerId=null,editingGroupPlanId=null;
-let grupalTab='semanal',grupalGrupo=null,grupalSemanaOffset=0,grupalMesOffset=0;
+let grupalTab='semanal',grupalGrupo=null,grupalSemanaOffset=0,grupalMesOffset=0,grupalMesExpanded={};
 // Selección múltiple calendario
 let selMode=false,selectedDays=new Set();
 
@@ -5784,8 +5784,118 @@ function renderGrupalSemanal() {
     </div>`;
 }
 
+function saveGrupalMensual() {
+  scheduleSync();
+  const btn = document.getElementById('gm-save-btn');
+  if (btn) { btn.textContent = 'Guardado ✓'; btn.disabled = true; setTimeout(() => { btn.textContent = 'Guardar mes'; btn.disabled = false; }, 1800); }
+}
+
+function toggleGrupalMesCard(wKey) {
+  grupalMesExpanded[wKey] = !grupalMesExpanded[wKey];
+  const body  = document.getElementById('mens-body-' + wKey);
+  const arrow = document.getElementById('mens-arrow-' + wKey);
+  if (body)  body.style.display = grupalMesExpanded[wKey] ? 'block' : 'none';
+  if (arrow) arrow.textContent  = grupalMesExpanded[wKey] ? '▴' : '▾';
+}
+
 function renderGrupalMensual() {
-  return `<div class="empty">Vista mensual (próximamente)</div>`;
+  const today  = new Date();
+  const target = new Date(today.getFullYear(), today.getMonth() + grupalMesOffset, 1);
+  const year   = target.getFullYear();
+  const month  = target.getMonth();
+  const monthLabel = MONTHS_FULL[month] + ' ' + year;
+
+  // todas las semanas que se solapan con el mes
+  const lastDay = new Date(year, month + 1, 0);
+  const cursor  = new Date(year, month, 1);
+  cursor.setDate(cursor.getDate() - ((cursor.getDay() + 6) % 7)); // retroceder al lunes
+  const weeks = [];
+  while (cursor <= lastDay) {
+    weeks.push(weekKey(new Date(cursor)));
+    cursor.setDate(cursor.getDate() + 7);
+  }
+
+  const weekCards = weeks.map(wKey => {
+    const plan     = getGrupalPlan(wKey);
+    const weekATR  = ATR_OPTS.find(a => a.id === plan.atr) || ATR_OPTS[1];
+    const diasActivos = plan.diasActivos || [];
+    const expanded = !!grupalMesExpanded[wKey];
+    const wDate    = new Date(wKey + 'T12:00:00');
+
+    // mini grid 7 días
+    const miniGrid = DIAS_GP.map((dia, i) => {
+      const d       = new Date(wDate); d.setDate(wDate.getDate() + i);
+      const inMonth = d.getMonth() === month;
+      const active  = diasActivos.includes(dia);
+      const dData   = plan.dias[dia] || {};
+      const dATR    = ATR_OPTS.find(a => a.id === dData.atr) || weekATR;
+      return `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <div style="font-size:9px;font-weight:600;color:var(--g4);">${DIAS_GP_ABR[i]}</div>
+          <div style="width:28px;height:28px;border-radius:50%;
+                      border:2px solid ${active?dATR.color:'var(--border)'};
+                      background:${active?dATR.color:'transparent'};
+                      color:${active?'#fff':'var(--g3)'};
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:11px;font-weight:600;opacity:${inMonth?1:0.35};">
+            ${d.getDate()}
+          </div>
+        </div>`;
+    }).join('');
+
+    // botones ATR (dentro del panel expandido)
+    const atrBtns = ATR_OPTS.map(a => `
+      <button onclick="setGrupalWeekATR('${wKey}','${a.id}')" title="${a.name}"
+        style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
+               border:2px solid ${plan.atr===a.id?a.color:'var(--border)'};
+               background:${plan.atr===a.id?a.light:'transparent'};
+               color:${plan.atr===a.id?a.dark:'var(--g3)'};">${a.label}</button>`).join('');
+
+    return `
+      <div style="border:2px solid ${weekATR.color};border-radius:var(--r);overflow:hidden;margin-bottom:10px;">
+        <div onclick="toggleGrupalMesCard('${wKey}')"
+          style="background:${weekATR.light};padding:10px 14px;cursor:pointer;
+                 display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:700;color:${weekATR.dark};">${weekLabel(wKey)}</span>
+            <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:${weekATR.color};color:#fff;font-weight:700;">${weekATR.label} · ${weekATR.name}</span>
+          </div>
+          <span id="mens-arrow-${wKey}" style="font-size:12px;color:${weekATR.dark};">${expanded?'▴':'▾'}</span>
+        </div>
+        <div style="padding:10px 14px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+          ${miniGrid}
+        </div>
+        <div id="mens-body-${wKey}" style="display:${expanded?'block':'none'};padding:12px 14px;">
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Tipo de semana</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;">${atrBtns}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Foco semanal</div>
+            <textarea placeholder="Objetivo de la semana..."
+              style="width:100%;min-height:55px;padding:8px 11px;border:1px solid ${weekATR.color};border-radius:var(--rsm);font-size:13px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
+              oninput="setGrupalFoco('${wKey}',this.value)">${plan.focoSemanal||''}</textarea>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-g btn-sm" onclick="grupalMesOffset--;renderGrupalContent();">← Anterior</button>
+      <div style="text-align:center;">
+        <div style="font-size:15px;font-weight:700;">${monthLabel}</div>
+        ${grupalMesOffset!==0
+          ?`<button onclick="grupalMesOffset=0;renderGrupalContent();" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;">Ir al mes actual</button>`
+          :`<div style="font-size:11px;color:var(--g3);">Mes actual</div>`}
+      </div>
+      <button class="btn btn-g btn-sm" onclick="grupalMesOffset++;renderGrupalContent();">Siguiente →</button>
+    </div>
+    ${weekCards}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+      <button id="gm-save-btn" class="btn btn-b" onclick="saveGrupalMensual()">Guardar mes</button>
+      <button class="btn btn-g" onclick="window.print()">Imprimir / PDF</button>
+    </div>`;
 }
 
 function renderGrupalHistorial() {
