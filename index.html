@@ -2048,7 +2048,7 @@ const ATR_OPTS = [
 ];
 const DIAS_GP      = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const DIAS_GP_ABR  = ['L','M','X','J','V','S','D'];
-const TIPO_DIA_OPTS = ['Entrenamiento','Descanso','Competencia','Recuperación','Viaje'];
+const TIPO_DIA_OPTS = ['Entrenamiento','Físico','Partido','Competencia'];
 
 function renderPlan(p){
   const today=new Date(),wKey=weekKey(today),wLbl=weekLabel(wKey);
@@ -5571,12 +5571,13 @@ function renderGrupal() {
     </div>`;
 
   const tabs = `
-    <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;">
+    <div style="display:flex;gap:4px;margin-bottom:16px;">
       ${tabItems.map(t => `
         <button onclick="grupalTab='${t.id}';renderGrupalContent();"
-          style="padding:8px 16px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;
-                 border-bottom:2px solid ${grupalTab===t.id?'var(--blue)':'transparent'};
-                 color:${grupalTab===t.id?'var(--blue)':'var(--g3)'};">
+          style="padding:7px 16px;font-size:13px;font-weight:600;border:none;border-radius:var(--rsm);cursor:pointer;
+                 background:${grupalTab===t.id?'var(--orange)':'var(--g5)'};
+                 color:${grupalTab===t.id?'#fff':'var(--g3)'};
+                 transition:all .13s;">
           ${t.label}
         </button>
       `).join('')}
@@ -5898,6 +5899,20 @@ function renderGrupalMensual() {
     </div>`;
 }
 
+function editGrupalSemanaHist(wKey) {
+  const todayMonday = weekKey(new Date());
+  grupalSemanaOffset = Math.round((new Date(wKey+'T12:00:00') - new Date(todayMonday+'T12:00:00')) / 604800000);
+  grupalTab = 'semanal';
+  renderMain();
+}
+
+function deleteGrupalPlan(wKey) {
+  if (!confirm('¿Eliminar el plan de la semana ' + weekLabel(wKey) + '?')) return;
+  data.grupalPlanes = (data.grupalPlanes || []).filter(p => !(p.week === wKey && p.grupo === grupalGrupo));
+  scheduleSync();
+  renderGrupalContent();
+}
+
 function printGrupalSemanaHist(wKey) {
   const todayMonday = weekKey(new Date());
   const diff = Math.round((new Date(wKey+'T12:00:00') - new Date(todayMonday+'T12:00:00')) / 604800000);
@@ -5982,7 +5997,9 @@ function renderGrupalHistorial() {
           <span style="font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;background:${atr.light};color:${atr.dark};border:1px solid ${atr.color};">${atr.label} · ${atr.name}</span>
           <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:var(--g5);color:var(--g2);border:1px solid var(--border);">${p.grupo||'Todos'}</span>
           <span style="font-size:11px;color:var(--g3);">${nDias} día${nDias!==1?'s':''}</span>
+          <button class="btn btn-g btn-sm" onclick="editGrupalSemanaHist('${p.week}')">Editar</button>
           <button class="btn btn-g btn-sm" onclick="printGrupalSemanaHist('${p.week}')">PDF</button>
+          <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:none;" onclick="deleteGrupalPlan('${p.week}')">Eliminar</button>
         </div>`;
     }).join('');
     return `
