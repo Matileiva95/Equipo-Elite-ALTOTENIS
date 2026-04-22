@@ -614,6 +614,7 @@ let data={players:JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),reflections:[]};
 let user="",page="dashboard",pid=null,dtab="perfil";
 let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
 let saveTimer=null,editingPlayerId=null,editingGroupPlanId=null;
+let grupalTab='semanal',grupalGrupo=null,grupalSemanaOffset=0,grupalMesOffset=0;
 // Selección múltiple calendario
 let selMode=false,selectedDays=new Set();
 
@@ -911,7 +912,7 @@ async function loadData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d = await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];}
     setSS('synced','Sincronizado · '+now());
   }catch(e){
     const l=localStorage.getItem('at_data_elite');
@@ -932,7 +933,7 @@ async function refreshData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d=await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];}
     setSS('synced','Sincronizado · '+now());renderPlayerNav();renderDrawerList();
   }catch(e){setSS('error','Sin conexión');}
 }
@@ -2036,6 +2037,18 @@ async function addRanking(){
 // PLAN SEMANAL
 const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
 const TURNOS = ['1er turno','2do turno'];
+
+// GRUPAL SEMANAL
+const ATR_OPTS = [
+  { id:'A',  label:'A',  name:'Acumulación',    color:'#8e44ad', light:'#f4eafb', dark:'#6c3483' },
+  { id:'T',  label:'T',  name:'Transformación', color:'#1DA1D6', light:'#E3F4FB', dark:'#0E7AA3' },
+  { id:'ES', label:'ES', name:'Especial',       color:'#e91e8c', light:'#fce4f4', dark:'#c2185b' },
+  { id:'R',  label:'R',  name:'Realización',    color:'#FF6B00', light:'#FFF0E6', dark:'#CC5500' },
+  { id:'D',  label:'D',  name:'Descanso',       color:'#27ae60', light:'#eafaf1', dark:'#1e8449' },
+];
+const DIAS_GP      = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const DIAS_GP_ABR  = ['L','M','X','J','V','S','D'];
+const TIPO_DIA_OPTS = ['Entrenamiento','Descanso','Competencia','Recuperación','Viaje'];
 
 function renderPlan(p){
   const today=new Date(),wKey=weekKey(today),wLbl=weekLabel(wKey);
@@ -5540,9 +5553,34 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
 
 // ── GRUPAL MODULE ──────────────────────────────────────────
 function renderGrupal() {
-  const plans = data.groupPlans || [];
-  const today = new Date();
-  const wKey = weekKey(today);
+  const grupos = ['Elite','F2','F1','Naranja','Verde'];
+  const tabItems = [
+    { id: 'mensual',   label: 'Mensual'   },
+    { id: 'semanal',   label: 'Semanal'   },
+    { id: 'historial', label: 'Historial' },
+  ];
+
+  const grupoSelector = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+      ${grupos.map(g => `
+        <button class="btn btn-sm ${grupalGrupo===g?'btn-b':'btn-g'}"
+          onclick="grupalGrupo='${g}';renderMain();">${g}</button>
+      `).join('')}
+      <button class="btn btn-sm ${grupalGrupo===null?'btn-b':'btn-g'}"
+        onclick="grupalGrupo=null;renderMain();">Todos</button>
+    </div>`;
+
+  const tabs = `
+    <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;">
+      ${tabItems.map(t => `
+        <button onclick="grupalTab='${t.id}';renderGrupalContent();"
+          style="padding:8px 16px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;
+                 border-bottom:2px solid ${grupalTab===t.id?'var(--blue)':'transparent'};
+                 color:${grupalTab===t.id?'var(--blue)':'var(--g3)'};">
+          ${t.label}
+        </button>
+      `).join('')}
+    </div>`;
 
   return `
     <div class="page-header">
@@ -5555,37 +5593,203 @@ function renderGrupal() {
 
     <div id="grupal-form-container"></div>
 
-    ${plans.length === 0
-      ? `<div class="card"><div class="empty">No hay planes grupales. Crea el primero.</div></div>`
-      : plans.slice().reverse().map(gp => {
-          const isCurrentWeek = gp.week === wKey;
-          const wLbl = weekLabel(gp.week);
-          const assignedNames = (gp.playerIds || []).map(pid => {
-            const p = data.players.find(pl => String(pl.id) === String(pid));
-            return p ? p.name.split(' ')[0] : null;
-          }).filter(Boolean);
-          return `<div class="card" style="margin-bottom:12px;border-left:3px solid var(--blue);">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-              <div>
-                <div style="font-size:15px;font-weight:600;margin-bottom:4px;">${gp.title||'Plan grupal'}</div>
-                <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
-                  <span class="week-badge" style="background:var(--bl);color:var(--bd);">${wLbl}${isCurrentWeek?' · Esta semana':''}</span>
-                  ${gp.dia ? `<span class="week-badge" style="background:var(--bl);color:var(--bd);">${gp.dia}</span>` : ''}
-                  ${gp.sesion ? `<span class="week-badge" style="background:var(--bl);color:var(--bd);">${gp.sesion}</span>` : ''}
-                </div>
-              </div>
-              <div style="display:flex;gap:6px;">
-                <button class="btn btn-g btn-sm" onclick="editGroupPlan('${gp.id}')">Editar</button>
-                <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:none;" onclick="deleteGroupPlan('${gp.id}')">Eliminar</button>
-              </div>
-            </div>
-            ${assignedNames.length > 0 ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">${assignedNames.map(n=>`<span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:500;">${n}</span>`).join('')}</div>` : '<div style="font-size:12px;color:var(--g3);margin-bottom:10px;">Sin jugadores asignados</div>'}
-            ${gp.desc ? `<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Descripción</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${gp.desc}</div></div>` : ''}
-            ${gp.exercises ? `<div style="margin-bottom:8px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Ejercicios y drills</div><div style="font-size:13px;color:var(--g2);line-height:1.5;white-space:pre-wrap;">${gp.exercises}</div></div>` : ''}
-            ${gp.observations ? `<div><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Observaciones</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${gp.observations}</div></div>` : ''}
-          </div>`;
-        }).join('')}
+    <div class="card">
+      ${grupoSelector}
+      ${tabs}
+      <div id="grupal-content"></div>
+    </div>
   `;
+}
+
+function renderGrupalContent() {
+  const el = document.getElementById('grupal-content');
+  if (!el) return;
+  if (grupalTab === 'mensual')        el.innerHTML = renderGrupalMensual();
+  else if (grupalTab === 'historial') el.innerHTML = renderGrupalHistorial();
+  else                                el.innerHTML = renderGrupalSemanal();
+}
+
+// ── helpers de estado grupal semanal ────────────────────────
+function getGrupalPlan(wKey) {
+  if (!data.grupalPlanes) data.grupalPlanes = [];
+  let plan = data.grupalPlanes.find(p => p.week === wKey && p.grupo === grupalGrupo);
+  if (!plan) {
+    plan = {
+      id: 'gps-' + wKey + '-' + (grupalGrupo || 'todos'),
+      week: wKey, grupo: grupalGrupo,
+      focoSemanal: '', atr: 'T',
+      diasActivos: ['Lunes','Martes','Miércoles','Jueves','Viernes'],
+      dias: {}
+    };
+    data.grupalPlanes.push(plan);
+  }
+  if (!plan.dias) plan.dias = {};
+  return plan;
+}
+function setGrupalFoco(wKey, val)            { getGrupalPlan(wKey).focoSemanal = val; }
+function setGrupalWeekATR(wKey, atr)         { getGrupalPlan(wKey).atr = atr; renderGrupalContent(); }
+function toggleGrupalDia(wKey, dia)          {
+  const plan = getGrupalPlan(wKey);
+  if (plan.diasActivos.includes(dia)) plan.diasActivos = plan.diasActivos.filter(d => d !== dia);
+  else plan.diasActivos.push(dia);
+  renderGrupalContent();
+}
+function setGrupalDiaTipo(wKey, dia, tipo)   {
+  const plan = getGrupalPlan(wKey);
+  if (!plan.dias[dia]) plan.dias[dia] = {};
+  plan.dias[dia].tipo = tipo;
+  renderGrupalContent();
+}
+function setGrupalDiaATR(wKey, dia, atr)     {
+  const plan = getGrupalPlan(wKey);
+  if (!plan.dias[dia]) plan.dias[dia] = {};
+  plan.dias[dia].atr = plan.dias[dia].atr === atr ? null : atr;
+  renderGrupalContent();
+}
+function setGrupalSesion(wKey, dia, ses, field, val) {
+  const plan = getGrupalPlan(wKey);
+  if (!plan.dias[dia]) plan.dias[dia] = {};
+  if (!plan.dias[dia][ses]) plan.dias[dia][ses] = { desc: '', ejercicios: '' };
+  plan.dias[dia][ses][field] = val;
+}
+function saveGrupalSemanal(wKey) {
+  scheduleSync();
+  const btn = document.getElementById('gs-save-btn');
+  if (btn) { btn.textContent = 'Guardado ✓'; btn.disabled = true; setTimeout(() => { btn.textContent = 'Guardar semana'; btn.disabled = false; }, 1800); }
+}
+function toggleGrupalEjercicios(btn) {
+  const ta = btn.nextElementSibling;
+  const open = ta.style.display !== 'none';
+  ta.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? '+ Ejercicios' : '− Ejercicios';
+}
+
+function renderGrupalSemanal() {
+  const base = new Date(); base.setHours(0,0,0,0);
+  base.setDate(base.getDate() + grupalSemanaOffset * 7);
+  const wKey = weekKey(base);
+  const wLbl = weekLabel(wKey);
+  const plan = getGrupalPlan(wKey);
+  const diasActivos = plan.diasActivos || [];
+  const weekATR = ATR_OPTS.find(a => a.id === plan.atr) || ATR_OPTS[1];
+
+  // ── navegación ──────────────────────────────────────────
+  const nav = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-g btn-sm" onclick="grupalSemanaOffset--;renderGrupalContent();">← Anterior</button>
+      <div style="text-align:center;">
+        <div style="font-size:14px;font-weight:600;">${wLbl}</div>
+        ${grupalSemanaOffset !== 0
+          ? `<button onclick="grupalSemanaOffset=0;renderGrupalContent();" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;">Ir a semana actual</button>`
+          : `<div style="font-size:11px;color:var(--g3);">Semana actual</div>`}
+      </div>
+      <button class="btn btn-g btn-sm" onclick="grupalSemanaOffset++;renderGrupalContent();">Siguiente →</button>
+    </div>`;
+
+  // ── ATR de la semana ─────────────────────────────────────
+  const atrBtns = ATR_OPTS.map(a => `
+    <button onclick="setGrupalWeekATR('${wKey}','${a.id}')"
+      title="${a.name}"
+      style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
+             border:2px solid ${plan.atr===a.id?a.color:'var(--border)'};
+             background:${plan.atr===a.id?a.light:'transparent'};
+             color:${plan.atr===a.id?a.dark:'var(--g3)'};">${a.label}</button>`).join('');
+
+  // ── selector de días circulares ──────────────────────────
+  const dayCircles = DIAS_GP.map((d,i) => {
+    const on = diasActivos.includes(d);
+    return `<button onclick="toggleGrupalDia('${wKey}','${d}')"
+      title="${d}"
+      style="width:34px;height:34px;border-radius:50%;border:2px solid ${on?weekATR.color:'var(--border)'};
+             background:${on?weekATR.color:'transparent'};color:${on?'#fff':'var(--g3)'};
+             font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">${DIAS_GP_ABR[i]}</button>`;
+  }).join('');
+
+  // ── tarjetas de cada día ─────────────────────────────────
+  const daySections = DIAS_GP.filter(d => diasActivos.includes(d)).map(dia => {
+    const dData = plan.dias[dia] || {};
+    const tipo  = dData.tipo || 'Entrenamiento';
+    const diaATR = ATR_OPTS.find(a => a.id === dData.atr) || weekATR;
+    const isDescanso = tipo === 'Descanso';
+    const s1 = dData.s1 || { desc:'', ejercicios:'' };
+    const s2 = dData.s2 || { desc:'', ejercicios:'' };
+
+    const tipoBtns = TIPO_DIA_OPTS.map(t => `
+      <button onclick="setGrupalDiaTipo('${wKey}','${dia}','${t}')"
+        style="padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;
+               border:1px solid ${tipo===t?diaATR.color:'var(--border)'};
+               background:${tipo===t?diaATR.light:'transparent'};
+               color:${tipo===t?diaATR.dark:'var(--g3)'};">${t}</button>`).join('');
+
+    const diaATRBtns = ATR_OPTS.map(a => `
+      <button onclick="setGrupalDiaATR('${wKey}','${dia}','${a.id}')"
+        title="${a.name}"
+        style="width:22px;height:22px;border-radius:50%;border:2px solid ${dData.atr===a.id?a.color:'var(--border)'};
+               background:${dData.atr===a.id?a.color:'transparent'};cursor:pointer;
+               font-size:9px;font-weight:700;color:${dData.atr===a.id?'#fff':'var(--g4)'};">${a.label}</button>`).join('');
+
+    const sesiones = [
+      { key:'s1', label:'Sesión 1', data: s1 },
+      { key:'s2', label:'Sesión 2', data: s2 },
+    ].map((ses, si) => `
+      <div style="padding:12px 14px;${si===0?'border-right:1px solid var(--border);':''}">
+        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">${ses.label}</div>
+        <textarea placeholder="Descripción de la sesión..."
+          style="width:100%;min-height:65px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
+          oninput="setGrupalSesion('${wKey}','${dia}','${ses.key}','desc',this.value)">${ses.data.desc||''}</textarea>
+        <button onclick="toggleGrupalEjercicios(this)"
+          style="margin-top:6px;font-size:11px;padding:3px 10px;border-radius:20px;border:1px dashed var(--border);background:transparent;color:var(--g3);cursor:pointer;">+ Ejercicios</button>
+        <textarea placeholder="Lista de ejercicios y drills..."
+          style="display:${ses.data.ejercicios?'block':'none'};margin-top:6px;width:100%;min-height:55px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
+          oninput="setGrupalSesion('${wKey}','${dia}','${ses.key}','ejercicios',this.value)">${ses.data.ejercicios||''}</textarea>
+      </div>`).join('');
+
+    return `
+      <div style="border:2px solid ${diaATR.color};border-radius:var(--r);overflow:hidden;margin-bottom:12px;">
+        <div style="background:${diaATR.light};padding:10px 14px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:14px;font-weight:700;color:${diaATR.dark};">${dia}</span>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">${tipoBtns}</div>
+          </div>
+          <div style="display:flex;gap:3px;align-items:center;">${diaATRBtns}</div>
+        </div>
+        ${isDescanso
+          ? `<div style="padding:14px;font-size:13px;color:var(--g3);font-style:italic;">Día de descanso</div>`
+          : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">${sesiones}</div>`}
+      </div>`;
+  }).join('');
+
+  return `
+    ${nav}
+    <div style="background:${weekATR.light};border:1px solid ${weekATR.color};border-radius:var(--r);padding:14px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:600;color:${weekATR.dark};text-transform:uppercase;letter-spacing:.05em;">Tipo de semana</span>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">${atrBtns}</div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Foco semanal</div>
+      <textarea placeholder="Objetivo principal de la semana..."
+        style="width:100%;min-height:55px;padding:8px 11px;border:1px solid ${weekATR.color};border-radius:var(--rsm);font-size:13px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
+        oninput="setGrupalFoco('${wKey}',this.value)">${plan.focoSemanal||''}</textarea>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Días de entrenamiento</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">${dayCircles}</div>
+    </div>
+    ${diasActivos.length === 0
+      ? `<div class="empty">Seleccioná al menos un día de entrenamiento.</div>`
+      : daySections}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+      <button id="gs-save-btn" class="btn btn-b" onclick="saveGrupalSemanal('${wKey}')">Guardar semana</button>
+      <button class="btn btn-g" onclick="window.print()">Imprimir / PDF</button>
+    </div>`;
+}
+
+function renderGrupalMensual() {
+  return `<div class="empty">Vista mensual (próximamente)</div>`;
+}
+
+function renderGrupalHistorial() {
+  return `<div class="empty">Historial (próximamente)</div>`;
 }
 
 function renderGroupPlanForm(editId) {
