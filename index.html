@@ -2040,12 +2040,20 @@ const TURNOS = ['1er turno','2do turno'];
 
 // GRUPAL SEMANAL
 const ATR_OPTS = [
-  { id:'A',  label:'A',  name:'Acumulación',    color:'#8e44ad', light:'#f4eafb', dark:'#6c3483' },
-  { id:'T',  label:'T',  name:'Transformación', color:'#1DA1D6', light:'#E3F4FB', dark:'#0E7AA3' },
-  { id:'ES', label:'ES', name:'Espec�fico',       color:'#e91e8c', light:'#fce4f4', dark:'#c2185b' },
-  { id:'R',  label:'R',  name:'Realización',    color:'#FF6B00', light:'#FFF0E6', dark:'#CC5500' },
-  { id:'D',  label:'D',  name:'Descanso',       color:'#27ae60', light:'#eafaf1', dark:'#1e8449' },
+  { id:'E',   label:'E',   name:'Estabilización', color:'#7C3AED', light:'#ede9fe', dark:'#5b21b6' },
+  { id:'A',   label:'A',   name:'Aplicación',      color:'#2563EB', light:'#dbeafe', dark:'#1d4ed8' },
+  { id:'PRE', label:'PRE', name:'Precompetencia',  color:'#DB2777', light:'#fce7f3', dark:'#9d174d' },
+  { id:'C',   label:'C',   name:'Competencia',     color:'#FF6B00', light:'#fff0e6', dark:'#c45200' },
 ];
+const ATR_OPTS_BASE = [
+  { id:'AS',  label:'AS',  name:'Asimilación',     color:'#059669', light:'#d1fae5', dark:'#047857' },
+  { id:'Con', label:'Con', name:'Consolidación',   color:'#0891b2', light:'#cffafe', dark:'#0e7490' },
+  { id:'E',   label:'E',   name:'Evaluación',      color:'#7C3AED', light:'#ede9fe', dark:'#5b21b6' },
+];
+function getATROpts() {
+  const g = grupalGrupo;
+  return (g === 'Naranja' || g === 'Verde') ? ATR_OPTS_BASE : ATR_OPTS;
+}
 const DIAS_GP      = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const DIAS_GP_ABR  = ['L','M','X','J','V','S','D'];
 const TIPO_DIA_OPTS = ['Entrenamiento','Físico','Partido','Competencia'];
@@ -5674,7 +5682,7 @@ function renderGrupalSemanal() {
   const wLbl = weekLabel(wKey);
   const plan = getGrupalPlan(wKey);
   const diasActivos = plan.diasActivos || [];
-  const weekATR = ATR_OPTS.find(a => a.id === plan.atr) || ATR_OPTS[1];
+  const weekATR = getATROpts().find(a => a.id === plan.atr) || getATROpts()[0];
 
   // ── navegación ──────────────────────────────────────────
   const nav = `
@@ -5690,7 +5698,7 @@ function renderGrupalSemanal() {
     </div>`;
 
   // ── ATR de la semana ─────────────────────────────────────
-  const atrBtns = ATR_OPTS.map(a => `
+  const atrBtns = getATROpts().map(a => `
     <button onclick="setGrupalWeekATR('${wKey}','${a.id}')"
       title="${a.name}"
       style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
@@ -5712,7 +5720,7 @@ function renderGrupalSemanal() {
   const daySections = DIAS_GP.filter(d => diasActivos.includes(d)).map(dia => {
     const dData = plan.dias[dia] || {};
     const tipo  = dData.tipo || 'Entrenamiento';
-    const diaATR = ATR_OPTS.find(a => a.id === dData.atr) || weekATR;
+    const diaATR = getATROpts().find(a => a.id === dData.atr) || weekATR;
     const isDescanso = tipo === 'Descanso';
     const s1 = dData.s1 || { desc:'', ejercicios:'' };
     const s2 = dData.s2 || { desc:'', ejercicios:'' };
@@ -5724,7 +5732,7 @@ function renderGrupalSemanal() {
                background:${tipo===t?diaATR.light:'transparent'};
                color:${tipo===t?diaATR.dark:'var(--g3)'};">${t}</button>`).join('');
 
-    const diaATRBtns = ATR_OPTS.map(a => `
+    const diaATRBtns = getATROpts().map(a => `
       <button onclick="setGrupalDiaATR('${wKey}','${dia}','${a.id}')"
         title="${a.name}"
         style="width:22px;height:22px;border-radius:50%;border:2px solid ${dData.atr===a.id?a.color:'var(--border)'};
@@ -5820,7 +5828,7 @@ function renderGrupalMensual() {
 
   const weekCards = weeks.map(wKey => {
     const plan     = getGrupalPlan(wKey);
-    const weekATR  = ATR_OPTS.find(a => a.id === plan.atr) || ATR_OPTS[1];
+    const weekATR  = getATROpts().find(a => a.id === plan.atr) || getATROpts()[0];
     const diasActivos = plan.diasActivos || [];
     const expanded = !!grupalMesExpanded[wKey];
     const wDate    = new Date(wKey + 'T12:00:00');
@@ -5831,7 +5839,7 @@ function renderGrupalMensual() {
       const inMonth = d.getMonth() === month;
       const active  = diasActivos.includes(dia);
       const dData   = plan.dias[dia] || {};
-      const dATR    = ATR_OPTS.find(a => a.id === dData.atr) || weekATR;
+      const dATR    = getATROpts().find(a => a.id === dData.atr) || weekATR;
       return `
         <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
           <div style="font-size:9px;font-weight:600;color:var(--g4);">${DIAS_GP_ABR[i]}</div>
@@ -5847,7 +5855,7 @@ function renderGrupalMensual() {
     }).join('');
 
     // botones ATR (dentro del panel expandido)
-    const atrBtns = ATR_OPTS.map(a => `
+    const atrBtns = getATROpts().map(a => `
       <button onclick="setGrupalWeekATR('${wKey}','${a.id}')" title="${a.name}"
         style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
                border:2px solid ${plan.atr===a.id?a.color:'var(--border)'};
