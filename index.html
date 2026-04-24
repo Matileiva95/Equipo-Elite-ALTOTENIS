@@ -5918,7 +5918,10 @@ function editGrupalSemanaHist(wKey) {
 
 function deleteGrupalPlan(wKey) {
   if (!confirm('¿Eliminar el plan de la semana ' + weekLabel(wKey) + '?')) return;
-  data.grupalPlanes = (data.grupalPlanes || []).filter(p => !(p.week === wKey && p.grupo === grupalGrupo));
+  data.grupalPlanes = (data.grupalPlanes || []).filter(p => {
+    if (grupalGrupo === null) return p.week !== wKey;
+    return !(p.week === wKey && p.grupo === grupalGrupo);
+  });
   scheduleSync();
   renderGrupalContent();
 }
