@@ -2629,8 +2629,8 @@ const AVAIL_CFG = {
 function getWeekMonday(offset) {
   const d = new Date();
   const day = d.getDay();
-  const diff = d.getDate() - (day === 0 ? 6 : day - 1);
-  d.setDate(diff + offset * 7);
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff + offset * 7);
   d.setHours(0, 0, 0, 0);
   return d;
 }
@@ -2684,7 +2684,7 @@ function availAddPerson() {
   availAddingType = null;
   renderMain();
 }
-function renderAvailGroup(label, people, wk, isAdmin, type) {
+function renderAvailGroup(label, people, wk, isAdmin, type, canEditStatus) {
   const weekData = (data.coachAvailability || {})[wk] || {};
   const counts = {ACAD:0, GIRA:0, VACACIONES:0, LICENCIA:0};
   people.forEach(n => { const s = weekData[n]||'ACAD'; if(counts[s]!==undefined) counts[s]++; });
@@ -2694,7 +2694,7 @@ function renderAvailGroup(label, people, wk, isAdmin, type) {
         const status = weekData[name] || 'ACAD';
         const cfg = AVAIL_CFG[status] || AVAIL_CFG.ACAD;
         const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-        const statusEl = isAdmin
+        const statusEl = canEditStatus
           ? `<select data-wk="${wk}" data-name="${name.replace(/"/g,'&quot;')}" onchange="setCoachAvailStatusFromEl(this)" style="border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;background:${cfg.bg};color:${cfg.color};outline:none;appearance:none;-webkit-appearance:none;box-shadow:0 0 0 1.5px ${cfg.border};">${['ACAD','GIRA','VACACIONES','LICENCIA'].map(s=>`<option value="${s}"${s===status?' selected':''}>${s}</option>`).join('')}</select>`
           : `<span style="background:${cfg.bg};color:${cfg.color};border:1.5px solid ${cfg.border};border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;">${status}</span>`;
         const removeBtn = isAdmin
@@ -2732,7 +2732,9 @@ function renderAvailGroup(label, people, wk, isAdmin, type) {
     </div>`;
 }
 function renderCoachAvailability() {
-  const isAdmin = sessionStorage.getItem('ciq_role') === 'admin';
+  const role = sessionStorage.getItem('ciq_role');
+  const isAdmin = role === 'admin';
+  const canEditStatus = isAdmin || role === 'coach';
   const monday = getWeekMonday(availWeekOffset);
   const wk = weekKey(monday);
   const label = availWeekLabel(wk);
@@ -2745,10 +2747,10 @@ function renderCoachAvailability() {
         <button onclick="availWeekOffset++;renderMain();" style="flex-shrink:0;padding:7px 13px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--white);color:var(--g2);font-size:13px;cursor:pointer;line-height:1;">›</button>
       </div>
       ${availWeekOffset!==0?`<div style="text-align:center;margin-bottom:14px;"><button onclick="availWeekOffset=0;renderMain();" style="padding:5px 16px;border:1.5px solid #1DA1D6;border-radius:20px;background:#e3f4fb;color:#1DA1D6;font-size:12px;font-weight:600;cursor:pointer;">Semana actual</button></div>`:''}
-      ${renderAvailGroup('Entrenadores', cfg.coaches, wk, isAdmin, 'coaches')}
+      ${renderAvailGroup('Entrenadores', cfg.coaches, wk, isAdmin, 'coaches', canEditStatus)}
       <div style="border-top:2px solid var(--border);margin:18px 0;"></div>
-      ${renderAvailGroup('Preparadores físicos', cfg.pfs, wk, isAdmin, 'pfs')}
-      ${!isAdmin?`<div style="margin-top:12px;font-size:11px;color:var(--g3);text-align:center;">Solo el admin puede editar los estados.</div>`:''}
+      ${renderAvailGroup('Preparadores físicos', cfg.pfs, wk, isAdmin, 'pfs', canEditStatus)}
+      ${!canEditStatus?`<div style="margin-top:12px;font-size:11px;color:var(--g3);text-align:center;">Solo admin y coaches pueden editar los estados.</div>`:''}
     </div>`;
 }
 // ─────────────────────────────────────────────────────────
