@@ -826,6 +826,7 @@ async function loadCoachTeam() {
     if (!res.ok) return;
     const d = await res.json();
     _coachTeamCache = d.data || d || [];
+    data.coachTeam = _coachTeamCache.map(c => c.profiles?.full_name || '').filter(Boolean);
     if (page === 'coaching') renderMain();
   } catch(e) {
     _coachTeamCache = [];
@@ -914,7 +915,7 @@ async function loadData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d = await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.coachTeam=data.coachTeam||[];}
     setSS('synced','Sincronizado · '+now());
   }catch(e){
     const l=localStorage.getItem('at_data_elite');
@@ -935,7 +936,7 @@ async function refreshData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d=await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.coachTeam=data.coachTeam||[];}
     setSS('synced','Sincronizado · '+now());renderPlayerNav();renderDrawerList();
   }catch(e){setSS('error','Sin conexión');}
 }
@@ -2653,20 +2654,20 @@ function setCoachAvailStatusFromEl(sel) {
   if (alert) alert.outerHTML = buildAvailAlert(wk);
 }
 function buildAvailAlert(wk) {
-  const coaches = _coachTeamCache || [];
+  const coaches = data.coachTeam || [];
   const weekData = (data.coachAvailability || {})[wk] || {};
   let acadCount = 0;
-  coaches.forEach(c => { if ((weekData[c.profiles?.full_name || '—'] || 'ACAD') === 'ACAD') acadCount++; });
+  coaches.forEach(c => { if ((weekData[c.name || c] || 'ACAD') === 'ACAD') acadCount++; });
   const color = acadCount >= 3 ? '#2e7d32' : acadCount === 2 ? '#e65100' : '#c62828';
   const bg = acadCount >= 3 ? '#e8f5e9' : acadCount === 2 ? '#fff8e1' : '#ffebee';
   const text = acadCount >= 3 ? `Cobertura completa — ${acadCount} en academia` : acadCount === 2 ? `Cobertura ajustada — solo ${acadCount} en academia` : `Cobertura insuficiente — ${acadCount} en academia`;
   return `<div id="avail-alert" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--rsm);background:${bg};border:1.5px solid ${color}33;margin-bottom:14px;"><span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span><span style="font-size:13px;font-weight:600;color:${color};">${text}</span></div>`;
 }
 function buildAvailSummary(wk) {
-  const coaches = _coachTeamCache || [];
+  const coaches = data.coachTeam || [];
   const weekData = (data.coachAvailability || {})[wk] || {};
   const counts = {ACAD:0,GIRA:0,VACACIONES:0,LICENCIA:0};
-  coaches.forEach(c => { const s = weekData[c.profiles?.full_name||'—']||'ACAD'; if(counts[s]!==undefined)counts[s]++; });
+  coaches.forEach(c => { const s = weekData[c.name || c]||'ACAD'; if(counts[s]!==undefined)counts[s]++; });
   const cfgMap = {ACAD:{bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'},GIRA:{bg:'#e3f4fb',color:'#1DA1D6',border:'#90caf9'},VACACIONES:{bg:'#fff8e1',color:'#e65100',border:'#ffd54f'},LICENCIA:{bg:'#ffebee',color:'#c62828',border:'#ef9a9a'}};
   const items = Object.entries(counts).map(([s,n]) => {
     const c = cfgMap[s];
@@ -2679,7 +2680,7 @@ function renderCoachAvailability() {
   const monday = getWeekMonday(availWeekOffset);
   const wk = weekKey(monday);
   const label = availWeekLabel(wk);
-  const coaches = _coachTeamCache || [];
+  const coaches = data.coachTeam || [];
   const weekData = (data.coachAvailability || {})[wk] || {};
   const cfgMap = {
     ACAD:       {bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'},
@@ -2690,7 +2691,7 @@ function renderCoachAvailability() {
   const coachRows = coaches.length === 0
     ? `<div class="empty" style="padding:20px 0;text-align:center;">Sin entrenadores registrados.</div>`
     : coaches.map(c => {
-        const name = c.profiles?.full_name || '—';
+        const name = c.name || c;
         const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
         const status = weekData[name] || 'ACAD';
         const cfg = cfgMap[status] || cfgMap.ACAD;
