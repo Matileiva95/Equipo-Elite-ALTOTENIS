@@ -1207,6 +1207,7 @@ const DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 let asistFecha = new Date();
 asistFecha.setHours(0,0,0,0);
 let asistVista = 'dia'; // 'dia' | 'mes'
+let asistTipo = 'tenis'; // 'tenis' | 'fisico'
 let asistPlayerIdx = 0;
 let asistMes = new Date();
 asistMes.setDate(1);asistMes.setHours(0,0,0,0);
@@ -1218,10 +1219,15 @@ function renderAsistencia() {
       <div class="page-sub">Registro diario por jugador y turno</div></div>
     </div>
 
-    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
       <button class="bib-filter-btn${asistVista==='dia'?' active':''}" onclick="asistVista='dia';renderMain();">Vista diaria</button>
       <button class="bib-filter-btn${asistVista==='mes'?' active':''}" onclick="asistVista='mes';renderMain();">Vista mensual</button>
       <button class="btn btn-sm" style="margin-left:auto;background:#eaf2ff;color:#1a5bc4;border:1px solid #b0c9f5;" onclick="generarReporteSecretaria()">📄 Reporte secretaría</button>
+    </div>
+
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <button class="bib-filter-btn${asistTipo==='tenis'?' active':''}" onclick="asistTipo='tenis';renderMain();">Tenis</button>
+      <button class="bib-filter-btn${asistTipo==='fisico'?' active':''}" onclick="asistTipo='fisico';renderMain();">Físico</button>
     </div>
 
     ${asistVista==='dia' ? renderAsistDia() : renderAsistMes()}
@@ -1237,7 +1243,9 @@ function renderAsistDia() {
   const dayName = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][asistFecha.getDay()];
   const dateLabel = dayName + ' ' + asistFecha.getDate() + ' de ' + ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][asistFecha.getMonth()] + ' ' + asistFecha.getFullYear();
 
-  const presentes = players.filter(p => (p.asistencia||{})[dateKey]?.t1 === 'p' && (p.asistencia||{})[dateKey]?.t2 === 'p').length;
+  const presentes = asistTipo === 'fisico'
+    ? players.filter(p => (p.asistencia||{})[dateKey]?.f1 === 'p').length
+    : players.filter(p => (p.asistencia||{})[dateKey]?.t1 === 'p' && (p.asistencia||{})[dateKey]?.t2 === 'p').length;
 
   return `
     <div class="card" style="margin-bottom:14px;">
@@ -1266,17 +1274,22 @@ function renderAsistDia() {
           const dayData = asist[dateKey] || {};
           const t1 = dayData['t1'] || '';
           const t2 = dayData['t2'] || '';
+          const f1 = dayData['f1'] || '';
           const e1 = ESTADOS.find(e=>e.id===t1);
           const e2 = ESTADOS.find(e=>e.id===t2);
-          const ambosPresentes = t1==='p' && t2==='p';
+          const ef = ESTADOS.find(e=>e.id===f1);
+          const ambosPresentes = asistTipo === 'fisico' ? f1==='p' : (t1==='p' && t2==='p');
+          const badges = asistTipo === 'fisico'
+            ? `<span style="font-size:11px;padding:1px 8px;border-radius:20px;font-weight:600;color:#fff;background:${ef?ef.color:'var(--border)'};">${ef?ef.nombre:'Sesión física'}</span>`
+            : `<span style="font-size:11px;padding:1px 8px;border-radius:20px;font-weight:600;color:#fff;background:${e1?e1.color:'var(--border)'};">${e1?e1.nombre:'1er turno'}</span>
+                <span style="font-size:11px;padding:1px 8px;border-radius:20px;font-weight:600;color:#fff;background:${e2?e2.color:'var(--border)'};">${e2?e2.nombre:'2do turno'}</span>`;
           return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${ambosPresentes?'#f0fbf4':'var(--g5)'};border:1px solid ${ambosPresentes?'#a9dfbf':'var(--border)'};border-radius:var(--rsm);cursor:pointer;"
             onclick="abrirAsistModal(${realIdx},'${dateKey}')">
             <div class="pav" style="background:${COLORS[i%COLORS.length]};width:32px;height:32px;font-size:11px;flex-shrink:0;">${ini(p.name)}</div>
             <div style="flex:1;min-width:0;">
               <div style="font-size:13px;font-weight:500;color:var(--gray);">${p.name}</div>
               <div style="display:flex;gap:6px;margin-top:3px;">
-                <span style="font-size:11px;padding:1px 8px;border-radius:20px;font-weight:600;color:#fff;background:${e1?e1.color:'var(--border)'};">${e1?e1.nombre:'1er turno'}</span>
-                <span style="font-size:11px;padding:1px 8px;border-radius:20px;font-weight:600;color:#fff;background:${e2?e2.color:'var(--border)'};">${e2?e2.nombre:'2do turno'}</span>
+                ${badges}
               </div>
             </div>
             <span style="font-size:18px;color:var(--g4);">›</span>
@@ -1295,6 +1308,10 @@ function renderAsistModal(playerIdx, dateKey) {
   const dayData = asist[dateKey] || {};
   const t1 = dayData['t1'] || '';
   const t2 = dayData['t2'] || '';
+  const f1 = dayData['f1'] || '';
+  const turnos = asistTipo === 'fisico'
+    ? [['f1', 'Sesión física', f1]]
+    : [['t1', '1er turno', t1], ['t2', '2do turno', t2]];
 
   return `<div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:flex-end;justify-content:center;" onclick="cerrarAsistModal()">
     <div style="background:var(--white);border-radius:18px 18px 0 0;padding:20px;width:100%;max-width:480px;" onclick="event.stopPropagation()">
@@ -1307,10 +1324,8 @@ function renderAsistModal(playerIdx, dateKey) {
         <button onclick="cerrarAsistModal()" style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:var(--g3);">×</button>
       </div>
 
-      ${['t1','t2'].map((turno,ti) => {
-        const cur = ti===0?t1:t2;
-        return `<div style="margin-bottom:14px;">
-          <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">${ti===0?'1er turno':'2do turno'}</div>
+      ${turnos.map(([turno, label, cur]) => `<div style="margin-bottom:14px;">
+          <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">${label}</div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
             ${ESTADOS.map(e=>`
               <button onclick="setEstadoDirecto(${playerIdx},'${dateKey}','${turno}','${e.id}')"
@@ -1324,8 +1339,7 @@ function renderAsistModal(playerIdx, dateKey) {
               <span style="font-size:11px;color:var(--g3);">Limpiar</span>
             </button>
           </div>
-        </div>`;
-      }).join('')}
+        </div>`).join('')}
     </div>
   </div>`;
 }
@@ -1357,8 +1371,12 @@ function todosPresentes(dateKey) {
   data.players.forEach(p => {
     if(!p.asistencia) p.asistencia = {};
     if(!p.asistencia[dateKey]) p.asistencia[dateKey] = {};
-    p.asistencia[dateKey].t1 = 'p';
-    p.asistencia[dateKey].t2 = 'p';
+    if(asistTipo === 'fisico') {
+      p.asistencia[dateKey].f1 = 'p';
+    } else {
+      p.asistencia[dateKey].t1 = 'p';
+      p.asistencia[dateKey].t2 = 'p';
+    }
   });
   scheduleSync();
   renderMain();
@@ -1390,7 +1408,7 @@ function renderAsistMes() {
   for(let d=1; d<=diasEnMes; d++){
     const key = `${año}-${String(asistMes.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dd = asist[key]||{};
-    ['t1','t2'].forEach(t=>{
+    (asistTipo === 'fisico' ? ['f1'] : ['t1','t2']).forEach(t=>{
       if(dd[t]){
         totalSesiones++;
         if(dd[t]==='p') presentes++;
@@ -1431,13 +1449,15 @@ function renderAsistMes() {
           const d=i+1;
           const key=`${año}-${String(asistMes.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           const dd=asist[key]||{};
-          const t1=dd.t1||'';const t2=dd.t2||'';
+          const t1=dd.t1||'';const t2=dd.t2||'';const f1=dd.f1||'';
+          const chipHtml = asistTipo === 'fisico'
+            ? (f1?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===f1)?.color||'#ccc'};">F</div>`:'')
+            : `${t1?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===t1)?.color||'#ccc'};">T1</div>`:''}${t2?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===t2)?.color||'#ccc'};">T2</div>`:''}`;
           const isToday=key===new Date().toISOString().slice(0,10);
           return `<div class="mes-day" style="${isToday?'border-color:var(--orange);border-width:2px;':''}">
             <div class="mes-day-num" style="${isToday?'color:var(--orange);':''}">${d}</div>
             <div class="mes-turnos">
-              ${t1?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===t1)?.color||'#ccc'};">T1</div>`:''}
-              ${t2?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===t2)?.color||'#ccc'};">T2</div>`:''}
+              ${chipHtml}
             </div>
           </div>`;
         }).join('')}
