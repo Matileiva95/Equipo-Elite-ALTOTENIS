@@ -2676,6 +2676,7 @@ function buildAvailSummary(wk) {
   return `<div id="avail-summary" class="card"><div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Resumen de la semana</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${items}</div></div>`;
 }
 function renderCoachAvailability() {
+  console.log('[DEBUG disponibilidad] data.coachTeam:', data.coachTeam, '| _coachTeamCache:', _coachTeamCache);
   const isAdmin = sessionStorage.getItem('ciq_role') === 'admin';
   const monday = getWeekMonday(availWeekOffset);
   const wk = weekKey(monday);
