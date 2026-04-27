@@ -615,7 +615,7 @@ let user="",page="dashboard",pid=null,dtab="perfil";
 let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
 let saveTimer=null,editingPlayerId=null,editingGroupPlanId=null;
 let grupalTab='semanal',grupalGrupo=null,grupalSemanaOffset=0,grupalMesOffset=0,grupalMesExpanded={};
-let coachingTab='equipo',availWeekOffset=0;
+let coachingTab='equipo',availWeekOffset=0,availAddingType=null;
 // Selección múltiple calendario
 let selMode=false,selectedDays=new Set();
 
@@ -826,7 +826,6 @@ async function loadCoachTeam() {
     if (!res.ok) return;
     const d = await res.json();
     _coachTeamCache = d.data || d || [];
-    data.coachTeam = _coachTeamCache.map(c => c.profiles?.full_name || '').filter(Boolean);
     if (page === 'coaching') renderMain();
   } catch(e) {
     _coachTeamCache = [];
@@ -915,7 +914,7 @@ async function loadData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d = await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.coachTeam=data.coachTeam||[];}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.availabilityConfig=data.availabilityConfig||{coaches:[],pfs:[]};}
     setSS('synced','Sincronizado · '+now());
   }catch(e){
     const l=localStorage.getItem('at_data_elite');
@@ -936,7 +935,7 @@ async function refreshData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d=await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.coachTeam=data.coachTeam||[];}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.availabilityConfig=data.availabilityConfig||{coaches:[],pfs:[]};}
     setSS('synced','Sincronizado · '+now());renderPlayerNav();renderDrawerList();
   }catch(e){setSS('error','Sin conexión');}
 }
@@ -2620,6 +2619,13 @@ function renderCoaching() {
 }
 
 // ── DISPONIBILIDAD DEL EQUIPO ────────────────────────────
+const AVAIL_DEFAULT_COACHES = ['Matías Leiva','Daniel Guillier','Cristopher Kohl','Andrés Sanchez','Cristobal Henriquez','Marcelo Clavero','Kevin Brown','Guillermo Gomez','Ignacio Jojot'];
+const AVAIL_CFG = {
+  ACAD:       {bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'},
+  GIRA:       {bg:'#e3f4fb',color:'#1DA1D6',border:'#90caf9'},
+  VACACIONES: {bg:'#fff8e1',color:'#e65100',border:'#ffd54f'},
+  LICENCIA:   {bg:'#ffebee',color:'#c62828',border:'#ef9a9a'}
+};
 function getWeekMonday(offset) {
   const d = new Date();
   const day = d.getDay();
@@ -2636,6 +2642,16 @@ function availWeekLabel(key) {
   const sm = MESES[d.getMonth()], em = MESES[e.getMonth()];
   return d.getMonth() === e.getMonth() ? `${s} - ${en} ${em}` : `${s} ${sm} - ${en} ${em}`;
 }
+function getAvailabilityConfig() {
+  data.availabilityConfig = data.availabilityConfig || {coaches:[], pfs:[]};
+  data.availabilityConfig.coaches = data.availabilityConfig.coaches || [];
+  data.availabilityConfig.pfs = data.availabilityConfig.pfs || [];
+  if (data.availabilityConfig.coaches.length === 0) {
+    data.availabilityConfig.coaches = [...AVAIL_DEFAULT_COACHES];
+    scheduleSync();
+  }
+  return data.availabilityConfig;
+}
 function setCoachAvailStatusFromEl(sel) {
   const wk = sel.dataset.wk;
   const name = sel.dataset.name;
@@ -2643,86 +2659,97 @@ function setCoachAvailStatusFromEl(sel) {
   data.coachAvailability = data.coachAvailability || {};
   data.coachAvailability[wk] = data.coachAvailability[wk] || {};
   data.coachAvailability[wk][name] = status;
-  const cfg = {ACAD:{bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'},GIRA:{bg:'#e3f4fb',color:'#1DA1D6',border:'#90caf9'},VACACIONES:{bg:'#fff8e1',color:'#e65100',border:'#ffd54f'},LICENCIA:{bg:'#ffebee',color:'#c62828',border:'#ef9a9a'}}[status]||{bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'};
+  const cfg = AVAIL_CFG[status] || AVAIL_CFG.ACAD;
   sel.style.background = cfg.bg;
   sel.style.color = cfg.color;
   sel.style.boxShadow = `0 0 0 1.5px ${cfg.border}`;
   scheduleSync();
-  const summary = document.getElementById('avail-summary');
-  if (summary) summary.outerHTML = buildAvailSummary(wk);
-  const alert = document.getElementById('avail-alert');
-  if (alert) alert.outerHTML = buildAvailAlert(wk);
 }
-function buildAvailAlert(wk) {
-  const coaches = data.coachTeam || [];
-  const weekData = (data.coachAvailability || {})[wk] || {};
-  let acadCount = 0;
-  coaches.forEach(c => { if ((weekData[c.name || c] || 'ACAD') === 'ACAD') acadCount++; });
-  const color = acadCount >= 3 ? '#2e7d32' : acadCount === 2 ? '#e65100' : '#c62828';
-  const bg = acadCount >= 3 ? '#e8f5e9' : acadCount === 2 ? '#fff8e1' : '#ffebee';
-  const text = acadCount >= 3 ? `Cobertura completa — ${acadCount} en academia` : acadCount === 2 ? `Cobertura ajustada — solo ${acadCount} en academia` : `Cobertura insuficiente — ${acadCount} en academia`;
-  return `<div id="avail-alert" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--rsm);background:${bg};border:1.5px solid ${color}33;margin-bottom:14px;"><span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span><span style="font-size:13px;font-weight:600;color:${color};">${text}</span></div>`;
+function availRemovePersonFromEl(btn) {
+  const type = btn.dataset.type;
+  const name = btn.dataset.name;
+  if (!confirm(`¿Quitar a ${name} de la lista?`)) return;
+  const cfg = getAvailabilityConfig();
+  cfg[type] = cfg[type].filter(n => n !== name);
+  scheduleSync();
+  renderMain();
 }
-function buildAvailSummary(wk) {
-  const coaches = data.coachTeam || [];
-  const weekData = (data.coachAvailability || {})[wk] || {};
-  const counts = {ACAD:0,GIRA:0,VACACIONES:0,LICENCIA:0};
-  coaches.forEach(c => { const s = weekData[c.name || c]||'ACAD'; if(counts[s]!==undefined)counts[s]++; });
-  const cfgMap = {ACAD:{bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'},GIRA:{bg:'#e3f4fb',color:'#1DA1D6',border:'#90caf9'},VACACIONES:{bg:'#fff8e1',color:'#e65100',border:'#ffd54f'},LICENCIA:{bg:'#ffebee',color:'#c62828',border:'#ef9a9a'}};
-  const items = Object.entries(counts).map(([s,n]) => {
-    const c = cfgMap[s];
-    return `<div style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:${c.bg};border-radius:20px;border:1.5px solid ${c.border};"><span style="font-size:15px;font-weight:700;color:${c.color};">${n}</span><span style="font-size:12px;font-weight:600;color:${c.color};">${s}</span></div>`;
-  }).join('');
-  return `<div id="avail-summary" class="card"><div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Resumen de la semana</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${items}</div></div>`;
+function availAddPerson() {
+  const type = availAddingType;
+  const input = document.getElementById('avail-add-input');
+  const name = input ? input.value.trim() : '';
+  if (!name) return;
+  const cfg = getAvailabilityConfig();
+  if (!cfg[type].includes(name)) { cfg[type].push(name); scheduleSync(); }
+  availAddingType = null;
+  renderMain();
 }
-function renderCoachAvailability() {
-  console.log('[DEBUG disponibilidad] data.coachTeam:', data.coachTeam, '| _coachTeamCache:', _coachTeamCache);
-  const isAdmin = sessionStorage.getItem('ciq_role') === 'admin';
-  const monday = getWeekMonday(availWeekOffset);
-  const wk = weekKey(monday);
-  const label = availWeekLabel(wk);
-  const coaches = data.coachTeam || [];
+function renderAvailGroup(label, people, wk, isAdmin, type) {
   const weekData = (data.coachAvailability || {})[wk] || {};
-  const cfgMap = {
-    ACAD:       {bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'},
-    GIRA:       {bg:'#e3f4fb',color:'#1DA1D6',border:'#90caf9'},
-    VACACIONES: {bg:'#fff8e1',color:'#e65100',border:'#ffd54f'},
-    LICENCIA:   {bg:'#ffebee',color:'#c62828',border:'#ef9a9a'}
-  };
-  const coachRows = coaches.length === 0
-    ? `<div class="empty" style="padding:20px 0;text-align:center;">Sin entrenadores registrados.</div>`
-    : coaches.map(c => {
-        const name = c.name || c;
-        const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  const counts = {ACAD:0, GIRA:0, VACACIONES:0, LICENCIA:0};
+  people.forEach(n => { const s = weekData[n]||'ACAD'; if(counts[s]!==undefined) counts[s]++; });
+  const rows = people.length === 0
+    ? `<div class="empty" style="padding:10px 0 4px;">Sin personas en esta lista.</div>`
+    : people.map(name => {
         const status = weekData[name] || 'ACAD';
-        const cfg = cfgMap[status] || cfgMap.ACAD;
+        const cfg = AVAIL_CFG[status] || AVAIL_CFG.ACAD;
+        const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
         const statusEl = isAdmin
-          ? `<select data-wk="${wk}" data-name="${name.replace(/"/g,'&quot;')}" onchange="setCoachAvailStatusFromEl(this)" style="border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;background:${cfg.bg};color:${cfg.color};outline:none;appearance:none;-webkit-appearance:none;box-shadow:0 0 0 1.5px ${cfg.border};">
-              ${['ACAD','GIRA','VACACIONES','LICENCIA'].map(s=>`<option value="${s}"${s===status?' selected':''}>${s}</option>`).join('')}
-            </select>`
+          ? `<select data-wk="${wk}" data-name="${name.replace(/"/g,'&quot;')}" onchange="setCoachAvailStatusFromEl(this)" style="border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;background:${cfg.bg};color:${cfg.color};outline:none;appearance:none;-webkit-appearance:none;box-shadow:0 0 0 1.5px ${cfg.border};">${['ACAD','GIRA','VACACIONES','LICENCIA'].map(s=>`<option value="${s}"${s===status?' selected':''}>${s}</option>`).join('')}</select>`
           : `<span style="background:${cfg.bg};color:${cfg.color};border:1.5px solid ${cfg.border};border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;">${status}</span>`;
-        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:34px;height:34px;border-radius:50%;background:#FF6B00;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${initials}</div>
-            <span style="font-size:14px;font-weight:500;color:var(--gray);">${name}</span>
+        const removeBtn = isAdmin
+          ? `<button onclick="availRemovePersonFromEl(this)" data-type="${type}" data-name="${name.replace(/"/g,'&quot;')}" title="Quitar" style="width:22px;height:22px;border-radius:50%;border:none;background:var(--g5);color:var(--g3);cursor:pointer;font-size:12px;flex-shrink:0;line-height:1;">✕</button>`
+          : '';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+            ${removeBtn}
+            <div style="width:32px;height:32px;border-radius:50%;background:#FF6B00;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${initials}</div>
+            <span style="font-size:13px;font-weight:500;color:var(--gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
           </div>
           ${statusEl}
         </div>`;
       }).join('');
+  const addForm = isAdmin
+    ? availAddingType === type
+      ? `<div style="display:flex;gap:8px;padding:10px 0;align-items:center;">
+          <input id="avail-add-input" placeholder="Nombre completo..." autofocus
+            style="flex:1;padding:7px 12px;border:1.5px solid var(--blue);border-radius:var(--rsm);font-size:13px;outline:none;"
+            onkeydown="if(event.key==='Enter')availAddPerson();if(event.key==='Escape'){availAddingType=null;renderMain();}" />
+          <button onclick="availAddPerson()" style="padding:7px 14px;background:#FF6B00;color:#fff;border:none;border-radius:var(--rsm);font-size:13px;font-weight:600;cursor:pointer;">Agregar</button>
+          <button onclick="availAddingType=null;renderMain();" style="padding:7px 10px;background:var(--g5);color:var(--g2);border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;cursor:pointer;">✕</button>
+        </div>`
+      : `<button onclick="availAddingType='${type}';renderMain();" style="margin-top:10px;padding:6px 14px;border:1.5px dashed var(--border);border-radius:var(--rsm);background:transparent;color:var(--g3);font-size:12px;cursor:pointer;width:100%;text-align:left;">+ Agregar persona</button>`
+    : '';
+  const summaryItems = Object.entries(AVAIL_CFG).map(([s,c]) =>
+    `<div style="display:flex;align-items:center;gap:5px;padding:5px 11px;background:${c.bg};border-radius:20px;border:1.5px solid ${c.border};"><span style="font-size:14px;font-weight:700;color:${c.color};">${counts[s]}</span><span style="font-size:11px;font-weight:600;color:${c.color};">${s}</span></div>`
+  ).join('');
   return `
-    <div class="card" style="margin-bottom:16px;">
-      <div style="font-size:14px;font-weight:600;color:var(--gray);margin-bottom:14px;">Disponibilidad del equipo</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:${availWeekOffset!==0?'10px':'16px'};">
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--g3);letter-spacing:.7px;text-transform:uppercase;margin-bottom:4px;">${label}</div>
+      ${rows}
+      ${addForm}
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;">${summaryItems}</div>
+    </div>`;
+}
+function renderCoachAvailability() {
+  const isAdmin = sessionStorage.getItem('ciq_role') === 'admin';
+  const monday = getWeekMonday(availWeekOffset);
+  const wk = weekKey(monday);
+  const label = availWeekLabel(wk);
+  const cfg = getAvailabilityConfig();
+  return `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:${availWeekOffset!==0?'10px':'18px'};">
         <button onclick="availWeekOffset--;renderMain();" style="flex-shrink:0;padding:7px 13px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--white);color:var(--g2);font-size:13px;cursor:pointer;line-height:1;">‹</button>
         <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:var(--gray);">${label}</div>
         <button onclick="availWeekOffset++;renderMain();" style="flex-shrink:0;padding:7px 13px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--white);color:var(--g2);font-size:13px;cursor:pointer;line-height:1;">›</button>
       </div>
       ${availWeekOffset!==0?`<div style="text-align:center;margin-bottom:14px;"><button onclick="availWeekOffset=0;renderMain();" style="padding:5px 16px;border:1.5px solid #1DA1D6;border-radius:20px;background:#e3f4fb;color:#1DA1D6;font-size:12px;font-weight:600;cursor:pointer;">Semana actual</button></div>`:''}
-      ${coaches.length>0?buildAvailAlert(wk):''}
-      ${coachRows}
+      ${renderAvailGroup('Entrenadores', cfg.coaches, wk, isAdmin, 'coaches')}
+      <div style="border-top:2px solid var(--border);margin:18px 0;"></div>
+      ${renderAvailGroup('Preparadores físicos', cfg.pfs, wk, isAdmin, 'pfs')}
       ${!isAdmin?`<div style="margin-top:12px;font-size:11px;color:var(--g3);text-align:center;">Solo el admin puede editar los estados.</div>`:''}
-    </div>
-    ${coaches.length>0?buildAvailSummary(wk):''}`;
+    </div>`;
 }
 // ─────────────────────────────────────────────────────────
 
