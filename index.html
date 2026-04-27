@@ -615,6 +615,7 @@ let user="",page="dashboard",pid=null,dtab="perfil";
 let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
 let saveTimer=null,editingPlayerId=null,editingGroupPlanId=null;
 let grupalTab='semanal',grupalGrupo=null,grupalSemanaOffset=0,grupalMesOffset=0,grupalMesExpanded={};
+let coachingTab='equipo',availWeekOffset=0;
 // Selección múltiple calendario
 let selMode=false,selectedDays=new Set();
 
@@ -811,6 +812,7 @@ async function loadGroups() {
     const res = await fetch(BACKEND_URL+'/api/v1/academies/'+ACADEMY_ID+'/groups', {headers:{'Authorization':'Bearer '+token}});
     if (!res.ok) return;
     window._groups = await res.json();
+    console.log('grupos cargados:', window._groups);
     renderGroupFilter();
   } catch(e) { window._groups = []; }
 }
@@ -912,7 +914,7 @@ async function loadData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d = await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};}
     setSS('synced','Sincronizado · '+now());
   }catch(e){
     const l=localStorage.getItem('at_data_elite');
@@ -933,7 +935,7 @@ async function refreshData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d=await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};}
     setSS('synced','Sincronizado · '+now());renderPlayerNav();renderDrawerList();
   }catch(e){setSS('error','Sin conexión');}
 }
@@ -2551,6 +2553,12 @@ let showBibForm = false;
 let editingBibIdx = null;
 
 function renderCoaching() {
+  const tabs = `<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:16px;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+    <button class="tab-btn${coachingTab==='equipo'?' active':''}" onclick="coachingTab='equipo';renderMain();">Equipo</button>
+    <button class="tab-btn${coachingTab==='disponibilidad'?' active':''}" onclick="coachingTab='disponibilidad';renderMain();">Disponibilidad</button>
+  </div>`;
+  if (coachingTab === 'disponibilidad') return tabs + renderCoachAvailability();
+
   const reflections = data.reflections || [];
   const ejercicios = data.ejercicios || [];
   const allEjercicios = [...ITF_EJERCICIOS, ...ejercicios];
@@ -2562,7 +2570,7 @@ function renderCoaching() {
   });
 
   const role = sessionStorage.getItem('ciq_role');
-  return `
+  return tabs + `
     <div class="card" style="margin-bottom:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="font-size:14px;font-weight:600;color:var(--gray);">Equipo de entrenadores</div>
@@ -2609,6 +2617,112 @@ function renderCoaching() {
       <div id="ref-list" style="margin-top:12px;">${(data.reflections||[]).slice(0,6).map(r=>`<div class="note-item"><div class="note-text">${r.text}</div><div class="note-meta">${r.date} · ${r.author||''}</div></div>`).join('')||'<div class="empty">Sin reflexiones aún</div>'}</div>
     </div>`;
 }
+
+// ── DISPONIBILIDAD DEL EQUIPO ────────────────────────────
+function getWeekMonday(offset) {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - (day === 0 ? 6 : day - 1);
+  d.setDate(diff + offset * 7);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+function availWeekLabel(key) {
+  const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const d = new Date(key + 'T12:00:00'), e = new Date(d);
+  e.setDate(d.getDate() + 6);
+  const s = d.getDate(), en = e.getDate();
+  const sm = MESES[d.getMonth()], em = MESES[e.getMonth()];
+  return d.getMonth() === e.getMonth() ? `${s} - ${en} ${em}` : `${s} ${sm} - ${en} ${em}`;
+}
+function setCoachAvailStatusFromEl(sel) {
+  const wk = sel.dataset.wk;
+  const name = sel.dataset.name;
+  const status = sel.value;
+  data.coachAvailability = data.coachAvailability || {};
+  data.coachAvailability[wk] = data.coachAvailability[wk] || {};
+  data.coachAvailability[wk][name] = status;
+  const cfg = {ACAD:{bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'},GIRA:{bg:'#e3f4fb',color:'#1DA1D6',border:'#90caf9'},VACACIONES:{bg:'#fff8e1',color:'#e65100',border:'#ffd54f'},LICENCIA:{bg:'#ffebee',color:'#c62828',border:'#ef9a9a'}}[status]||{bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'};
+  sel.style.background = cfg.bg;
+  sel.style.color = cfg.color;
+  sel.style.boxShadow = `0 0 0 1.5px ${cfg.border}`;
+  scheduleSync();
+  const summary = document.getElementById('avail-summary');
+  if (summary) summary.outerHTML = buildAvailSummary(wk);
+  const alert = document.getElementById('avail-alert');
+  if (alert) alert.outerHTML = buildAvailAlert(wk);
+}
+function buildAvailAlert(wk) {
+  const coaches = _coachTeamCache || [];
+  const weekData = (data.coachAvailability || {})[wk] || {};
+  let acadCount = 0;
+  coaches.forEach(c => { if ((weekData[c.profiles?.full_name || '—'] || 'ACAD') === 'ACAD') acadCount++; });
+  const color = acadCount >= 3 ? '#2e7d32' : acadCount === 2 ? '#e65100' : '#c62828';
+  const bg = acadCount >= 3 ? '#e8f5e9' : acadCount === 2 ? '#fff8e1' : '#ffebee';
+  const text = acadCount >= 3 ? `Cobertura completa — ${acadCount} en academia` : acadCount === 2 ? `Cobertura ajustada — solo ${acadCount} en academia` : `Cobertura insuficiente — ${acadCount} en academia`;
+  return `<div id="avail-alert" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--rsm);background:${bg};border:1.5px solid ${color}33;margin-bottom:14px;"><span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span><span style="font-size:13px;font-weight:600;color:${color};">${text}</span></div>`;
+}
+function buildAvailSummary(wk) {
+  const coaches = _coachTeamCache || [];
+  const weekData = (data.coachAvailability || {})[wk] || {};
+  const counts = {ACAD:0,GIRA:0,VACACIONES:0,LICENCIA:0};
+  coaches.forEach(c => { const s = weekData[c.profiles?.full_name||'—']||'ACAD'; if(counts[s]!==undefined)counts[s]++; });
+  const cfgMap = {ACAD:{bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'},GIRA:{bg:'#e3f4fb',color:'#1DA1D6',border:'#90caf9'},VACACIONES:{bg:'#fff8e1',color:'#e65100',border:'#ffd54f'},LICENCIA:{bg:'#ffebee',color:'#c62828',border:'#ef9a9a'}};
+  const items = Object.entries(counts).map(([s,n]) => {
+    const c = cfgMap[s];
+    return `<div style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:${c.bg};border-radius:20px;border:1.5px solid ${c.border};"><span style="font-size:15px;font-weight:700;color:${c.color};">${n}</span><span style="font-size:12px;font-weight:600;color:${c.color};">${s}</span></div>`;
+  }).join('');
+  return `<div id="avail-summary" class="card"><div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Resumen de la semana</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${items}</div></div>`;
+}
+function renderCoachAvailability() {
+  const isAdmin = sessionStorage.getItem('ciq_role') === 'admin';
+  const monday = getWeekMonday(availWeekOffset);
+  const wk = weekKey(monday);
+  const label = availWeekLabel(wk);
+  const coaches = _coachTeamCache || [];
+  const weekData = (data.coachAvailability || {})[wk] || {};
+  const cfgMap = {
+    ACAD:       {bg:'#e8f5e9',color:'#2e7d32',border:'#81c784'},
+    GIRA:       {bg:'#e3f4fb',color:'#1DA1D6',border:'#90caf9'},
+    VACACIONES: {bg:'#fff8e1',color:'#e65100',border:'#ffd54f'},
+    LICENCIA:   {bg:'#ffebee',color:'#c62828',border:'#ef9a9a'}
+  };
+  const coachRows = coaches.length === 0
+    ? `<div class="empty" style="padding:20px 0;text-align:center;">Sin entrenadores registrados.</div>`
+    : coaches.map(c => {
+        const name = c.profiles?.full_name || '—';
+        const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+        const status = weekData[name] || 'ACAD';
+        const cfg = cfgMap[status] || cfgMap.ACAD;
+        const statusEl = isAdmin
+          ? `<select data-wk="${wk}" data-name="${name.replace(/"/g,'&quot;')}" onchange="setCoachAvailStatusFromEl(this)" style="border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;background:${cfg.bg};color:${cfg.color};outline:none;appearance:none;-webkit-appearance:none;box-shadow:0 0 0 1.5px ${cfg.border};">
+              ${['ACAD','GIRA','VACACIONES','LICENCIA'].map(s=>`<option value="${s}"${s===status?' selected':''}>${s}</option>`).join('')}
+            </select>`
+          : `<span style="background:${cfg.bg};color:${cfg.color};border:1.5px solid ${cfg.border};border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;">${status}</span>`;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:34px;height:34px;border-radius:50%;background:#FF6B00;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${initials}</div>
+            <span style="font-size:14px;font-weight:500;color:var(--gray);">${name}</span>
+          </div>
+          ${statusEl}
+        </div>`;
+      }).join('');
+  return `
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:600;color:var(--gray);margin-bottom:14px;">Disponibilidad del equipo</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:${availWeekOffset!==0?'10px':'16px'};">
+        <button onclick="availWeekOffset--;renderMain();" style="flex-shrink:0;padding:7px 13px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--white);color:var(--g2);font-size:13px;cursor:pointer;line-height:1;">‹</button>
+        <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:var(--gray);">${label}</div>
+        <button onclick="availWeekOffset++;renderMain();" style="flex-shrink:0;padding:7px 13px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--white);color:var(--g2);font-size:13px;cursor:pointer;line-height:1;">›</button>
+      </div>
+      ${availWeekOffset!==0?`<div style="text-align:center;margin-bottom:14px;"><button onclick="availWeekOffset=0;renderMain();" style="padding:5px 16px;border:1.5px solid #1DA1D6;border-radius:20px;background:#e3f4fb;color:#1DA1D6;font-size:12px;font-weight:600;cursor:pointer;">Semana actual</button></div>`:''}
+      ${coaches.length>0?buildAvailAlert(wk):''}
+      ${coachRows}
+      ${!isAdmin?`<div style="margin-top:12px;font-size:11px;color:var(--g3);text-align:center;">Solo el admin puede editar los estados.</div>`:''}
+    </div>
+    ${coaches.length>0?buildAvailSummary(wk):''}`;
+}
+// ─────────────────────────────────────────────────────────
 
 function renderBibCard(e, idx) {
   const typeStyle = {tecnico:'bib-type-tecnico',canasto:'bib-type-canasto',tactico:'bib-type-tactico'}[e.tipo]||'bib-type-tecnico';
