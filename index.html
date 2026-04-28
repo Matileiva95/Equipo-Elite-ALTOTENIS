@@ -2647,12 +2647,10 @@ const AVAIL_CFG = {
   LICENCIA:   {bg:'#ffebee',color:'#c62828',border:'#ef9a9a'}
 };
 function getWeekMonday(offset) {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1 - day);
-  d.setDate(d.getDate() + diff + offset * 7);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const now = new Date();
+  const utcDay = now.getUTCDay();
+  const diff = (utcDay === 0 ? -6 : 1 - utcDay);
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff + offset * 7));
 }
 function availWeekLabel(key) {
   const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -5574,7 +5572,7 @@ function initCourtEditor() {
 
 // ── UTILS ─────────────────────────────────────────────────
 function ini(n){return n.split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');}
-function weekKey(d){const m=new Date(d);m.setDate(d.getDate()-((d.getDay()+6)%7));return m.toISOString().slice(0,10);}
+function weekKey(d){const monday=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()-((d.getUTCDay()+6)%7)));return monday.toISOString().slice(0,10);}
 function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDate(d.getDate()+6);return `${d.getDate()} ${MONTHS[d.getMonth()]} – ${e.getDate()} ${MONTHS[e.getMonth()]} ${e.getFullYear()}`;}
 
 // ── INIT: session restore + magic link handler ─────────────
