@@ -4673,6 +4673,8 @@ function renderPortalHoy() {
       <div style="display:flex;gap:10px;margin-bottom:20px;">
         ${[['😔',1],['😐',2],['😊',3]].map(([ico,v]) => `<button id="ppmood-${v}" onclick="ppSelMoodHoy(${v})" style="flex:1;padding:10px;border-radius:10px;border:2px solid #e0e0e0;background:#fff;font-size:22px;cursor:pointer;transition:all .13s;">${ico}</button>`).join('')}
       </div>
+      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Reflexión del entrenamiento</div>
+      <textarea id="pp-reflexion" placeholder="¿Qué quieres destacar de este entrenamiento?" style="width:100%;min-height:72px;padding:10px 12px;border:2px solid #e0e0e0;border-radius:10px;font-size:13px;color:#333;resize:vertical;outline:none;box-sizing:border-box;font-family:inherit;margin-bottom:16px;" oninput="this.style.borderColor='#FF6B00'" onblur="if(!this.value)this.style.borderColor='#e0e0e0'"></textarea>
       <button onclick="ppGuardarEval()" style="width:100%;padding:13px;background:#FF6B00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.02em;">Guardar evaluación</button>
     </div>`;
 }
@@ -4710,11 +4712,12 @@ function ppSelMoodHoy(n) {
 }
 async function ppGuardarEval() {
   if (!_ppNota || !_ppRpe || !_ppMood) { alert('Completá todos los campos antes de guardar.'); return; }
-  const playerId = sessionStorage.getItem('ciq_player_id');
-  const token    = sessionStorage.getItem('ciq_token');
-  const payload  = { date: new Date().toISOString().slice(0,10), rpe: parseInt(_ppRpe), mood: parseInt(_ppMood), duration: 90, tipos: [], session_nota: parseInt(_ppNota) };
+  const playerId   = sessionStorage.getItem('ciq_player_id');
+  const token      = sessionStorage.getItem('ciq_token');
+  const reflexion  = (document.getElementById('pp-reflexion')?.value || '').trim();
+  const payload    = { date: new Date().toISOString().slice(0,10), rpe: parseInt(_ppRpe), mood: parseInt(_ppMood), duration: 90, tipos: [], session_nota: parseInt(_ppNota), reflexion };
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
+    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-evaluation`, {
       method: 'POST', headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
