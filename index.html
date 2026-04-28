@@ -590,7 +590,24 @@ body{background:#faf7f2;color:#1a1a1a;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script>
 const BACKEND_URL = "https://courtiq-backend-hrdc.onrender.com";
-const ACADEMY_ID = "2d20c092-bfb8-41ca-8342-c2b5d34fde8c";
+const ACADEMY_ID_FALLBACK = "2d20c092-bfb8-41ca-8342-c2b5d34fde8c";
+let ACADEMY_ID = ACADEMY_ID_FALLBACK;
+async function resolveAcademyId() {
+  try {
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+    if (parts.length >= 3 && parts[1] === 'tenismetricspro') {
+      const slug = parts[0];
+      const res = await fetch('https://courtiq-backend-hrdc.onrender.com/api/v1/academies/by-slug/' + slug);
+      if (res.ok) {
+        const data = await res.json();
+        ACADEMY_ID = data.id;
+      }
+    }
+  } catch (e) {
+    console.warn('Usando academy fallback:', e);
+  }
+}
 const COLORS=['#FF6B00','#1DA1D6','#2ecc71','#9b59b6','#e74c3c','#f39c12','#1abc9c','#e67e22','#3498db'];
 const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MONTHS_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -5584,6 +5601,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
 //   2. Existing session in sessionStorage          → restore panel silently
 //   3. Neither                                     → stay on login screen
 (async function init() {
+  await resolveAcademyId();
 
   // ── helpers ──────────────────────────────────────────────
   function hideLoading() {
