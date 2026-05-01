@@ -1239,7 +1239,8 @@ function renderAsistencia() {
     <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
       <button class="bib-filter-btn${asistVista==='dia'?' active':''}" onclick="asistVista='dia';renderMain();">Vista diaria</button>
       <button class="bib-filter-btn${asistVista==='mes'?' active':''}" onclick="asistVista='mes';renderMain();">Vista mensual</button>
-      <button class="btn btn-sm" style="margin-left:auto;background:#eaf2ff;color:#1a5bc4;border:1px solid #b0c9f5;" onclick="generarReporteSecretaria()">📄 Reporte secretaría</button>
+      <button class="btn btn-sm" style="margin-left:auto;background:#eaf2ff;color:#1a5bc4;border:1px solid #b0c9f5;" onclick="generarReporteTenis()">🎾 Reporte Tenis</button>
+      <button class="btn btn-sm" style="background:#fff0ea;color:#c44a1a;border:1px solid #f5b0a0;" onclick="generarReporteFisico()">💪 Reporte Físico</button>
     </div>
 
     <div style="display:flex;gap:6px;margin-bottom:16px;">
@@ -1523,7 +1524,7 @@ function cambiarMes(delta) {
 }
 
 
-function generarReporteSecretaria() {
+function _generarReportePDF({ titulo, tipo, filename }) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const año = asistMes.getFullYear();
@@ -1531,7 +1532,6 @@ function generarReporteSecretaria() {
   const mesNombre = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][mes];
   const diasEnMes = new Date(año, mes+1, 0).getDate();
 
-  // Collect weekday columns
   const cols = [];
   for(let d=1; d<=diasEnMes; d++){
     const dt = new Date(año, mes, d);
@@ -1539,18 +1539,15 @@ function generarReporteSecretaria() {
     if(dow>=1 && dow<=5) cols.push({d, key:`${año}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`, dow});
   }
 
-  const pageW = 297; const pageH = 210;
-  const marginL = 10; const marginR = 10; const marginT = 12;
+  const pageW = 297; const marginL = 10; const marginR = 10; const marginT = 12;
 
-  // Title
   doc.setFontSize(14); doc.setFont('helvetica','bold');
   doc.setTextColor(30,30,30);
-  doc.text(`Reporte de Asistencia — ${mesNombre} ${año}`, marginL, marginT+4);
+  doc.text(`${titulo} — ${mesNombre} ${año}`, marginL, marginT+4);
   doc.setFontSize(9); doc.setFont('helvetica','normal');
   doc.setTextColor(100,100,100);
   doc.text(`Generado el ${new Date().toLocaleDateString('es-AR')}`, pageW-marginR, marginT+4, {align:'right'});
 
-  // Stats boxes
   const players = data.players;
   let totalAsist=0, totalSes=0, conFaltas=0, ok=0;
   players.forEach(p=>{
@@ -1558,7 +1555,11 @@ function generarReporteSecretaria() {
     let pSes=0, pPres=0;
     cols.forEach(c=>{
       const dd = asist[c.key]||{};
-      ['t1','t2'].forEach(t=>{ if(dd[t]){pSes++;if(dd[t]==='p')pPres++;} });
+      if(tipo==='tenis'){
+        ['t1','t2'].forEach(t=>{ if(dd[t]){pSes++;if(dd[t]==='p')pPres++;} });
+      } else {
+        if(dd.f1){pSes++;if(dd.f1==='p'||dd.f1==='l')pPres++;}
+      }
     });
     totalSes+=pSes; totalAsist+=pPres;
     const pct = pSes>0?Math.round((pPres/pSes)*100):100;
@@ -1582,7 +1583,6 @@ function generarReporteSecretaria() {
     doc.text(b.label, bx+boxW/2, boxY+11, {align:'center'});
   });
 
-  // Table
   const tableStartY = boxY + boxH2 + 5;
   const dayLabels = cols.map(c=>{ const names=['','L','M','X','J','V']; return `${names[c.dow]}\n${c.d}`; });
   const head = [['Jugador', ...dayLabels, 'Asist%', 'Faltas']];
@@ -1592,15 +1592,20 @@ function generarReporteSecretaria() {
     const row = [p.name];
     cols.forEach(c=>{
       const dd = asist[c.key]||{};
-      const t1 = dd.t1||''; const t2 = dd.t2||'';
-      const both = t1 && t2;
       let cell = '';
-      if(t1===t2&&t1) cell = t1.toUpperCase();
-      else if(t1&&t2) cell = `${t1.toUpperCase()}/${t2.toUpperCase()}`;
-      else if(t1) cell = t1.toUpperCase();
-      else if(t2) cell = t2.toUpperCase();
+      if(tipo==='tenis'){
+        const t1=dd.t1||''; const t2=dd.t2||'';
+        if(t1===t2&&t1) cell=t1.toUpperCase();
+        else if(t1&&t2) cell=`${t1.toUpperCase()}/${t2.toUpperCase()}`;
+        else if(t1) cell=t1.toUpperCase();
+        else if(t2) cell=t2.toUpperCase();
+        [t1,t2].forEach(t=>{ if(t){pSes++;if(t==='p')pPres++;} });
+      } else {
+        const f1=dd.f1||'';
+        cell=f1.toUpperCase();
+        if(f1){pSes++;if(f1==='p'||f1==='l')pPres++;}
+      }
       row.push(cell);
-      [t1,t2].forEach(t=>{ if(t){pSes++;if(t==='p')pPres++;} });
     });
     const pct = pSes>0?Math.round((pPres/pSes)*100):'-';
     const faltas = pSes>0?(pSes-pPres):0;
@@ -1623,22 +1628,20 @@ function generarReporteSecretaria() {
     },
     didDrawCell(data){
       if(data.section==='body' && data.column.index>=1 && data.column.index<=cols.length){
-        const val = (data.cell.raw||'').split('/')[0].toLowerCase();
-        const col = statusColors[val];
+        const val=(data.cell.raw||'').split('/')[0].toLowerCase();
+        const col=statusColors[val];
         if(col){
           doc.setFillColor(...col);
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height,'F');
-          doc.setTextColor(255,255,255);
-          doc.setFontSize(6.5);
+          doc.setTextColor(255,255,255); doc.setFontSize(6.5);
           doc.text(String(data.cell.raw||''), data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+0.8, {align:'center'});
         }
       }
       if(data.section==='body' && data.column.index===cols.length+1){
-        const pct = parseInt(data.cell.raw)||0;
+        const pct=parseInt(data.cell.raw)||0;
         if(data.cell.raw!=='-'){
-          const col = pct>=90?[39,174,96]:pct>=70?[243,156,18]:[231,76,60];
-          doc.setTextColor(...col);
-          doc.setFontSize(7); doc.setFont('helvetica','bold');
+          const col=pct>=90?[39,174,96]:pct>=70?[243,156,18]:[231,76,60];
+          doc.setTextColor(...col); doc.setFontSize(7); doc.setFont('helvetica','bold');
           doc.text(String(data.cell.raw||''), data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+0.8, {align:'center'});
         }
       }
@@ -1646,7 +1649,15 @@ function generarReporteSecretaria() {
     alternateRowStyles:{fillColor:[248,249,250]},
   });
 
-  doc.save(`Asistencia_Secretaria_${mesNombre}_${año}.pdf`);
+  doc.save(`${filename}_${mesNombre}_${año}.pdf`);
+}
+
+function generarReporteTenis() {
+  _generarReportePDF({ titulo:'Reporte de Asistencia Tenis', tipo:'tenis', filename:'Asistencia_Tenis' });
+}
+
+function generarReporteFisico() {
+  _generarReportePDF({ titulo:'Reporte de Asistencia Físico', tipo:'fisico', filename:'Asistencia_Fisico' });
 }
 
 function generarReporteJugador() {
