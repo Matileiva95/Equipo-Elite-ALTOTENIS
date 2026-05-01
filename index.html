@@ -1548,6 +1548,7 @@ function _generarReportePDF({ titulo, tipo, filename }) {
   doc.setTextColor(100,100,100);
   doc.text(`Generado el ${new Date().toLocaleDateString('es-AR')}`, pageW-marginR, marginT+4, {align:'right'});
 
+  // Stats sobre todos los jugadores
   const players = data.players;
   let totalAsist=0, totalSes=0, conFaltas=0, ok=0;
   players.forEach(p=>{
@@ -1583,10 +1584,25 @@ function _generarReportePDF({ titulo, tipo, filename }) {
     doc.text(b.label, bx+boxW/2, boxY+11, {align:'center'});
   });
 
+  // Agrupar jugadores por grupo
+  const grupoOrden = ['Elite','F2','F1','F1C','Naranja','Verde'];
+  const grupoMap = {};
+  grupoOrden.forEach(g => grupoMap[g] = []);
+  data.players.forEach(p => {
+    const g = p.group || p.grupo || 'Sin grupo';
+    if(grupoMap[g] !== undefined) grupoMap[g].push(p);
+    else { if(!grupoMap['Sin grupo']) grupoMap['Sin grupo']=[]; grupoMap['Sin grupo'].push(p); }
+  });
+  const gruposConJugadores = [...grupoOrden, 'Sin grupo'].filter(g => (grupoMap[g]||[]).length > 0);
+
   const tableStartY = boxY + boxH2 + 5;
   const dayLabels = cols.map(c=>{ const names=['','L','M','X','J','V']; return `${names[c.dow]}\n${c.d}`; });
   const head = [['Jugador', ...dayLabels, 'Asist%', 'Faltas']];
-  const body = players.map(p=>{
+
+  const body = [];
+  const rowMeta = [];
+
+  const buildPlayerRow = (p) => {
     const asist = p.asistencia||{};
     let pSes=0, pPres=0;
     const row = [p.name];
@@ -1595,8 +1611,7 @@ function _generarReportePDF({ titulo, tipo, filename }) {
       let cell = '';
       if(tipo==='tenis'){
         const t1=dd.t1||''; const t2=dd.t2||'';
-        if(t1===t2&&t1) cell=t1.toUpperCase();
-        else if(t1&&t2) cell=`${t1.toUpperCase()}/${t2.toUpperCase()}`;
+        if(t1 && t2) cell=`${t1.toUpperCase()}/${t2.toUpperCase()}`;
         else if(t1) cell=t1.toUpperCase();
         else if(t2) cell=t2.toUpperCase();
         [t1,t2].forEach(t=>{ if(t){pSes++;if(t==='p')pPres++;} });
@@ -1612,9 +1627,25 @@ function _generarReportePDF({ titulo, tipo, filename }) {
     row.push(pct==='-'?'-':`${pct}%`);
     row.push(String(faltas));
     return row;
+  };
+
+  gruposConJugadores.forEach(g => {
+    body.push([`── ${g.toUpperCase()} ──`, ...cols.map(()=>''), '', '']);
+    rowMeta.push({ isHeader: true, grupo: g });
+    (grupoMap[g]||[]).forEach(p => {
+      body.push(buildPlayerRow(p));
+      rowMeta.push({ isHeader: false });
+    });
   });
 
-  const statusColors = {p:[39,174,96],l:[243,156,18],t:[29,161,214],d:[142,68,173],s:[231,76,60]};
+  const statusColors = {
+    p: [39,174,96],
+    t: [41,182,246],
+    l: [241,196,15],
+    d: [142,68,173],
+    s: [231,76,60],
+  };
+
   doc.autoTable({
     head, body,
     startY: tableStartY,
@@ -1627,17 +1658,49 @@ function _generarReportePDF({ titulo, tipo, filename }) {
       [cols.length+2]:{fontStyle:'bold'},
     },
     didDrawCell(data){
+      const meta = rowMeta[data.row.index];
+
+      // Encabezados de grupo
+      if(meta && meta.isHeader){
+        doc.setFillColor(26,26,46);
+        doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+        if(data.column.index === 0){
+          const tableWidth = pageW - marginL - marginR;
+          doc.setTextColor(255,255,255);
+          doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+          doc.text(`── ${meta.grupo.toUpperCase()} ──`, marginL + tableWidth/2, data.cell.y + data.cell.height/2 + 0.8, {align:'center'});
+        }
+        return;
+      }
+
+      // Celdas de días
       if(data.section==='body' && data.column.index>=1 && data.column.index<=cols.length){
-        const val=(data.cell.raw||'').split('/')[0].toLowerCase();
-        const col=statusColors[val];
-        if(col){
-          doc.setFillColor(...col);
-          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height,'F');
-          doc.setTextColor(255,255,255); doc.setFontSize(6.5);
-          doc.text(String(data.cell.raw||''), data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+0.8, {align:'center'});
+        const raw = String(data.cell.raw||'');
+        if(raw.includes('/')){
+          const [left, right] = raw.split('/');
+          const halfW = data.cell.width/2;
+          const colL = statusColors[left.toLowerCase()] || [200,200,200];
+          const colR = statusColors[right.toLowerCase()] || [200,200,200];
+          doc.setFillColor(...colL);
+          doc.rect(data.cell.x, data.cell.y, halfW, data.cell.height, 'F');
+          doc.setTextColor(255,255,255); doc.setFontSize(5.5); doc.setFont('helvetica','bold');
+          doc.text(left, data.cell.x + halfW/2, data.cell.y + data.cell.height/2 + 0.8, {align:'center'});
+          doc.setFillColor(...colR);
+          doc.rect(data.cell.x+halfW, data.cell.y, halfW, data.cell.height, 'F');
+          doc.text(right, data.cell.x + halfW + halfW/2, data.cell.y + data.cell.height/2 + 0.8, {align:'center'});
+        } else {
+          const col = statusColors[raw.toLowerCase()];
+          if(col){
+            doc.setFillColor(...col);
+            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+            doc.setTextColor(255,255,255); doc.setFontSize(6.5);
+            doc.text(raw, data.cell.x+data.cell.width/2, data.cell.y+data.cell.height/2+0.8, {align:'center'});
+          }
         }
       }
-      if(data.section==='body' && data.column.index===cols.length+1){
+
+      // Columna Asist%
+      if(data.section==='body' && !meta?.isHeader && data.column.index===cols.length+1){
         const pct=parseInt(data.cell.raw)||0;
         if(data.cell.raw!=='-'){
           const col=pct>=90?[39,174,96]:pct>=70?[243,156,18]:[231,76,60];
@@ -1647,6 +1710,25 @@ function _generarReportePDF({ titulo, tipo, filename }) {
       }
     },
     alternateRowStyles:{fillColor:[248,249,250]},
+  });
+
+  // Leyenda al pie
+  const legendY = doc.lastAutoTable.finalY + 5;
+  const legend = [
+    {label:'P = Presente',      color:[39,174,96]},
+    {label:'T = Torneo',        color:[41,182,246]},
+    {label:'L = Lesión',        color:[241,196,15]},
+    {label:'D = Descanso',      color:[142,68,173]},
+    {label:'S = Sin justificar',color:[231,76,60]},
+  ];
+  doc.setFontSize(7); doc.setFont('helvetica','normal');
+  let lx = marginL;
+  legend.forEach(item => {
+    doc.setFillColor(...item.color);
+    doc.rect(lx, legendY-2.5, 3, 3, 'F');
+    doc.setTextColor(50,50,50);
+    doc.text(item.label, lx+4.5, legendY+0.2);
+    lx += doc.getTextWidth(item.label) + 10;
   });
 
   doc.save(`${filename}_${mesNombre}_${año}.pdf`);
