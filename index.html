@@ -1525,6 +1525,14 @@ function cambiarMes(delta) {
 
 
 function _generarReportePDF({ titulo, tipo, filename }) {
+  if(!data?.players?.length){
+    alert('Los datos aún no han cargado. Espera un momento e intenta de nuevo.');
+    return;
+  }
+  if(!window._groups?.length){
+    alert('Los grupos aún no han cargado. Espera un segundo e intenta de nuevo.');
+    return;
+  }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const año = asistMes.getFullYear();
@@ -1545,7 +1553,7 @@ function _generarReportePDF({ titulo, tipo, filename }) {
   }
 
   const pageW = 297; const marginL = 10; const marginR = 10; const marginT = 12;
-  const totalCols = cols.length + 3;
+  const totalCols = tipo==='tenis' ? cols.length*2+3 : cols.length+3;
 
   const resolverGrupo = (p) =>
     (window._groups||[]).find(g => g.id === p.group_id)?.name || 'Sin grupo';
@@ -1612,10 +1620,10 @@ function _generarReportePDF({ titulo, tipo, filename }) {
     .filter(g => (grupoMap[g]||[]).length > 0);
 
   const tableStartY = boxY+boxH2+5;
-  const dayLabels = cols.map(c=>{
-    const names=['','L','M','X','J','V'];
-    return `${names[c.dow]}\n${c.d}`;
-  });
+  const names=['','L','M','X','J','V'];
+  const dayLabels = tipo==='tenis'
+    ? cols.flatMap(c=>[`${names[c.dow]}\n${c.d}`, ''])
+    : cols.map(c=>`${names[c.dow]}\n${c.d}`);
   const head = [['Jugador', ...dayLabels, 'Asist%', 'Faltas']];
 
   const body = [];
@@ -1627,23 +1635,20 @@ function _generarReportePDF({ titulo, tipo, filename }) {
     const row = [p.name];
     cols.forEach(c=>{
       const dd = asist[c.key]||{};
-      let cell='';
       if(tipo==='tenis'){
         const t1=dd.t1||''; const t2=dd.t2||'';
-        if(t1 && t2) cell=`${t1.toUpperCase()}/${t2.toUpperCase()}`;
-        else if(t1) cell=t1.toUpperCase();
-        else if(t2) cell=t2.toUpperCase();
+        row.push(t1.toUpperCase());
+        row.push(t2.toUpperCase());
         [t1,t2].forEach(t=>{
           if(t==='p'||t==='t'||t==='l'||t==='s'){ pSes++; }
           if(t==='p'||t==='t'){ pPres++; }
         });
       } else {
         const f1=dd.f1||'';
-        cell=f1.toUpperCase();
         if(f1==='p'||f1==='t'||f1==='l'||f1==='s'){ pSes++; }
         if(f1==='p'||f1==='t'){ pPres++; }
+        row.push(f1.toUpperCase());
       }
-      row.push(cell);
     });
     const pct=pSes>0?Math.round((pPres/pSes)*100):'-';
     const faltas=pSes>0?(pSes-pPres):0;
@@ -1680,8 +1685,8 @@ function _generarReportePDF({ titulo, tipo, filename }) {
       fontStyle:'bold',halign:'center'},
     columnStyles:{
       0:{halign:'left',fontStyle:'bold',cellWidth:32},
-      [cols.length+1]:{fontStyle:'bold'},
-      [cols.length+2]:{fontStyle:'bold'},
+      [tipo==='tenis'?cols.length*2+1:cols.length+1]:{fontStyle:'bold'},
+      [tipo==='tenis'?cols.length*2+2:cols.length+2]:{fontStyle:'bold'},
     },
     didDrawCell(data){
       if(data.section !== 'body') return;
@@ -1705,31 +1710,37 @@ function _generarReportePDF({ titulo, tipo, filename }) {
         return;
       }
 
-      if(data.column.index >= 1 && data.column.index <= cols.length){
-        const raw = String(data.cell.raw||'');
-        if(!raw) return;
+      const dayColMax = tipo==='tenis' ? cols.length*2 : cols.length;
+      const asistColIdx = dayColMax + 1;
 
-        if(raw.includes('/')){
-          const [left, right] = raw.split('/');
-          const halfW = data.cell.width/2;
-          const colL = statusColors[left.toLowerCase()] || [200,200,200];
-          const colR = statusColors[right.toLowerCase()] || [200,200,200];
-          doc.setFillColor(...colL);
-          doc.rect(data.cell.x, data.cell.y, halfW, data.cell.height,'F');
-          doc.setTextColor(255,255,255);
-          doc.setFontSize(5.5); doc.setFont('helvetica','bold');
-          doc.text(left,
-            data.cell.x + halfW/2,
-            data.cell.y + data.cell.height/2 + 0.8,
-            {align:'center'});
-          doc.setFillColor(...colR);
-          doc.rect(data.cell.x+halfW, data.cell.y, halfW, data.cell.height,'F');
-          doc.setTextColor(255,255,255);
-          doc.text(right,
-            data.cell.x + halfW + halfW/2,
-            data.cell.y + data.cell.height/2 + 0.8,
-            {align:'center'});
+      if(data.column.index >= 1 && data.column.index <= dayColMax){
+        const raw = String(data.cell.raw||'');
+
+        if(tipo==='tenis'){
+          const dayIdx = Math.floor((data.column.index - 1) / 2);
+          const bgVal = dayIdx%2===1 ? 244 : 255;
+          doc.setFillColor(bgVal, bgVal, bgVal);
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height,'F');
+          if(raw){
+            const col = statusColors[raw.toLowerCase()];
+            if(col){
+              doc.setFillColor(...col);
+              doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height,'F');
+              doc.setTextColor(255,255,255); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+              doc.text(raw,
+                data.cell.x+data.cell.width/2,
+                data.cell.y+data.cell.height/2+0.8,
+                {align:'center'});
+            }
+          }
+          if(data.column.index % 2 === 0){
+            doc.setDrawColor(80,80,80);
+            doc.setLineWidth(0.5);
+            doc.line(data.cell.x+data.cell.width, data.cell.y,
+                     data.cell.x+data.cell.width, data.cell.y+data.cell.height);
+          }
         } else {
+          if(!raw) return;
           const col = statusColors[raw.toLowerCase()];
           if(col){
             doc.setFillColor(...col);
@@ -1743,7 +1754,7 @@ function _generarReportePDF({ titulo, tipo, filename }) {
         }
       }
 
-      if(data.column.index === cols.length+1){
+      if(data.column.index === asistColIdx){
         const pct=parseInt(data.cell.raw)||0;
         if(data.cell.raw !== '-'){
           const col=pct>=90?[39,174,96]:pct>=70?[243,156,18]:[231,76,60];
