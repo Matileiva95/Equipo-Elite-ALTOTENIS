@@ -4882,7 +4882,7 @@ async function ppGuardarEval() {
   const playerId   = sessionStorage.getItem('ciq_player_id');
   const token      = sessionStorage.getItem('ciq_token');
   const reflexion  = (document.getElementById('pp-reflexion')?.value || '').trim();
-  const payload    = { date: new Date().toISOString().slice(0,10), rpe: parseInt(_ppRpe), mood: parseInt(_ppMood), duration: 90, tipos: [], session_nota: parseInt(_ppNota), reflexion };
+  const payload    = { fecha: new Date().toISOString().slice(0,10), rpe: parseInt(_ppRpe), mood: parseInt(_ppMood), nota: parseInt(_ppNota), reflexion };
   try {
     const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-evaluation`, {
       method: 'POST', headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
