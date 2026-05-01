@@ -1659,7 +1659,7 @@ function _generarReportePDF({ titulo, tipo, filename }) {
 
   gruposConJugadores.forEach(g => {
     const headerRow = new Array(totalCols).fill('');
-    headerRow[0] = `── ${g.toUpperCase()} ──`;
+    headerRow[0] = '';
     body.push(headerRow);
     rowMeta.push({ isHeader:true, grupo:g });
     (grupoMap[g]||[]).forEach(p => {
