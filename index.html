@@ -810,14 +810,14 @@ async function loadUserPermissions() {
 
 function canEditGroup(groupId) {
   const p = window._userPermissions;
-  if (!p || p.role === 'admin') return true;
+  if (!p || p.role === 'admin' || p.role === 'super_admin') return true;
   if (p.role === 'viewer') return false;
   return p.canEdit.includes(groupId);
 }
 
 function canViewGroup(groupId) {
   const p = window._userPermissions;
-  if (!p || p.role === 'admin') return true;
+  if (!p || p.role === 'admin' || p.role === 'super_admin') return true;
   if (p.role === 'viewer') return p.canView.includes(groupId);
   return p.canEdit.includes(groupId) || p.canView.includes(groupId);
 }
@@ -2761,7 +2761,7 @@ function renderCoaching() {
     <div class="card" style="margin-bottom:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="font-size:14px;font-weight:600;color:var(--gray);">Equipo de entrenadores</div>
-        ${role === 'admin' ? `<button class="btn btn-o btn-sm" onclick="showInviteCoachModal()">+ Invitar coach</button>` : ''}
+        ${(role === 'admin' || role === 'super_admin') ? `<button class="btn btn-o btn-sm" onclick="showInviteCoachModal()">+ Invitar coach</button>` : ''}
       </div>
       ${renderCoachTeamList(_coachTeamCache)}
     </div>
@@ -2918,7 +2918,7 @@ function renderAvailGroup(label, people, wk, isAdmin, type, canEditStatus) {
 }
 function renderCoachAvailability() {
   const role = sessionStorage.getItem('ciq_role');
-  const isAdmin = role === 'admin';
+  const isAdmin = role === 'admin' || role === 'super_admin';
   const canEditStatus = isAdmin || role === 'coach';
   const monday = getWeekMonday(availWeekOffset);
   const wk = weekKey(monday);
@@ -5811,7 +5811,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
       if (!res.ok) { errEl.textContent = 'El link ha expirado o no es válido. Solicitá uno nuevo.'; return; }
       const profile = await res.json();
 
-      if (profile.role === 'coach' || profile.role === 'admin') {
+      if (profile.role === 'coach' || profile.role === 'admin' || profile.role === 'super_admin') {
         // Coach/admin magic link login
         sessionStorage.setItem('ciq_token', accessToken);
         if (refreshToken) sessionStorage.setItem('ciq_refresh', refreshToken);
