@@ -730,7 +730,7 @@ async function doLogin() {
         if (!res.ok) { errEl.textContent = d.error || 'Credenciales incorrectas'; btn.disabled = false; return; }
         const detectedRole = d.user?.user_metadata?.role || 'coach';
         // Bloqueo de seguridad: solo admin, coach y viewer pueden acceder al panel
-        if (!['admin', 'coach', 'viewer'].includes(detectedRole)) {
+        if (!['admin', 'coach', 'viewer', 'super_admin'].includes(detectedRole)) {
           errEl.textContent = 'Esta cuenta es de jugador. Usá el acceso de jugador.';
           btn.disabled = false;
           return;
