@@ -590,6 +590,28 @@ body{background:#faf7f2;color:#1a1a1a;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script>
 const BACKEND_URL = "https://courtiq-backend-hrdc.onrender.com";
+
+async function apiFetch(url, opts = {}) {
+  const token = sessionStorage.getItem('ciq_token');
+  const headers = { ...(opts.headers || {}), ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+  let res = await fetch(url, { ...opts, headers });
+  if (res.status !== 401) return res;
+  const refresh = sessionStorage.getItem('ciq_refresh');
+  if (!refresh) { clearSession(); return null; }
+  const rr = await fetch(BACKEND_URL + '/api/v1/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken: refresh })
+  });
+  if (!rr.ok) { clearSession(); return null; }
+  const rd = await rr.json();
+  sessionStorage.setItem('ciq_token', rd.session.access_token);
+  if (rd.session.refresh_token) sessionStorage.setItem('ciq_refresh', rd.session.refresh_token);
+  const headers2 = { ...(opts.headers || {}), 'Authorization': `Bearer ${rd.session.access_token}` };
+  res = await fetch(url, { ...opts, headers: headers2 });
+  return res;
+}
+
 const ACADEMY_ID_FALLBACK = "2d20c092-bfb8-41ca-8342-c2b5d34fde8c";
 let ACADEMY_ID = ACADEMY_ID_FALLBACK;
 async function resolveAcademyId() {
@@ -793,7 +815,7 @@ async function loadUserPermissions() {
   const token = sessionStorage.getItem('ciq_token');
   if (!token) { window._userPermissions = { role: 'admin', canEdit: [], canView: [] }; return; }
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/users/me/permissions`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/users/me/permissions`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('permissions fetch failed');
@@ -826,7 +848,7 @@ async function loadGroups() {
   const token = sessionStorage.getItem('ciq_token');
   if (!token) return;
   try {
-    const res = await fetch(BACKEND_URL+'/api/v1/academies/'+ACADEMY_ID+'/groups', {headers:{'Authorization':'Bearer '+token}});
+    const res = await apiFetch(BACKEND_URL+'/api/v1/academies/'+ACADEMY_ID+'/groups', {headers:{'Authorization':'Bearer '+token}});
     if (!res.ok) return;
     window._groups = await res.json();
     console.log('grupos cargados:', window._groups);
@@ -837,7 +859,7 @@ async function loadCoachTeam() {
   const token = sessionStorage.getItem('ciq_token');
   if (!token) return;
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) return;
@@ -883,7 +905,7 @@ async function submitInviteCoach() {
   btn.disabled = true; btn.textContent = 'Enviando...';
   try {
     const token = sessionStorage.getItem('ciq_token');
-    const res = await fetch(`${BACKEND_URL}/api/v1/coaches/invite`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/coaches/invite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ fullName: name, email, academyId: ACADEMY_ID })
@@ -902,7 +924,7 @@ async function resendCoachInvite(coachId, name) {
   if (!confirm(`¿Reenviar invitación a ${name}?`)) return;
   const token = sessionStorage.getItem('ciq_token');
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches/${coachId}/resend-invite`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches/${coachId}/resend-invite`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -927,7 +949,7 @@ async function loadData(){
   data = {players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)), reflections: [], scouting: []};
   try{
     const token = sessionStorage.getItem('ciq_token');
-    const res = await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`, {
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d = await res.json();
@@ -948,7 +970,7 @@ async function refreshData(){
   if(saveTimer) return;
   try{
     const token = sessionStorage.getItem('ciq_token');
-    const res = await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`, {
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d=await res.json();
@@ -961,7 +983,7 @@ async function saveData(){
   setSS('syncing','Guardando...');
   try{
     const token = sessionStorage.getItem('ciq_token');
-    const res = await fetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
       body: JSON.stringify(data)
@@ -2696,7 +2718,7 @@ async function enviarMagicLink(i) {
   if (!p || !p.email) { alert('Este jugador no tiene email registrado. Agregá el email en Editar.'); return; }
   const token = sessionStorage.getItem('ciq_token');
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/players/${p.id}/send-magic-link`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${p.id}/send-magic-link`, {
       method: 'POST', headers: {'Authorization': `Bearer ${token}`}
     });
     const d = await res.json();
@@ -4252,9 +4274,9 @@ async function loadPlayerPortal(playerId) {
   const h = {'Authorization': `Bearer ${token}`};
   try {
     const [playerRes, objRes, anlRes] = await Promise.all([
-      fetch(`${BACKEND_URL}/api/v1/players/${playerId}/my-data`, {headers: h}),
-      fetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {headers: h}),
-      fetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {headers: h}),
+      apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/my-data`, {headers: h}),
+      apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {headers: h}),
+      apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {headers: h}),
     ]);
     const [playerData, objData, anlData] = await Promise.all([playerRes.json(), objRes.json(), anlRes.json()]);
     portalPlayer = playerData.player || null;
@@ -4383,7 +4405,7 @@ async function ppGuardarObjetivos() {
   if (!portalPlayer.playerObjectives) portalPlayer.playerObjectives = {};
   portalPlayer.playerObjectives = { corto, mediano, largo };
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/player-objectives`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/player-objectives`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ corto, mediano, largo })
@@ -4516,7 +4538,7 @@ async function ppGuardarScoutingNotas(nombreRival, idx) {
   portalPlayer.scoutingNotas[nombreRival] = { misNotas, plan };
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/scouting-notas`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/scouting-notas`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ rival: nombreRival, misNotas, plan })
@@ -4884,7 +4906,7 @@ async function ppGuardarEval() {
   const reflexion  = (document.getElementById('pp-reflexion')?.value || '').trim();
   const payload    = { fecha: new Date().toISOString().slice(0,10), rpe: parseInt(_ppRpe), mood: parseInt(_ppMood), nota: parseInt(_ppNota), reflexion };
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-evaluation`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-evaluation`, {
       method: 'POST', headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
@@ -5086,7 +5108,7 @@ async function submitPortalSession() {
   try {
     if (_ppEditIdx !== null) {
       // Editar sesión existente
-      const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
+      const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
         method: 'PUT',
         headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
         body: JSON.stringify({ index: _ppEditIdx, entry })
@@ -5095,7 +5117,7 @@ async function submitPortalSession() {
       portalPlayer.trainingLoad[_ppEditIdx] = entry;
     } else {
       // Nueva sesión
-      const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
+      const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-load`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
         body: JSON.stringify(entry)
@@ -5178,7 +5200,7 @@ async function addPortalObjective() {
   const playerId = sessionStorage.getItem('ciq_player_id');
   const token = sessionStorage.getItem('ciq_token');
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {
       method: 'POST',
       headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
       body: JSON.stringify({tipo, texto})
@@ -5194,7 +5216,7 @@ async function deletePortalObjective(id) {
   const playerId = sessionStorage.getItem('ciq_player_id');
   const token = sessionStorage.getItem('ciq_token');
   try {
-    await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives/${id}`, {
+    await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives/${id}`, {
       method: 'DELETE', headers: {'Authorization': `Bearer ${token}`}
     });
     portalObjectives = portalObjectives.filter(o => o.id !== id);
@@ -5265,7 +5287,7 @@ async function addPortalAnalysis() {
     analisis_texto: texto,
   };
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {
       method: 'POST',
       headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
       body: JSON.stringify(body)
@@ -5281,7 +5303,7 @@ async function deletePortalAnalysis(id) {
   const playerId = sessionStorage.getItem('ciq_player_id');
   const token = sessionStorage.getItem('ciq_token');
   try {
-    await fetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis/${id}`, {
+    await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis/${id}`, {
       method: 'DELETE', headers: {'Authorization': `Bearer ${token}`}
     });
     portalAnalyses = portalAnalyses.filter(a => a.id !== id);
@@ -5363,8 +5385,8 @@ async function loadCoachPortalData(playerId) {
   const h = {'Authorization': `Bearer ${token}`};
   try {
     const [objRes, anlRes] = await Promise.all([
-      fetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {headers: h}),
-      fetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {headers: h}),
+      apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {headers: h}),
+      apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {headers: h}),
     ]);
     const [objData, anlData] = await Promise.all([objRes.json(), anlRes.json()]);
     _coachPortalCache[playerId] = {
@@ -5805,7 +5827,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
     errEl.textContent = 'Verificando acceso...';
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/v1/auth/me`, {
+      const res = await apiFetch(`${BACKEND_URL}/api/v1/auth/me`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
       if (!res.ok) { errEl.textContent = 'El link ha expirado o no es válido. Solicitá uno nuevo.'; return; }
@@ -5835,7 +5857,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
       // Use the player_id/academy_id embedded in the magic-link URL to link the profile.
       if (!finalPlayerId && urlPlayerId && urlAcademyId) {
         errEl.textContent = 'Configurando tu acceso...';
-        const linkRes = await fetch(`${BACKEND_URL}/api/v1/players/${urlPlayerId}/link-profile`, {
+        const linkRes = await apiFetch(`${BACKEND_URL}/api/v1/players/${urlPlayerId}/link-profile`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
           body: JSON.stringify({ academyId: urlAcademyId })
@@ -5872,7 +5894,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
   if (!token || !role) return; // no stored session → stay on login screen
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/auth/me`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/auth/me`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) { clearSession(); return; } // token expired/invalid → show login
@@ -6573,7 +6595,7 @@ async function saveNewPassword() {
   btn.textContent = 'Guardando...';
   try {
     const token = sessionStorage.getItem('ciq_token');
-    const res = await fetch(`${BACKEND_URL}/api/v1/auth/set-password`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/auth/set-password`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
       body: JSON.stringify({password: p1})
@@ -6633,7 +6655,7 @@ async function saveChangePassword(){
   if(newPass!==confirm){errEl.textContent='Las contraseñas nuevas no coinciden.';return;}
   if(newPass.length<6){errEl.textContent='La nueva contraseña debe tener al menos 6 caracteres.';return;}
   try{
-    const res=await fetch(`${BACKEND_URL}/api/v1/auth/set-password`,{
+    const res=await apiFetch(`${BACKEND_URL}/api/v1/auth/set-password`,{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionStorage.getItem('ciq_token')},
       body:JSON.stringify({password:newPass})
