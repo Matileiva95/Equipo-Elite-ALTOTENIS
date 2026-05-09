@@ -465,15 +465,24 @@ body{background:#faf7f2;color:#1a1a1a;}
   <nav class="mobile-nav">
     <div class="mobile-nav-inner">
       <button class="mnav-btn" id="mnav-dashboard" onclick="navTo('dashboard')"><span class="mnav-icon">◈</span>Dashboard</button>
-      <button class="mnav-btn" id="mnav-coaching" onclick="navTo('coaching')"><span class="mnav-icon">★</span>Coaching</button>
       <button class="mnav-btn" id="mnav-players" onclick="toggleDrawer()"><span class="mnav-icon">👥</span>Jugadores</button>
-      <button class="mnav-btn" id="mnav-scouting" onclick="navTo('scouting')"><span class="mnav-icon">◎</span>Scouting</button>
       <button class="mnav-btn" id="mnav-asistencia" onclick="navTo('asistencia')"><span class="mnav-icon">✓</span>Asist.</button>
-      <button class="mnav-btn" id="mnav-grupal" onclick="navTo('grupal')"><span class="mnav-icon">⊞</span>Grupal</button>
       <button class="mnav-btn" id="mnav-gira" onclick="navTo('gira')"><span class="mnav-icon">✈</span>Gira</button>
-      <button class="mnav-btn" id="mnav-mas" onclick="openMasMenu()"><span class="mnav-icon">⚙️</span>Más</button>
+      <button class="mnav-btn" id="mnav-mas2" onclick="openMasMenu2()"><span class="mnav-icon">☰</span>Más</button>
     </div>
   </nav>
+
+  <div id="mas2-overlay" onclick="closeMasMenu2()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150"></div>
+  <div id="mas2-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;padding:16px 16px 32px;z-index:151;box-shadow:0 -4px 24px rgba(0,0,0,.15)">
+    <div style="width:40px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px"></div>
+    <div style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Mas opciones</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button onclick="closeMasMenu2();navTo('coaching')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">★</span>Coaching</button>
+      <button onclick="closeMasMenu2();navTo('scouting')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">◎</span>Scouting</button>
+      <button onclick="closeMasMenu2();navTo('grupal')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">⊞</span>Grupal</button>
+      <button onclick="closeMasMenu2();openMasMenu()" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">⚙️</span>Ajustes</button>
+    </div>
+  </div>
 
   <div id="mas-overlay" onclick="closeMasMenu()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:150;"></div>
   <div id="mas-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--white);border-radius:16px 16px 0 0;padding:16px;z-index:151;border-top:1px solid var(--border);">
@@ -1030,7 +1039,7 @@ function renderDrawerList(){
   dl.innerHTML=filtered.map(({p,i})=>`<div class="drawer-item${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};width:36px;height:36px;font-size:12px;">${ini(p.name)}</div><div><div class="drawer-name">${p.name}</div><div class="drawer-rank">${p.ranking}</div></div></div>`).join('');
 }
 function updateMobileNav(){
-  ['dashboard','coaching','scouting','asistencia','grupal','gira'].forEach(p=>{const b=document.getElementById('mnav-'+p);if(b)b.classList.toggle('active',page===p);});
+  ['dashboard','scouting','asistencia','grupal','gira','mas2'].forEach(p=>{const b=document.getElementById('mnav-'+p);if(b)b.classList.toggle('active',page===p);});
   const pb=document.getElementById('mnav-players');if(pb)pb.classList.toggle('active',page==='player');
 }
 function toggleDrawer(){const dr=document.getElementById('player-drawer'),ov=document.getElementById('drawer-overlay');dr.classList.toggle('open');ov.classList.toggle('open');}
@@ -6626,6 +6635,8 @@ function skipSetPassword() {
   document.getElementById('set-password-modal').style.display = 'none';
 }
 
+function openMasMenu2(){document.getElementById('mas2-panel').style.display='block';document.getElementById('mas2-overlay').style.display='block';}
+function closeMasMenu2(){document.getElementById('mas2-panel').style.display='none';document.getElementById('mas2-overlay').style.display='none';}
 function openMasMenu(){
   document.getElementById('mas-overlay').style.display='block';
   const p=document.getElementById('mas-panel');

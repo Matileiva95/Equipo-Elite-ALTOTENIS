@@ -1,0 +1,11 @@
+<div id="mas2-overlay" onclick="closeMasMenu2()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150"></div>
+<div id="mas2-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;padding:16px 16px 32px;z-index:151;box-shadow:0 -4px 24px rgba(0,0,0,.15)">
+  <div style="width:40px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px"></div>
+  <div style="font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Mas opciones</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button onclick="closeMasMenu2();navTo('coaching')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">★</span>Coaching</button>
+    <button onclick="closeMasMenu2();navTo('scouting')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">◎</span>Scouting</button>
+    <button onclick="closeMasMenu2();navTo('grupal')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">⊞</span>Grupal</button>
+    <button onclick="closeMasMenu2();openMasMenu()" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">⚙️</span>Ajustes</button>
+  </div>
+</div>
