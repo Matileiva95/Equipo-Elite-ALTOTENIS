@@ -113,12 +113,12 @@ async function renderGira() {
 
 async function giraLoadData() {
   try {
-    const url = giraActiveGroup === 'all' ? '/api/v1/gira' : `/api/v1/gira?group_id=${giraActiveGroup}`;
+    const url = giraActiveGroup === 'all' ? `${BACKEND_URL}/api/v1/gira` : `${BACKEND_URL}/api/v1/gira?group_id=${giraActiveGroup}`;
     const res = await apiFetch(url);
     giraEvents = res.data || [];
     const [pRes, cRes] = await Promise.all([
-      apiFetch('/api/v1/players?limit=200'),
-      apiFetch('/api/v1/coaches')
+      apiFetch(`${BACKEND_URL}/api/v1/players?limit=200`),
+      apiFetch(`${BACKEND_URL}/api/v1/coaches`)
     ]);
     giraPlayers = pRes.data || [];
     giraCoaches = cRes.data || [];
@@ -296,9 +296,9 @@ async function giraSaveEvent() {
   const editId = document.getElementById('gira-edit-id').value;
   try {
     if (editId) {
-      await apiFetch(`/api/v1/gira/${editId}`, { method: 'PUT', body: JSON.stringify(body) });
+      await apiFetch(`${BACKEND_URL}/api/v1/gira/${editId}`, { method: 'PUT', body: JSON.stringify(body) });
     } else {
-      await apiFetch('/api/v1/gira', { method: 'POST', body: JSON.stringify(body) });
+      await apiFetch(`${BACKEND_URL}/api/v1/gira`, { method: 'POST', body: JSON.stringify(body) });
     }
     giraCloseModal();
     await giraLoadData();
@@ -308,7 +308,7 @@ async function giraSaveEvent() {
 async function giraDeleteEvent(id) {
   if (!confirm('¿Eliminar este evento?')) return;
   try {
-    await apiFetch(`/api/v1/gira/${id}`, { method: 'DELETE' });
+    await apiFetch(`${BACKEND_URL}/api/v1/gira/${id}`, { method: 'DELETE' });
     await giraLoadData();
   } catch(e) { alert('Error al eliminar'); }
 }
