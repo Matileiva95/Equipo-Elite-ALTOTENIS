@@ -6787,7 +6787,21 @@ async function renderGira() {
         <button onclick="giraSaveEvent()" style="width:100%;background:#FF6B00;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">Guardar evento</button>
       </div>
     </div>`;
+  await giraLoadStaticData();
   await giraLoadData();
+}
+
+async function giraLoadStaticData() {
+  try {
+    const [pRes, cRes] = await Promise.all([
+      apiFetch('/api/v1/players?limit=200'),
+      apiFetch('/api/v1/coaches')
+    ]);
+    giraPlayers = pRes.data || [];
+    giraCoaches = cRes.data || [];
+  } catch(e) {
+    console.error('Error cargando players/coaches:', e);
+  }
 }
 
 async function giraLoadData() {
@@ -6795,12 +6809,6 @@ async function giraLoadData() {
     const url = giraActiveGroup === 'all' ? '/api/v1/gira' : `/api/v1/gira?group_id=${giraActiveGroup}`;
     const res = await apiFetch(url);
     giraEvents = res.data || [];
-    const [pRes, cRes] = await Promise.all([
-      apiFetch('/api/v1/players?limit=200'),
-      apiFetch('/api/v1/coaches')
-    ]);
-    giraPlayers = pRes.data || [];
-    giraCoaches = cRes.data || [];
     giraRenderMetrics();
     giraRenderCalendar();
   } catch(e) {
