@@ -1052,194 +1052,248 @@ function postRender(){document.querySelectorAll('canvas.court-ro').forEach(c=>{t
 function renderDashboard(){
   const today=new Date();today.setHours(0,0,0,0);
   const todayKey=today.toISOString().slice(0,10);
-  const wKey=weekKey(today);
-  const wLabel_str=weekLabel(wKey);
-  const players = activeGroup ? data.players.filter(p => p.group_id === activeGroup) : data.players;
+  const allPlayers=data.players;
+  const groups=window._groups||[];
+  const now=new Date();
 
-  // ── Alertas automáticas ──
-  const alerts = buildAlerts(today, wKey, players);
-
-  // ── Vista semanal: 7 días desde hoy ──
-  const weekDays = [];
-  for(let i=0;i<7;i++){
-    const d=new Date(today);d.setDate(today.getDate()+i);
-    weekDays.push(d);
+  // Auto-cargar datos de gira en background si están vacíos
+  if(!giraEvents.length&&!gira_loading){
+    gira_loading=true;
+    giraLoadStaticData().then(()=>giraLoadData()).then(()=>{gira_loading=false;if(page==='dashboard')renderMain();}).catch(()=>{gira_loading=false;});
   }
 
-  // ── Stats rápidas ──
-  const conPlan=players.filter(p=>p.weekPlans&&p.weekPlans.find(pl=>pl.week===wKey)).length;
-  let trainHoy=0,compHoy=0;
-  players.forEach(p=>{const ev=p.events&&p.events[todayKey];if(ev){if(ev.type==='training')trainHoy++;else if(ev.type==='competition')compHoy++;}});
+  const GROUP_COLOR={
+    'af18ac1d-9ea2-441f-b83b-023afd315bfc':'#1A1A2E',
+    'fdb992b2-e71b-4ced-bfc0-c3d67f685a84':'#1A6FD4',
+    'e15be2e1-a5e3-4318-b55a-a24d293a799d':'#06B6D4',
+    '15755c31-2f3c-4b8a-8c3e-9d5c47d858de':'#6366F1',
+    'e281eeee-9ebb-4de1-a48a-90b6c07ceb27':'#FF8A1F',
+    '083dc0d5-3161-4e6e-82d9-819e8d04b8e4':'#22C55E',
+  };
+
+  function parseGW(wStr){
+    const MES={Ene:0,Feb:1,Mar:2,Abr:3,May:4,Jun:5,Jul:6,Ago:7,Sep:8,Oct:9,Nov:10,Dic:11};
+    const parts=(wStr||'').split('–');
+    if(parts.length<2)return null;
+    const parse=str=>{const[d,m]=str.trim().split(' ');return new Date(today.getFullYear(),MES[m],parseInt(d));};
+    const r={start:parse(parts[0]),end:parse(parts[1])};
+    if(r.end<r.start)r.end.setFullYear(r.end.getFullYear()+1);
+    return r;
+  }
+
+  // ── 2. ALERTAS ──
+  const alertsRed=[],alertsAmber=[];
+
+  // ROJO: torneo terminado hace 2–10 días sin partido registrado
+  allPlayers.forEach((p,i)=>{
+    const matches=p.matches||[];
+    Object.entries(p.events||{}).forEach(([key,ev])=>{
+      if(ev.type!=='competition')return;
+      const diffDays=(today-new Date(key+'T12:00:00'))/864e5;
+      if(diffDays>=2&&diffDays<=10&&!matches.some(m=>m.fecha>=key))
+        alertsRed.push({name:p.name,pid:i,msg:`Torneo sin registrar — ${ev.desc||key}`});
+    });
+  });
+
+  // AMBER: RPE promedio ≥ 4/5 últimos 5 días
+  const d5k=new Date(today);d5k.setDate(today.getDate()-5);
+  const d5key=d5k.toISOString().slice(0,10);
+  allPlayers.forEach((p,i)=>{
+    const loads=(p.trainingLoad||[]).filter(l=>l.date>=d5key);
+    if(loads.length>=3){
+      const avg=loads.reduce((a,b)=>a+b.rpe,0)/loads.length;
+      if(avg>=4.5)alertsAmber.push({name:p.name,pid:i,msg:`Carga alta — RPE ${avg.toFixed(1)}/5`});
+    }
+  });
+
+  // AMBER: ausencias sin justificar hoy
+  allPlayers.forEach((p,i)=>{
+    const dd=(p.asistencia||{})[todayKey]||{};
+    if(['t1','t2'].some(t=>dd[t]==='s'))alertsAmber.push({name:p.name,pid:i,msg:'Ausencia sin justificar hoy'});
+  });
+
+  // AMBER: hora > 19:00 y hay grupos sin asistencia registrada
+  if(now.getHours()>=19){
+    groups.forEach(g=>{
+      const sinReg=allPlayers.filter(p=>p.group_id===g.id&&(()=>{const dd=(p.asistencia||{})[todayKey]||{};return!dd.t1&&!dd.t2;})());
+      if(sinReg.length)alertsAmber.push({name:`Grupo ${g.name}`,pid:null,msg:'Asistencia no registrada hoy'});
+    });
+  }
+
+  const noAlerts=!alertsRed.length&&!alertsAmber.length;
+
+  // ── 3. PRÓXIMOS TORNEOS ──
+  const in28=new Date(today);in28.setDate(today.getDate()+28);
+  const upcoming=(giraEvents||[]).filter(ev=>{
+    const w=parseGW(ev.week);return w&&w.end>=today&&w.start<=in28;
+  }).sort((a,b)=>{const wa=parseGW(a.week),wb=parseGW(b.week);return wa.start-wb.start;});
+
+  // ── 4. CARGA SEMANAL POR GRUPO ──
+  const d7k=new Date(today);d7k.setDate(today.getDate()-7);
+  const d7key=d7k.toISOString().slice(0,10);
+  const grpRpe={};
+  allPlayers.forEach(p=>{
+    if(!p.group_id)return;
+    const loads=(p.trainingLoad||[]).filter(l=>l.date>=d7key);
+    if(!loads.length)return;
+    const avg=loads.reduce((a,b)=>a+b.rpe,0)/loads.length;
+    if(!grpRpe[p.group_id])grpRpe[p.group_id]={sum:0,n:0};
+    grpRpe[p.group_id].sum+=avg;grpRpe[p.group_id].n++;
+  });
+
+  // ── 5. ENTRENADORES ──
+  const wStart=new Date(today);wStart.setDate(today.getDate()-today.getDay());
+  const wEnd=new Date(wStart);wEnd.setDate(wStart.getDate()+6);
+  const coachesInGira=[];
+  (giraEvents||[]).forEach(ev=>{
+    const w=parseGW(ev.week);
+    if(!w||w.end<wStart||w.start>wEnd)return;
+    (ev.coach_ids||[]).forEach(cid=>{
+      if(coachesInGira.find(x=>x.id===cid))return;
+      const c=(giraCoaches||[]).find(x=>x.id===cid);
+      coachesInGira.push({id:cid,name:c?.profiles?.full_name||'Coach',dest:`${ev.city}, ${ev.country}`});
+    });
+  });
+  const totalCoaches=(giraCoaches||[]).length;
+  const coachesInAcad=Math.max(0,totalCoaches-coachesInGira.length);
+
+  // ── 6. RENDIMIENTO ──
+  const ELITE_ID='af18ac1d-9ea2-441f-b83b-023afd315bfc';
+  const rendPlayers=(activeGroup?allPlayers.filter(p=>p.group_id===activeGroup):allPlayers.filter(p=>p.group_id===ELITE_ID))
+    .filter(p=>(p.matches||[]).length>0||(getPlayerMatches(p.name)||[]).length>0);
 
   return `
-    <div class="page-header">
-      <div><div class="page-title">Dashboard${activeGroup?` <span style="font-size:13px;font-weight:600;background:#fff3e8;color:var(--orange);border:1px solid var(--orange);border-radius:20px;padding:2px 10px;vertical-align:middle;">Viendo: ${(window._groups||[]).find(g=>g.id===activeGroup)?.name||activeGroup.slice(0,4)}</span>`:''}</div><div class="page-sub">${wLabel_str} · Hola, ${user} </div></div>
-      <button class="btn btn-g btn-sm" onclick="refreshData().then(()=>renderMain())">↺ Actualizar</button>
+  <!-- 1. SALUDO -->
+  <div style="display:flex;align-items:center;gap:14px;padding:20px 4px 18px;">
+    <div style="width:48px;height:48px;border-radius:50%;background:#FF6B00;color:#fff;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini(user||'U')}</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:20px;font-weight:700;color:#1a1a1a;">Hola, ${(user||'Coach').split(' ')[0]}</div>
+      <div style="font-size:12px;color:#999;margin-top:2px;">${today.getDate()} de ${MONTHS[today.getMonth()]} ${today.getFullYear()} · ${groups.length} grupos activos</div>
     </div>
+    <button class="btn btn-g btn-sm" onclick="refreshData().then(()=>renderMain())">↺</button>
+  </div>
 
-    ${(()=>{
-      const redA=alerts.filter(a=>a.level==='red');
-      const blueA=alerts.filter(a=>a.level==='blue');
-      if(!redA.length&&!blueA.length) return '';
-      const mkGroup=(title,items,accentColor,showMsg)=>`
-        <div style="background:#ffffff;border:1px solid #ece8e1;border-left:3px solid ${accentColor};border-radius:10px;overflow:hidden;">
-          <div style="padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f5f2ee;">
-            <span style="font-size:13px;font-weight:600;color:#1a1a1a;flex:1;">${title}</span>
-            <span style="background:${accentColor};color:#fff;border-radius:20px;padding:1px 9px;font-size:11px;font-weight:700;">${items.length}</span>
-          </div>
-          ${items.map(a=>`
-            <div onclick="navTo('player',${a.pid})" style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #f9f7f5;cursor:pointer;transition:background .13s;" onmouseover="this.style.background='#faf7f2'" onmouseout="this.style.background=''">
-              <div style="width:8px;height:8px;border-radius:50%;background:${accentColor};flex-shrink:0;"></div>
-              <div style="flex:1;min-width:0;">
-                <span style="font-size:13px;color:#1a1a1a;">${a.fullName}</span>
-                ${showMsg?`<div style="font-size:11px;color:#888;margin-top:1px;">${a.msg}</div>`:''}
+  <!-- 2. ALERTAS -->
+  <div style="margin-bottom:20px;">
+    ${noAlerts
+      ?`<div style="background:#eafaf1;border:1px solid #82e0aa;border-radius:10px;padding:12px 16px;font-size:13px;color:#1e8449;font-weight:600;">✓ Todo al día — sin alertas pendientes</div>`
+      :`<div style="background:#FCEBEB;border:1px solid #F09595;border-radius:10px;overflow:hidden;">
+        <div style="padding:10px 16px;font-size:11px;font-weight:700;color:#c0392b;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f5b7b1;">Alertas del equipo</div>
+        ${alertsRed.map(a=>`
+          <div onclick="${a.pid!=null?`navTo('player',${a.pid})`:''}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #fdecea;${a.pid!=null?'cursor:pointer;':''}">
+            <div style="width:8px;height:8px;border-radius:50%;background:#e74c3c;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1a1a1a;">${a.name}</div><div style="font-size:11px;color:#999;">${a.msg}</div></div>
+            ${a.pid!=null?`<span style="color:#ccc;font-size:12px;flex-shrink:0;">→</span>`:''}
+          </div>`).join('')}
+        ${alertsAmber.map(a=>`
+          <div onclick="${a.pid!=null?`navTo('player',${a.pid})`:''}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #fef9e7;${a.pid!=null?'cursor:pointer;':''}">
+            <div style="width:8px;height:8px;border-radius:50%;background:#f39c12;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1a1a1a;">${a.name||'Asistencia'}</div><div style="font-size:11px;color:#999;">${a.msg}</div></div>
+            ${a.pid!=null?`<span style="color:#ccc;font-size:12px;flex-shrink:0;">→</span>`:''}
+          </div>`).join('')}
+      </div>`}
+  </div>
+
+  <!-- 3. PRÓXIMOS TORNEOS -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Próximos torneos / giras</div>
+    ${!upcoming.length
+      ?`<div style="background:#f9f9f7;border:1px solid #eee;border-radius:10px;padding:12px 16px;font-size:13px;color:#aaa;">Sin eventos en las próximas 4 semanas${!giraEvents.length?' — cargando datos…':''}</div>`
+      :upcoming.map(ev=>{
+          const pNames=(ev.player_ids||[]).slice(0,3).map(id=>{const gp=(giraPlayers||[]).find(x=>x.id===id);return gp?.full_name?.split(' ')[0]||null;}).filter(Boolean);
+          const cNames=(ev.coach_ids||[]).map(id=>{const c=(giraCoaches||[]).find(x=>x.id===id);return c?.profiles?.full_name?.split(' ')[0]||null;}).filter(Boolean);
+          return `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+              <div>
+                <div style="font-size:14px;font-weight:700;color:#1a1a1a;">${ev.city} <span style="font-weight:400;color:#888;">· ${ev.country}</span></div>
+                <div style="font-size:11px;color:#bbb;margin-top:2px;">${ev.week}</div>
               </div>
-              <span style="font-size:11px;color:#ccc;flex-shrink:0;">→</span>
+              <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">${giraLevelBadge(ev.level)}<span style="background:#eee;color:#555;font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600;">${ev.surface||''}</span></div>
             </div>
-          `).join('')}
-        </div>`;
-      return `<div style="margin-bottom:20px;">
-        <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Alertas del equipo</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;">
-          ${redA.length?mkGroup('Sin plan esta semana',redA,'#e74c3c',false):''}
-          ${blueA.length?mkGroup('En torneo esta semana',blueA,'#1DA1D6',true):''}
-        </div>
-      </div>`;
-    })()}
+            ${pNames.length?`<div style="font-size:11px;color:#555;margin-top:4px;">👤 ${pNames.join(', ')}${(ev.player_ids||[]).length>3?' +'+((ev.player_ids||[]).length-3):''}</div>`:''}
+            ${cNames.length?`<div style="font-size:11px;color:#555;margin-top:2px;">🎾 ${cNames.join(', ')}</div>`:''}
+          </div>`;
+        }).join('')}
+  </div>
 
-    <div style="margin-bottom:20px;">
-      <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Vista semanal del equipo</div>
-      <div style="background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
-        <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;min-width:600px;">
-            <thead>
-              <tr style="border-bottom:1px solid var(--border);background:var(--g5);">
-                <th style="text-align:left;padding:10px 14px;font-size:12px;font-weight:600;color:var(--g3);min-width:130px;">Jugador</th>
-                ${weekDays.map(d=>{
-                  const isToday=d.getTime()===today.getTime();
-                  const dayName=DAYS[d.getDay()];
-                  const dayNum=d.getDate();
-                  const mon=MONTHS[d.getMonth()];
-                  return `<th style="text-align:center;padding:8px 6px;font-size:11px;font-weight:600;color:${isToday?'var(--orange)':'var(--g3)'};min-width:70px;${isToday?'background:var(--ol);':''}">
-                    <div>${dayName}</div>
-                    <div style="font-size:13px;font-weight:700;color:${isToday?'var(--od)':'var(--gray)'};">${dayNum}</div>
-                    <div style="font-size:10px;color:var(--g4);">${mon}</div>
-                  </th>`;
-                }).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${players.map((p,i)=>{
-                return `<tr style="border-bottom:1px solid var(--border);" onclick="navTo('player',${i})" style="cursor:pointer;">
-                  <td style="padding:8px 14px;cursor:pointer;" onclick="navTo('player',${i})">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                      <div class="pav" style="background:${COLORS[i%COLORS.length]};width:24px;height:24px;font-size:9px;">${ini(p.name)}</div>
-                      <div>
-                        <div style="font-size:12px;font-weight:500;color:var(--gray);">${p.name.split(' ')[0]}</div>
-                        <div style="font-size:10px;color:var(--g3);">${p.ranking}</div>
-                      </div>
-                    </div>
-                  </td>
-                  ${weekDays.map(d=>{
-                    const key=d.toISOString().slice(0,10);
-                    const ev=p.events&&p.events[key];
-                    const isToday=d.getTime()===today.getTime();
-                    let cellBg=isToday?'#fffaf6':'';
-                    let cellContent='';
-                    if(ev){
-                      if(ev.type==='training'){
-                        cellBg='#fff5ee';
-                        cellContent=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-                          <div style="width:8px;height:8px;border-radius:50%;background:var(--orange);"></div>
-                          <span style="font-size:9px;font-weight:600;color:var(--od);">Entr.</span>
-                          ${ev.desc?`<span style="font-size:8px;color:var(--od);text-align:center;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ev.desc}</span>`:''}
-                        </div>`;
-                      } else if(ev.type==='competition'){
-                        cellBg='#eef7fc';
-                        cellContent=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-                          <div style="width:8px;height:8px;border-radius:50%;background:var(--blue);"></div>
-                          <span style="font-size:9px;font-weight:600;color:var(--bd);">Comp.</span>
-                          ${ev.desc?`<span style="font-size:8px;color:var(--bd);text-align:center;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ev.desc}</span>`:''}
-                        </div>`;
-                      } else if(ev.type==='rest'){
-                        cellBg='#f9f4fe';
-                        cellContent=`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-                          <div style="width:8px;height:8px;border-radius:50%;background:var(--rest);"></div>
-                          <span style="font-size:9px;font-weight:600;color:var(--restd);">Desc.</span>
-                        </div>`;
-                      }
-                    }
-                    return `<td style="padding:6px 4px;text-align:center;background:${cellBg};${isToday?'border-left:2px solid var(--orange);border-right:2px solid var(--orange);':''}">
-                      ${cellContent||'<span style="color:var(--g4);font-size:11px;">—</span>'}
-                    </td>`;
-                  }).join('')}
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-        <div style="padding:8px 14px;background:var(--g5);border-top:1px solid var(--border);display:flex;gap:14px;flex-wrap:wrap;">
-          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--g2);"><div style="width:8px;height:8px;border-radius:50%;background:var(--orange);"></div>Entrenamiento</div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--g2);"><div style="width:8px;height:8px;border-radius:50%;background:var(--blue);"></div>Competencia</div>
-          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--g2);"><div style="width:8px;height:8px;border-radius:50%;background:var(--rest);"></div>Descanso</div>
-        </div>
-      </div>
+  <!-- 4. CARGA SEMANAL POR GRUPO -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Carga semanal por grupo <span style="font-weight:400;text-transform:none;letter-spacing:0;">(RPE últimos 7 días)</span></div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px;">
+      ${!groups.length?`<div style="font-size:13px;color:#aaa;">Sin grupos</div>`:
+        groups.map(g=>{
+          const rd=grpRpe[g.id];
+          const avg=rd?rd.sum/rd.n:null;
+          const pct=avg!=null?((avg-1)/4)*100:0;
+          const col=GROUP_COLOR[g.id]||'#999';
+          return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;"></div>
+            <div style="font-size:13px;font-weight:600;color:#333;min-width:56px;">${g.name}</div>
+            <div style="flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden;">
+              ${avg!=null?`<div style="width:${pct.toFixed(0)}%;height:100%;background:${col};border-radius:4px;"></div>`:`<div style="width:100%;height:100%;background:repeating-linear-gradient(90deg,#eee,#eee 4px,#f8f8f8 4px,#f8f8f8 8px);"></div>`}
+            </div>
+            <div style="font-size:12px;font-weight:700;color:${col};min-width:36px;text-align:right;">${avg!=null?avg.toFixed(1)+'/5':'—'}</div>
+          </div>`;
+        }).join('')}
     </div>
+  </div>
 
-    <div class="g2">
-      <div class="card">
-        <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Planes de la semana</div>
-        ${players.map((p,i)=>{
-          const plan=p.weekPlans&&p.weekPlans.find(pl=>pl.week===wKey);
-          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="navTo('player',${i})">
-            <div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div>
-            <div style="flex:1;">
-              <div style="font-size:13px;font-weight:500;">${p.name}</div>
-              ${plan?`<div style="font-size:11px;color:var(--g3);">${(plan.focos||[]).join(' · ')||'Sin focos'}</div>`:'<div style="font-size:11px;color:#e74c3c;">Sin plan cargado</div>'}
-            </div>
-            ${plan
-              ?`<span style="font-size:11px;color:#27ae60;font-weight:600;">✓ Plan</span>`
-              :`<span style="font-size:11px;color:#e74c3c;font-weight:600;">!</span>`}
-          </div>`;
-        }).join('')}
-      </div>
-      <div class="card">
-        <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Resumen del equipo</div>
-        <div class="g3" style="margin-bottom:14px;">
-          <div style="text-align:center;padding:10px;background:var(--g5);border-radius:var(--rsm);">
-            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;">${players.length}</div>
-            <div style="font-size:11px;color:var(--g3);">Jugadores</div>
-          </div>
-          <div style="text-align:center;padding:10px;background:var(--g5);border-radius:var(--rsm);">
-            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:#27ae60;">${conPlan}</div>
-            <div style="font-size:11px;color:var(--g3);">Con plan</div>
-          </div>
-          <div style="text-align:center;padding:10px;background:var(--g5);border-radius:var(--rsm);">
-            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--blue);">${trainHoy+compHoy}</div>
-            <div style="font-size:11px;color:var(--g3);">Eventos hoy</div>
-          </div>
+  <!-- 5. ENTRENADORES ESTA SEMANA -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Entrenadores esta semana</div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px;">
+      <div style="display:flex;gap:12px;margin-bottom:${coachesInGira.length?'14px':'0'};">
+        <div style="flex:1;text-align:center;padding:10px 8px;background:#f9f9f7;border-radius:8px;">
+          <div style="font-size:24px;font-weight:700;color:#1a1a1a;">${coachesInAcad}</div>
+          <div style="font-size:11px;color:#999;margin-top:2px;">En academia</div>
         </div>
-        <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Rendimiento 2026</div>
-        ${players.map((p,i)=>{
+        <div style="flex:1;text-align:center;padding:10px 8px;background:#f0faff;border-radius:8px;">
+          <div style="font-size:24px;font-weight:700;color:#1DA1D6;">${coachesInGira.length}</div>
+          <div style="font-size:11px;color:#999;margin-top:2px;">En gira</div>
+        </div>
+      </div>
+      ${coachesInGira.map(c=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #f5f5f5;">
+          <div style="width:28px;height:28px;border-radius:50%;background:#1DA1D6;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini(c.name)}</div>
+          <div style="font-size:13px;font-weight:500;color:#333;flex:1;">${c.name}</div>
+          <div style="font-size:11px;color:#aaa;">${c.dest}</div>
+        </div>`).join('')}
+      ${!giraCoaches.length?`<div style="font-size:12px;color:#ccc;padding-top:${coachesInGira.length?'0':'0'};border-top:${coachesInGira.length?'0':'0'};text-align:center;">Abre Torneo/Gira para cargar entrenadores</div>`:''}
+    </div>
+  </div>
+
+  <!-- 6. RENDIMIENTO -->
+  <div style="margin-bottom:28px;">
+    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Rendimiento${activeGroup?' — '+(groups.find(g=>g.id===activeGroup)?.name||''):' — Elite'}</div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px;">
+      ${!rendPlayers.length?`<div style="font-size:13px;color:#aaa;">Sin partidos registrados</div>`:
+        rendPlayers.map(p=>{
+          const pidx=allPlayers.indexOf(p);
           const allM=[...(p.matches||[]),...(getPlayerMatches(p.name)||[])];
-          const w=allM.filter(m=>m.resultado&&m.resultado.toUpperCase()==='G').length;
-          const l=allM.filter(m=>m.resultado&&m.resultado.toUpperCase()==='P').length;
+          const w=allM.filter(m=>m.resultado?.toUpperCase()==='G').length;
+          const l=allM.filter(m=>m.resultado?.toUpperCase()==='P').length;
           const t=w+l;
-          if(t===0) return '';
-          const pct=Math.round((w/t)*100);
+          const pct=t>0?Math.round((w/t)*100):0;
           const col=pct>=60?'#27ae60':pct>=40?'#f39c12':'#e74c3c';
-          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;cursor:pointer;" onclick="navTo('player',${i})">
-            <div class="pav" style="background:${COLORS[i%COLORS.length]};width:22px;height:22px;font-size:9px;">${ini(p.name)}</div>
-            <span style="font-size:12px;color:var(--g2);min-width:70px;">${p.name.split(' ')[0]}</span>
-            <div style="flex:1;height:6px;background:var(--g5);border-radius:3px;overflow:hidden;border:1px solid var(--border);">
-              <div style="width:${pct}%;height:100%;background:${col};border-radius:3px;"></div>
+          return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer;" onclick="navTo('player',${pidx})">
+            <div class="pav" style="background:${COLORS[pidx%COLORS.length]};width:32px;height:32px;font-size:11px;">${ini(p.name)}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+                <span style="font-size:13px;font-weight:600;color:#1a1a1a;">${p.name.split(' ')[0]}</span>
+                <span style="font-size:11px;color:#aaa;">${p.ranking||''}</span>
+              </div>
+              <div style="height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden;display:flex;">
+                ${t>0?`<div style="width:${pct}%;background:#27ae60;height:100%;"></div><div style="width:${100-pct}%;background:#e74c3c;height:100%;"></div>`:`<div style="width:100%;background:#eee;height:100%;"></div>`}
+              </div>
             </div>
-            <span style="font-size:11px;font-weight:600;color:${col};min-width:28px;text-align:right;">${pct}%</span>
-            <span style="font-size:10px;color:var(--g3);">${w}V ${l}D</span>
+            <div style="text-align:right;min-width:52px;flex-shrink:0;">
+              <div style="font-size:14px;font-weight:700;color:${col};">${pct}%</div>
+              <div style="font-size:10px;color:#aaa;">${w}V ${l}D</div>
+            </div>
           </div>`;
         }).join('')}
-      </div>
-    </div>`;
+    </div>
+  </div>`;
 }
 
 
@@ -6767,6 +6821,7 @@ const GIRA_LEVELS = [
 let giraActiveGroup = 'all';
 let giraDestinos = JSON.parse(localStorage.getItem('gira_destinos') || '{"ciudades":[],"paises":[]}');
 let giraEvents = [];
+let gira_loading = false;
 let giraPlayers = [];
 let giraCoaches = [];
 
