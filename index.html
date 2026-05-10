@@ -1084,16 +1084,21 @@ function renderDashboard(){
   // ── 2. ALERTAS ──
   const alertsRed=[],alertsAmber=[];
 
-  // ROJO: torneo terminado hace 2–10 días sin partido registrado
-  allPlayers.forEach((p,i)=>{
-    const matches=p.matches||[];
-    Object.entries(p.events||{}).forEach(([key,ev])=>{
-      if(ev.type!=='competition')return;
-      const diffDays=(today-new Date(key+'T12:00:00'))/864e5;
-      if(diffDays>=2&&diffDays<=10&&!matches.some(m=>m.fecha>=key))
-        alertsRed.push({name:p.name,pid:i,msg:`Torneo sin registrar — ${ev.desc||key}`});
+  // ROJO: torneo esta semana sin partido registrado (solo jueves en adelante)
+  const dayOfWeek=today.getDay(); // 0=Dom,1=Lun...6=Sáb
+  const isThursOrLater=dayOfWeek===0||dayOfWeek>=4;
+  if(isThursOrLater){
+    const weekMon=new Date(today);weekMon.setDate(today.getDate()-(dayOfWeek===0?6:dayOfWeek-1));
+    const weekMonKey=weekMon.toISOString().slice(0,10);
+    allPlayers.forEach((p,i)=>{
+      const matches=p.matches||[];
+      const compThisWeek=Object.entries(p.events||{}).find(([key,ev])=>ev.type==='competition'&&key>=weekMonKey&&key<=todayKey);
+      if(!compThisWeek)return;
+      const hasMatchThisWeek=matches.some(m=>m.fecha>=weekMonKey&&m.fecha<=todayKey);
+      if(!hasMatchThisWeek)
+        alertsRed.push({name:p.name,pid:i,msg:`Torneo sin registrar — ${compThisWeek[1].desc||compThisWeek[0]}`});
     });
-  });
+  }
 
   // AMBER: RPE promedio ≥ 4/5 últimos 5 días
   const d5k=new Date(today);d5k.setDate(today.getDate()-5);
@@ -1121,6 +1126,7 @@ function renderDashboard(){
   }
 
   const noAlerts=!alertsRed.length&&!alertsAmber.length;
+  const alertsCollapsed=localStorage.getItem('dashboard_alerts_collapsed')==='1';
 
   // ── 3. PRÓXIMOS TORNEOS ──
   const in28=new Date(today);in28.setDate(today.getDate()+28);
@@ -1178,19 +1184,24 @@ function renderDashboard(){
     ${noAlerts
       ?`<div style="background:#eafaf1;border:1px solid #82e0aa;border-radius:10px;padding:12px 16px;font-size:13px;color:#1e8449;font-weight:600;">✓ Todo al día — sin alertas pendientes</div>`
       :`<div style="background:#FCEBEB;border:1px solid #F09595;border-radius:10px;overflow:hidden;">
-        <div style="padding:10px 16px;font-size:11px;font-weight:700;color:#c0392b;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f5b7b1;">Alertas del equipo</div>
-        ${alertsRed.map(a=>`
-          <div onclick="${a.pid!=null?`navTo('player',${a.pid})`:''}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #fdecea;${a.pid!=null?'cursor:pointer;':''}">
-            <div style="width:8px;height:8px;border-radius:50%;background:#e74c3c;flex-shrink:0;"></div>
-            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1a1a1a;">${a.name}</div><div style="font-size:11px;color:#999;">${a.msg}</div></div>
-            ${a.pid!=null?`<span style="color:#ccc;font-size:12px;flex-shrink:0;">→</span>`:''}
-          </div>`).join('')}
-        ${alertsAmber.map(a=>`
-          <div onclick="${a.pid!=null?`navTo('player',${a.pid})`:''}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #fef9e7;${a.pid!=null?'cursor:pointer;':''}">
-            <div style="width:8px;height:8px;border-radius:50%;background:#f39c12;flex-shrink:0;"></div>
-            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1a1a1a;">${a.name||'Asistencia'}</div><div style="font-size:11px;color:#999;">${a.msg}</div></div>
-            ${a.pid!=null?`<span style="color:#ccc;font-size:12px;flex-shrink:0;">→</span>`:''}
-          </div>`).join('')}
+        <div style="padding:10px 16px;display:flex;align-items:center;border-bottom:${alertsCollapsed?'none':'1px solid #f5b7b1'};">
+          <span style="flex:1;font-size:11px;font-weight:700;color:#c0392b;text-transform:uppercase;letter-spacing:.06em;">Alertas del equipo <span style="font-weight:600;background:#e74c3c;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;margin-left:4px;">${alertsRed.length+alertsAmber.length}</span></span>
+          <button onclick="toggleAlertsCollapse()" id="alerts-toggle-btn" style="background:none;border:none;cursor:pointer;font-size:13px;color:#c0392b;padding:0 0 0 8px;">${alertsCollapsed?'▼':'▲'}</button>
+        </div>
+        <div id="alerts-content" style="display:${alertsCollapsed?'none':'block'}">
+          ${alertsRed.map(a=>`
+            <div onclick="${a.pid!=null?`navTo('player',${a.pid})`:''}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #fdecea;${a.pid!=null?'cursor:pointer;':''}">
+              <div style="width:8px;height:8px;border-radius:50%;background:#e74c3c;flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1a1a1a;">${a.name}</div><div style="font-size:11px;color:#999;">${a.msg}</div></div>
+              ${a.pid!=null?`<span style="color:#ccc;font-size:12px;flex-shrink:0;">→</span>`:''}
+            </div>`).join('')}
+          ${alertsAmber.map(a=>`
+            <div onclick="${a.pid!=null?`navTo('player',${a.pid})`:''}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #fef9e7;${a.pid!=null?'cursor:pointer;':''}">
+              <div style="width:8px;height:8px;border-radius:50%;background:#f39c12;flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1a1a1a;">${a.name||'Asistencia'}</div><div style="font-size:11px;color:#999;">${a.msg}</div></div>
+              ${a.pid!=null?`<span style="color:#ccc;font-size:12px;flex-shrink:0;">→</span>`:''}
+            </div>`).join('')}
+        </div>
       </div>`}
   </div>
 
@@ -2137,6 +2148,17 @@ function buildAlerts(today, wKey, players) {
   });
 
   return alerts.slice(0, 8);
+}
+
+function toggleAlertsCollapse(){
+  const collapsed=localStorage.getItem('dashboard_alerts_collapsed')==='1';
+  localStorage.setItem('dashboard_alerts_collapsed',collapsed?'0':'1');
+  const content=document.getElementById('alerts-content');
+  const btn=document.getElementById('alerts-toggle-btn');
+  const header=btn?.closest('div');
+  if(content)content.style.display=collapsed?'block':'none';
+  if(btn)btn.textContent=collapsed?'▲':'▼';
+  if(header)header.style.borderBottom=collapsed?'1px solid #f5b7b1':'none';
 }
 
 // ── PLAYER ──// ── PLAYER ────────────────────────────────────────────────
