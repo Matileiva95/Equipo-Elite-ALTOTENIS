@@ -448,7 +448,7 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button class="nav-btn" onclick="navTo('scouting')">◎ &nbsp;Scouting</button>
       <button class="nav-btn" onclick="navTo('asistencia')">✓ &nbsp;Asistencia</button>
       <button class="nav-btn" onclick="navTo('grupal')">⊞ &nbsp;Grupal</button>
-      <button class="nav-btn" onclick="navTo('gira')">✈ &nbsp;Gira</button>
+      <button class="nav-btn" onclick="navTo('gira')">✈ &nbsp;Torneo/Gira</button>
       <div class="nav-lbl" style="margin-top:14px;">Jugadores</div>
       <div id="group-filter" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 2px 6px;"></div>
       <div id="player-nav"></div>
@@ -468,7 +468,7 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button class="mnav-btn" id="mnav-dashboard" onclick="navTo('dashboard')"><span class="mnav-icon">◈</span>Dashboard</button>
       <button class="mnav-btn" id="mnav-players" onclick="toggleDrawer()"><span class="mnav-icon">👥</span>Jugadores</button>
       <button class="mnav-btn" id="mnav-asistencia" onclick="navTo('asistencia')"><span class="mnav-icon">✓</span>Asist.</button>
-      <button class="mnav-btn" id="mnav-gira" onclick="navTo('gira')"><span class="mnav-icon">✈</span>Gira</button>
+      <button class="mnav-btn" id="mnav-gira" onclick="navTo('gira')"><span class="mnav-icon">✈</span>Torneo/Gira</button>
       <button class="mnav-btn" id="mnav-mas2" onclick="openMasMenu2()"><span class="mnav-icon">☰</span>Más</button>
     </div>
   </nav>
@@ -6715,7 +6715,7 @@ async function renderGira() {
     <div style="padding:16px 16px 100px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div>
-          <div style="font-size:18px;font-weight:700;color:#333">✈ Gira 2026</div>
+          <div style="font-size:18px;font-weight:700;color:#333">✈ Torneo/Gira 2026</div>
           <div style="font-size:12px;color:#888;margin-top:2px">Control semanal · May – Dic 2026</div>
         </div>
         <button onclick="giraOpenAdd()" style="background:#FF6B00;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">+ Evento</button>
