@@ -6289,6 +6289,8 @@ function renderGrupalMensual() {
 }
 
 function editGrupalSemanaHist(wKey) {
+  const plan = (data.grupalPlanes || []).find(p => p.week === wKey);
+  if (plan) grupalGrupo = plan.grupo || null;
   const todayMonday = weekKey(new Date());
   grupalSemanaOffset = Math.round((new Date(wKey+'T12:00:00') - new Date(todayMonday+'T12:00:00')) / 604800000);
   grupalTab = 'semanal';
