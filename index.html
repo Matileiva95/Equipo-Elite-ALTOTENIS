@@ -6031,6 +6031,15 @@ function setGrupalSesion(wKey, dia, ses, field, val) {
   plan.dias[dia][ses][field] = val;
 }
 function saveGrupalSemanal(wKey) {
+  // Leer explícitamente todos los textareas del DOM antes de sincronizar
+  document.querySelectorAll('textarea[oninput^="setGrupalSesion"]').forEach(ta => {
+    const m = ta.getAttribute('oninput').match(/setGrupalSesion\('([^']+)','([^']+)','([^']+)','([^']+)',this\.value\)/);
+    if (m) setGrupalSesion(m[1], m[2], m[3], m[4], ta.value);
+  });
+  document.querySelectorAll('textarea[oninput^="setGrupalFoco"]').forEach(ta => {
+    const m = ta.getAttribute('oninput').match(/setGrupalFoco\('([^']+)',this\.value\)/);
+    if (m) setGrupalFoco(m[1], ta.value);
+  });
   scheduleSync();
   const btn = document.getElementById('gs-save-btn');
   if (btn) { btn.textContent = 'Guardado ✓'; btn.disabled = true; setTimeout(() => { btn.textContent = 'Guardar semana'; btn.disabled = false; }, 1800); }
