@@ -6821,10 +6821,14 @@ async function giraLoadData() {
   try {
     const url = giraActiveGroup === 'all' ? `${BACKEND_URL}/api/v1/gira` : `${BACKEND_URL}/api/v1/gira?group_id=${giraActiveGroup}`;
     const res = await apiFetch(url);
-    giraEvents = res.data || [];
+    if (!res || !res.ok) { console.error('giraLoadData error:', res?.status); return; }
+    const data = await res.json();
+    giraEvents = data.data || [];
+    console.log('giraEvents cargados:', giraEvents.length, JSON.stringify(giraEvents));
     giraRenderMetrics();
     giraRenderCalendar();
   } catch(e) {
+    console.error('giraLoadData catch:', e);
     const b = document.getElementById('gira-body');
     if (b) b.innerHTML = '<div style="text-align:center;padding:40px;color:#e55">Error cargando datos</div>';
   }
