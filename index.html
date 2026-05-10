@@ -6788,6 +6788,7 @@ async function renderGira() {
         <button onclick="giraSaveEvent()" style="width:100%;background:#FF6B00;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">Guardar evento</button>
       </div>
     </div>`;
+  console.log('renderGira - ACADEMY_ID:', ACADEMY_ID, '| token:', sessionStorage.getItem('ciq_token') ? 'OK' : 'MISSING');
   await giraLoadStaticData();
   await giraLoadData();
 }
