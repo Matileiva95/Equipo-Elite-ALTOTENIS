@@ -5929,7 +5929,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
 // ── GRUPAL MODULE ──────────────────────────────────────────
 function renderGrupal() {
   if (!grupalTab) grupalTab = 'semanal';
-  if (grupalGrupo === undefined) grupalGrupo = 'todos';
+  if (grupalGrupo === undefined || grupalGrupo === 'todos') grupalGrupo = null;
   const grupos = ['Elite','F2','F1','F1C','Naranja','Verde'];
   const tabItems = [
     { id: 'mensual',   label: 'Mensual'   },
@@ -5990,7 +5990,8 @@ function renderGrupalContent() {
 // ── helpers de estado grupal semanal ────────────────────────
 function getGrupalPlan(wKey) {
   if (!data.grupalPlanes) data.grupalPlanes = [];
-  let plan = data.grupalPlanes.find(p => p.week === wKey && p.grupo === grupalGrupo);
+  const gKey = grupalGrupo || null;
+  let plan = data.grupalPlanes.find(p => p.week === wKey && (p.grupo || null) === gKey);
   if (!plan) {
     plan = {
       id: 'gps-' + wKey + '-' + (grupalGrupo || 'todos'),
@@ -6353,7 +6354,7 @@ function printGrupalAnual() {
 
 function renderGrupalHistorial() {
   const planes = (data.grupalPlanes || [])
-    .filter(p => grupalGrupo === null || p.grupo === grupalGrupo)
+    .filter(p => grupalGrupo === null || (p.grupo || null) === grupalGrupo)
     .sort((a, b) => b.week.localeCompare(a.week));
 
   const footer = `
