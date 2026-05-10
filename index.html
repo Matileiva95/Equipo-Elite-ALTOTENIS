@@ -6798,8 +6798,14 @@ async function giraLoadStaticData() {
       apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/players?limit=200`),
       apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches`)
     ]);
-    giraPlayers = pRes.data || [];
-    giraCoaches = cRes.data || [];
+    console.log('pRes status:', pRes && pRes.status);
+    console.log('cRes status:', cRes && cRes.status);
+    const pData = pRes ? await pRes.json() : {};
+    const cData = cRes ? await cRes.json() : {};
+    console.log('pRes:', JSON.stringify(pData));
+    console.log('cRes:', JSON.stringify(cData));
+    giraPlayers = pData.data || [];
+    giraCoaches = cData.data || [];
     console.log('Gira data:', giraEvents.length, 'eventos,', giraPlayers.length, 'players,', giraCoaches.length, 'coaches');
   } catch(e) {
     console.error('Error cargando players/coaches:', e);
