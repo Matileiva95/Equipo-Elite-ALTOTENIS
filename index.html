@@ -6773,7 +6773,7 @@ async function renderGira() {
         </div>
         <div style="margin-bottom:12px">
           <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Grupo</label>
-          <select id="gira-group-sel" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
+          <select id="gira-group-sel" onchange="giraRenderPlayerSel([])" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px">
             ${GIRA_GROUPS.map(g => `<option value="${g.id}">${g.name}</option>`).join('')}
           </select>
         </div>
@@ -6942,9 +6942,11 @@ function giraCloseModal() {
 function giraRenderPlayerSel(selected) {
   const el = document.getElementById('gira-player-sel');
   if (!el) return;
-  el.innerHTML = giraPlayers.map(p => {
+  const groupSel = document.getElementById('gira-group-sel')?.value || 'all';
+  const filtered = groupSel === 'all' ? giraPlayers : giraPlayers.filter(p => p.group_id === groupSel);
+  el.innerHTML = filtered.map(p => {
     const checked = selected.includes(p.id);
-    return `<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid ${checked?'#FF6B00':'#eee'};border-radius:8px;cursor:pointer;background:${checked?'#fff5f0':'#fff'}">
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;border:2px solid ${checked?'#FF6B00':'#eee'};background:${checked?'#fff5ee':'#fff'};margin-bottom:4px">
       <input type="checkbox" value="${p.id}" ${checked?'checked':''} onchange="giraTogglePlayer(this)" style="accent-color:#FF6B00">
       <span style="font-size:13px">${p.full_name}</span>
     </label>`;
