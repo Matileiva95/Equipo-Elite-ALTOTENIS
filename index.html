@@ -2473,7 +2473,8 @@ function renderCal(p){
       const selDot=isSel?`<div class="cd-dot" style="background:var(--blue);"></div>`:'';
       const tipType=ev?(ev.type==='training'?'Entrenamiento':ev.type==='rest'?'Descanso':'Competencia'):'';
       const tipText=ev?(ev.desc?`${tipType}: ${ev.desc}`:tipType):'';
-      weeksHtml+=`<div class="${cls}" onclick="toggleDaySelect('${key}')" title="${tipText}"><span class="cdname">${DAYS[d]}</span><span class="cdn">${day.getDate()}</span>${selDot}${dot}${lbl2}</div>`;
+      const dayOnclick=ev?`calEvPopup(this,'${key}')`:`toggleDaySelect('${key}')`;
+      weeksHtml+=`<div class="${cls}" onclick="${dayOnclick}" title="${tipText}"><span class="cdname">${DAYS[d]}</span><span class="cdn">${day.getDate()}</span>${selDot}${dot}${lbl2}</div>`;
     }
     weeksHtml+='</div>';
   }
@@ -2529,6 +2530,40 @@ function toggleDaySelect(key){
 }
 
 function clearSel(){selectedDays=new Set();const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();}
+
+function calEvPopup(el,key){
+  document.getElementById('cal-ev-popup')?.remove();
+  const ev=data.players[pid]?.events?.[key];
+  if(!ev)return;
+  const typeLabel=ev.type==='training'?'Entrenamiento':ev.type==='rest'?'Descanso':'Competencia';
+  const typeColor=ev.type==='training'?'var(--orange)':ev.type==='rest'?'var(--rest)':'var(--blue)';
+  const d=new Date(key+'T12:00:00');
+  const dateStr=`${d.getDate()} de ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const popup=document.createElement('div');
+  popup.id='cal-ev-popup';
+  popup.style.cssText='position:fixed;z-index:9999;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.18);padding:16px 18px;min-width:210px;max-width:270px;font-family:inherit;';
+  popup.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-weight:700;color:${typeColor};font-size:12px;text-transform:uppercase;letter-spacing:.5px;">${typeLabel}</span>
+      <button onclick="document.getElementById('cal-ev-popup').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;line-height:1;padding:0 0 0 10px;">×</button>
+    </div>
+    <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:${ev.desc?'8px':'0'}">${dateStr}</div>
+    ${ev.desc?`<div style="font-size:14px;color:#222;line-height:1.4;">${ev.desc}</div>`:''}
+    ${ev.addedBy?`<div style="font-size:11px;color:#999;margin-top:10px;border-top:1px solid #f0f0f0;padding-top:8px;">Por: ${ev.addedBy}</div>`:''}
+  `;
+  document.body.appendChild(popup);
+  const rect=el.getBoundingClientRect();
+  const pw=270,ph=140;
+  let top=rect.bottom+8,left=rect.left;
+  if(left+pw>window.innerWidth-8)left=window.innerWidth-pw-8;
+  if(left<8)left=8;
+  if(top+ph>window.innerHeight-8)top=rect.top-ph-8;
+  popup.style.top=top+'px';
+  popup.style.left=left+'px';
+  setTimeout(()=>{
+    document.addEventListener('click',function h(e){if(!popup.contains(e.target)){popup.remove();document.removeEventListener('click',h);}});
+  },10);
+}
 
 async function applyMultiDesc(type){
   const desc=document.getElementById('multi-desc')?.value||'';
