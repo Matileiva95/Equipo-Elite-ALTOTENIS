@@ -6999,23 +6999,21 @@ async function giraSaveEvent() {
   try {
     let res;
     if (editId) {
-      res = await apiFetch(`${BACKEND_URL}/api/v1/gira/${editId}`, { method: 'PUT', body: JSON.stringify(body) });
+      res = await apiFetch(`${BACKEND_URL}/api/v1/gira/${editId}`, { method: 'PUT', body: JSON.stringify(body), headers: {'Content-Type':'application/json'} });
     } else {
-      res = await apiFetch(`${BACKEND_URL}/api/v1/gira`, { method: 'POST', body: JSON.stringify(body) });
+      res = await apiFetch(`${BACKEND_URL}/api/v1/gira`, { method: 'POST', body: JSON.stringify(body), headers: {'Content-Type':'application/json'} });
     }
     if (!res || !res.ok) {
-      const errBody = res ? await res.text() : 'sin respuesta (null)';
-      console.error('giraSaveEvent HTTP error:', res?.status, errBody);
-      alert('Error ' + (res?.status || '') + ': ' + errBody);
+      const errData = await res?.json().catch(() => ({}));
+      console.error('Backend error:', res?.status, JSON.stringify(errData));
+      alert('Error del servidor: ' + (errData?.error || errData?.message || res?.status));
       return;
     }
     giraCloseModal();
     await giraLoadData();
   } catch(e) {
     console.error('giraSaveEvent error:', e);
-    const errText = e?.message || 'Error desconocido';
-    console.error('Backend respondió:', errText);
-    alert('Error: ' + errText);
+    alert('Error al guardar: ' + e.message);
   }
 }
 
