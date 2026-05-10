@@ -6798,15 +6798,16 @@ async function giraLoadStaticData() {
       apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/players?limit=200`),
       apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches`)
     ]);
-    console.log('pRes status:', pRes && pRes.status);
-    console.log('cRes status:', cRes && cRes.status);
-    const pData = pRes ? await pRes.json() : {};
-    const cData = cRes ? await cRes.json() : {};
-    console.log('pRes:', JSON.stringify(pData));
-    console.log('cRes:', JSON.stringify(cData));
-    giraPlayers = pData.data || [];
-    giraCoaches = cData.data || [];
-    console.log('Gira data:', giraEvents.length, 'eventos,', giraPlayers.length, 'players,', giraCoaches.length, 'coaches');
+    console.log('pRes:', pRes ? pRes.status : 'NULL');
+    console.log('cRes:', cRes ? cRes.status : 'NULL');
+    if (!pRes || !cRes) { console.error('apiFetch devolvió null — sin token o sesión expirada'); return; }
+    const pData = await pRes.json();
+    const cData = await cRes.json();
+    console.log('pData:', JSON.stringify(pData));
+    console.log('cData:', JSON.stringify(cData));
+    giraPlayers = pData.data || pData || [];
+    giraCoaches = cData.data || cData || [];
+    console.log('Gira:', giraPlayers.length, 'players,', giraCoaches.length, 'coaches');
   } catch(e) {
     console.error('Error cargando players/coaches:', e);
   }
