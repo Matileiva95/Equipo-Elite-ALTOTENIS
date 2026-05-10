@@ -6890,7 +6890,7 @@ function giraRenderCalendar() {
         <span style="font-size:11px;background:#eee;color:#666;padding:2px 8px;border-radius:10px">${events.length} evento${events.length>1?'s':''}</span>
       </div>
       ${events.map(ev => {
-        const playerNames = (ev.player_ids||[]).map(pid => { const p = giraPlayers.find(x=>x.id===pid); return p?p.name:null; }).filter(Boolean);
+        const playerNames = (ev.player_ids||[]).map(pid => { const p = giraPlayers.find(x=>x.id===pid); return p?p.full_name:null; }).filter(Boolean);
         const coachNames = (ev.coach_ids||[]).map(cid => { const c = giraCoaches.find(x=>x.id===cid); return c?c.profiles?.full_name:null; }).filter(Boolean);
         return `<div style="padding:10px 14px;border-top:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:10px">
           <div style="flex:1">
