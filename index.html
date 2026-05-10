@@ -6823,7 +6823,7 @@ async function giraLoadData() {
     const res = await apiFetch(url);
     if (!res || !res.ok) { console.error('giraLoadData error:', res?.status); return; }
     const data = await res.json();
-    giraEvents = data.data || [];
+    giraEvents = Array.isArray(data) ? data : (data.data || []);
     console.log('giraEvents cargados:', giraEvents.length, JSON.stringify(giraEvents));
     giraRenderMetrics();
     giraRenderCalendar();
