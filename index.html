@@ -6946,7 +6946,7 @@ function giraRenderPlayerSel(selected) {
     const checked = selected.includes(p.id);
     return `<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid ${checked?'#FF6B00':'#eee'};border-radius:8px;cursor:pointer;background:${checked?'#fff5f0':'#fff'}">
       <input type="checkbox" value="${p.id}" ${checked?'checked':''} onchange="giraTogglePlayer(this)" style="accent-color:#FF6B00">
-      <span style="font-size:13px">${p.name}</span>
+      <span style="font-size:13px">${p.full_name}</span>
     </label>`;
   }).join('') || '<div style="color:#aaa;font-size:13px">Sin jugadores</div>';
 }
