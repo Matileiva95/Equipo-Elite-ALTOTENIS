@@ -448,6 +448,7 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button class="nav-btn" onclick="navTo('scouting')">◎ &nbsp;Scouting</button>
       <button class="nav-btn" onclick="navTo('asistencia')">✓ &nbsp;Asistencia</button>
       <button class="nav-btn" onclick="navTo('grupal')">⊞ &nbsp;Grupal</button>
+      <button class="nav-btn" onclick="navTo('gira')">✈ &nbsp;Gira</button>
       <div class="nav-lbl" style="margin-top:14px;">Jugadores</div>
       <div id="group-filter" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 2px 6px;"></div>
       <div id="player-nav"></div>
@@ -1031,7 +1032,7 @@ function renderPlayerNav(){
   const nav=document.getElementById('player-nav');if(!nav)return;
   const filtered=data.players.map((p,i)=>({p,i})).filter(({p})=>(!activeGroup||p.group_id===activeGroup)&&canViewGroup(p.group_id));
   nav.innerHTML=filtered.map(({p,i})=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span></button>`).join('');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal'][i]===page));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal','gira'][i]===page));
 }
 function renderDrawerList(){
   const dl=document.getElementById('drawer-list');if(!dl)return;
