@@ -6322,12 +6322,22 @@ function printGrupalAnual() {
   const grupoLabel = grupalGrupo || 'Todos los grupos';
   const rows = planes.map(p => {
     const atr = ATR_OPTS.find(a => a.id === p.atr) || ATR_OPTS[1];
+    const diasContent = (p.diasActivos || []).map(dia => {
+      const d = p.dias?.[dia] || {};
+      const s1 = d.s1?.desc || '';
+      const s2 = d.s2?.desc || '';
+      return `<div style="margin-bottom:6px;">
+        <strong>${dia}</strong>
+        ${s1 ? `<div style="font-size:11px;color:#555;margin-top:2px;">S1: ${s1}</div>` : ''}
+        ${s2 ? `<div style="font-size:11px;color:#555;margin-top:2px;">S2: ${s2}</div>` : ''}
+      </div>`;
+    }).join('') || '—';
     return `<tr>
-      <td>${weekLabel(p.week)}</td>
-      <td style="color:${atr.dark};font-weight:700;">${atr.label} · ${atr.name}</td>
-      <td>${p.grupo || 'Todos'}</td>
+      <td style="white-space:nowrap;">${weekLabel(p.week)}</td>
+      <td style="color:${atr.dark};font-weight:700;white-space:nowrap;">${atr.label} · ${atr.name}</td>
+      <td style="white-space:nowrap;">${p.grupo || 'Todos'}</td>
       <td>${p.focoSemanal || '—'}</td>
-      <td>${(p.diasActivos||[]).join(', ') || '—'}</td>
+      <td>${diasContent}</td>
     </tr>`;
   }).join('');
   const win = window.open('', '_blank', 'width=900,height=700');
@@ -6339,14 +6349,14 @@ function printGrupalAnual() {
       h2{font-size:14px;color:#888;margin-bottom:20px;font-weight:normal;}
       table{width:100%;border-collapse:collapse;font-size:13px;}
       th{text-align:left;padding:8px 10px;background:#f4f3f1;border-bottom:2px solid #ddd;}
-      td{padding:8px 10px;border-bottom:1px solid #eee;}
+      td{padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top;}
       @media print{body{padding:0;}}
     </style>
   </head><body>
     <h1>Planificación Grupal ${year}</h1>
     <h2>${grupoLabel}</h2>
     <table><thead><tr>
-      <th>Semana</th><th>ATR</th><th>Grupo</th><th>Foco semanal</th><th>Días activos</th>
+      <th>Semana</th><th>ATR</th><th>Grupo</th><th>Foco semanal</th><th>Días y sesiones</th>
     </tr></thead><tbody>${rows}</tbody></table>
   </body></html>`);
   win.document.close();
