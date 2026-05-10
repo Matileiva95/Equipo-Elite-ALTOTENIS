@@ -6761,9 +6761,11 @@ const GIRA_WEEKS = [
 const GIRA_LEVELS = [
   'GRAND SLAM','ATP 1000','ATP 500','ATP 250','WTA 125','W100',
   'CH 125','CH 100','CH 75','CH 50','M25','M15','W75','W35','W15',
+  'COSAT G4','COSAT G3','COSAT G2','COSAT G1','NG3','NG2','N1','NACIONAL',
   'J500','J300','J200','J100','J60','J30','ENTRENAMIENTO','OTRO'
 ];
 let giraActiveGroup = 'all';
+let giraDestinos = JSON.parse(localStorage.getItem('gira_destinos') || '{"ciudades":[],"paises":[]}');
 let giraEvents = [];
 let giraPlayers = [];
 let giraCoaches = [];
@@ -6809,11 +6811,13 @@ async function renderGira() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div>
             <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Ciudad</label>
-            <input id="gira-city" placeholder="Ej: SANTIAGO" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;box-sizing:border-box">
+            <input id="gira-city" list="gira-cities-list" placeholder="Ej: SANTIAGO" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;box-sizing:border-box">
+            <datalist id="gira-cities-list"></datalist>
           </div>
           <div>
             <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">País</label>
-            <input id="gira-country" placeholder="Ej: CHILE" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;box-sizing:border-box">
+            <input id="gira-country" list="gira-countries-list" placeholder="Ej: CHILE" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;box-sizing:border-box">
+            <datalist id="gira-countries-list"></datalist>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
@@ -6985,6 +6989,7 @@ function giraOpenAdd() {
   if (giraActiveGroup !== 'all') document.getElementById('gira-group-sel').value = giraActiveGroup;
   giraRenderPlayerSel([]);
   giraRenderCoachSel([]);
+  giraUpdateDestinoDatalists();
   document.getElementById('gira-modal').style.display = 'flex';
 }
 
@@ -7001,6 +7006,7 @@ function giraOpenEdit(id) {
   document.getElementById('gira-group-sel').value = ev.group_id || 'all';
   giraRenderPlayerSel(ev.player_ids || []);
   giraRenderCoachSel(ev.coach_ids || []);
+  giraUpdateDestinoDatalists();
   document.getElementById('gira-modal').style.display = 'flex';
 }
 
@@ -7046,6 +7052,19 @@ function giraToggleCoach(cb) {
   l.style.background = cb.checked ? '#f0faff' : '#fff';
 }
 
+function giraUpdateDestinoDatalists() {
+  const cl = document.getElementById('gira-cities-list');
+  const pl = document.getElementById('gira-countries-list');
+  if (cl) cl.innerHTML = giraDestinos.ciudades.map(c => `<option value="${c}">`).join('');
+  if (pl) pl.innerHTML = giraDestinos.paises.map(p => `<option value="${p}">`).join('');
+}
+
+function giraSaveDestino(city, country) {
+  if (city && !giraDestinos.ciudades.includes(city)) giraDestinos.ciudades.push(city);
+  if (country && !giraDestinos.paises.includes(country)) giraDestinos.paises.push(country);
+  localStorage.setItem('gira_destinos', JSON.stringify(giraDestinos));
+}
+
 async function giraSaveEvent() {
   const city = document.getElementById('gira-city').value.trim();
   const country = document.getElementById('gira-country').value.trim();
@@ -7077,6 +7096,7 @@ async function giraSaveEvent() {
     }
     const successData = await res.json().catch(() => ({}));
     console.log('Evento guardado:', JSON.stringify(successData));
+    giraSaveDestino(city.toUpperCase(), country.toUpperCase());
     giraCloseModal();
     await giraLoadData();
   } catch(e) {
