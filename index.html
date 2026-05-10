@@ -7009,6 +7009,8 @@ async function giraSaveEvent() {
       alert('Error del servidor: ' + (errData?.error || errData?.message || res?.status));
       return;
     }
+    const successData = await res.json().catch(() => ({}));
+    console.log('Evento guardado:', JSON.stringify(successData));
     giraCloseModal();
     await giraLoadData();
   } catch(e) {
