@@ -2471,7 +2471,9 @@ function renderCal(p){
       const dot=ev&&!isSel?`<div class="cd-dot ${ev.type==='training'?'dot-t':ev.type==='rest'?'dot-r':'dot-c'}"></div>`:'';
       const lbl2=ev&&!isSel?`<span class="cd-lbl ${ev.type==='training'?'lbl-t':ev.type==='rest'?'lbl-r':'lbl-c'}">${ev.type==='training'?'Entr.':ev.type==='rest'?'Desc.':ev.desc?ev.desc.slice(0,7):'Comp.'}</span>`:'';
       const selDot=isSel?`<div class="cd-dot" style="background:var(--blue);"></div>`:'';
-      weeksHtml+=`<div class="${cls}" onclick="toggleDaySelect('${key}')" title="${ev?ev.desc||ev.type:''}"><span class="cdname">${DAYS[d]}</span><span class="cdn">${day.getDate()}</span>${selDot}${dot}${lbl2}</div>`;
+      const tipType=ev?(ev.type==='training'?'Entrenamiento':ev.type==='rest'?'Descanso':'Competencia'):'';
+      const tipText=ev?(ev.desc?`${tipType}: ${ev.desc}`:tipType):'';
+      weeksHtml+=`<div class="${cls}" onclick="toggleDaySelect('${key}')" title="${tipText}"><span class="cdname">${DAYS[d]}</span><span class="cdn">${day.getDate()}</span>${selDot}${dot}${lbl2}</div>`;
     }
     weeksHtml+='</div>';
   }
