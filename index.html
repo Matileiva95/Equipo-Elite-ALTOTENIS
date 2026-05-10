@@ -6808,6 +6808,9 @@ async function giraLoadStaticData() {
     console.log('cData:', JSON.stringify(cData));
     giraPlayers = pData.data || pData || [];
     giraCoaches = cData.data || cData || [];
+    const porGrupo = {};
+    giraPlayers.forEach(p => { porGrupo[p.group_id] = (porGrupo[p.group_id] || 0) + 1; });
+    console.log('Players por grupo:', JSON.stringify(porGrupo));
     console.log('Gira:', giraPlayers.length, 'players,', giraCoaches.length, 'coaches');
   } catch(e) {
     console.error('Error cargando players/coaches:', e);
