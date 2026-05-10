@@ -6032,7 +6032,8 @@ function setGrupalSesion(wKey, dia, ses, field, val) {
   plan.dias[dia][ses][field] = val;
 }
 function saveGrupalSemanal(wKey) {
-  // Leer explícitamente todos los textareas del DOM antes de sincronizar
+  // grupalGrupo se usa implícitamente en setGrupalSesion/setGrupalFoco — al ser sincrónico
+  // siempre corresponde al grupo activo cuando el usuario hizo click en Guardar.
   document.querySelectorAll('textarea[oninput^="setGrupalSesion"]').forEach(ta => {
     const m = ta.getAttribute('oninput').match(/setGrupalSesion\('([^']+)','([^']+)','([^']+)','([^']+)',this\.value\)/);
     if (m) setGrupalSesion(m[1], m[2], m[3], m[4], ta.value);
@@ -6173,6 +6174,7 @@ function renderGrupalSemanal() {
 }
 
 function saveGrupalMensual() {
+  // grupalGrupo es consistente por ser sincrónico — corresponde al grupo activo al guardar.
   scheduleSync();
   const btn = document.getElementById('gm-save-btn');
   if (btn) { btn.textContent = 'Guardado ✓'; btn.disabled = true; setTimeout(() => { btn.textContent = 'Guardar mes'; btn.disabled = false; }, 1800); }
