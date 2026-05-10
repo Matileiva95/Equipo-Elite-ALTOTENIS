@@ -6795,8 +6795,8 @@ async function renderGira() {
 async function giraLoadStaticData() {
   try {
     const [pRes, cRes] = await Promise.all([
-      apiFetch(`${BACKEND_URL}/api/v1/players?limit=200`),
-      apiFetch(`${BACKEND_URL}/api/v1/coaches`)
+      apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/players?limit=200`),
+      apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches`)
     ]);
     giraPlayers = pRes.data || [];
     giraCoaches = cRes.data || [];
