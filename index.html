@@ -6309,7 +6309,8 @@ function printGrupalSemanaHist(wKey) {
   grupalSemanaOffset = diff;
   grupalTab = 'semanal';
   renderMain();
-  setTimeout(() => window.print(), 400);
+  // Espera dos frames: el primero para que el DOM se actualice, el segundo para que el browser pinte
+  requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
 }
 
 function printGrupalAnual() {
