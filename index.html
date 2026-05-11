@@ -7150,6 +7150,7 @@ async function giraSaveEvent() {
   const coach_ids = Array.from(document.querySelectorAll('#gira-coach-sel input:checked')).map(cb => cb.value);
   const group_sel = document.getElementById('gira-group-sel').value;
   const body = {
+    academyId: ACADEMY_ID,
     week: document.getElementById('gira-week').value,
     city, country,
     level: document.getElementById('gira-level').value,
@@ -7185,7 +7186,7 @@ async function giraSaveEvent() {
 async function giraDeleteEvent(id) {
   if (!confirm('¿Eliminar este evento?')) return;
   try {
-    await apiFetch(`${BACKEND_URL}/api/v1/gira/${id}`, { method: 'DELETE' });
+    await apiFetch(`${BACKEND_URL}/api/v1/gira/${id}?academyId=${ACADEMY_ID}`, { method: 'DELETE' });
     await giraLoadData();
   } catch(e) { alert('Error al eliminar'); }
 }
