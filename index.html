@@ -602,6 +602,28 @@ body{background:#faf7f2;color:#1a1a1a;}
 <script>
 const BACKEND_URL = "https://courtiq-backend-hrdc.onrender.com";
 
+// ── BRAND POR SUBDOMINIO (pre-login) ─────────────────────
+const _sub = window.location.hostname.split('.')[0];
+const IS_ALTOTENIS_BRAND_BY_HOST = (_sub === 'altotenis' || window.location.hostname === 'altotenis.netlify.app');
+
+if (!IS_ALTOTENIS_BRAND_BY_HOST) {
+  document.title = 'TenisMetricsPro — Hub de Entrenadores';
+  document.querySelectorAll('.brand-name').forEach(el => {
+    el.innerHTML = 'TenisMetricsPro';
+  });
+  if (!document.getElementById('tmp-brand-styles')) {
+    const s = document.createElement('style');
+    s.id = 'tmp-brand-styles';
+    s.textContent = `:root {
+      --orange: #1A6FD4 !important;
+      --blue: #AAFF00 !important;
+      --ol: #E7F1FB !important;
+      --od: #1456A5 !important;
+    }`;
+    document.head.appendChild(s);
+  }
+}
+
 async function apiFetch(url, opts = {}) {
   const token = sessionStorage.getItem('ciq_token');
   const headers = { ...(opts.headers || {}), ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
@@ -622,6 +644,30 @@ async function apiFetch(url, opts = {}) {
   res = await fetch(url, { ...opts, headers: headers2 });
   return res;
 }
+
+// ── FEATURE FLAGS ────────────────────────────────────────
+async function loadFeatures() {
+  try {
+    const token = sessionStorage.getItem('ciq_token');
+    if (!token) return;
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/me/features`);
+    if (!res || !res.ok) return;
+    const data = await res.json();
+    window.FEATURES = Array.isArray(data.features) ? data.features : [];
+    sessionStorage.setItem('ciq_features', JSON.stringify(window.FEATURES));
+  } catch(e) { console.warn('loadFeatures:', e); }
+}
+
+window.hasFeature = (flag) =>
+  Array.isArray(window.FEATURES) && window.FEATURES.includes(flag);
+
+// Restaurar features de sessionStorage en page load
+(function() {
+  try {
+    const f = sessionStorage.getItem('ciq_features');
+    if (f) window.FEATURES = JSON.parse(f);
+  } catch(e) {}
+})();
 
 const ACADEMY_ID_FALLBACK = "2d20c092-bfb8-41ca-8342-c2b5d34fde8c";
 let ACADEMY_ID = ACADEMY_ID_FALLBACK;
@@ -713,6 +759,7 @@ async function doLogin() {
         sessionStorage.setItem('ciq_token', d.session.access_token);
         sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
         sessionStorage.setItem('ciq_player_id', String(d.playerId || ''));
+        await loadFeatures();
         sessionStorage.setItem('ciq_role', 'player');
         user = d.session.user?.user_metadata?.full_name || u;
         document.getElementById('login-screen').style.display = 'none';
@@ -771,6 +818,7 @@ async function doLogin() {
         sessionStorage.setItem('ciq_token', d.session.access_token);
         sessionStorage.setItem('ciq_refresh', d.session.refresh_token);
         sessionStorage.setItem('ciq_role', detectedRole);
+        await loadFeatures();
         user = d.user?.user_metadata?.full_name || u;
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app').style.display = 'block';
@@ -956,6 +1004,7 @@ async function loadData(){
     if (pid) loadPlayerPortal(pid);
     return;
   }
+  await loadFeatures();
   setSS('syncing','Cargando...');
   data = {players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)), reflections: [], scouting: []};
   try{
@@ -4394,6 +4443,7 @@ let _ppRpe = 0, _ppMood = 0, _ppEditIdx = null;
 let _coachPortalCache = {};  // { [playerId]: { objectives, analyses, ts } }
 
 async function loadPlayerPortal(playerId) {
+  await loadFeatures();
   const token = sessionStorage.getItem('ciq_token');
   const h = {'Authorization': `Bearer ${token}`};
   try {
@@ -5962,6 +6012,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
         sessionStorage.setItem('ciq_token', accessToken);
         if (refreshToken) sessionStorage.setItem('ciq_refresh', refreshToken);
         sessionStorage.setItem('ciq_role', profile.role);
+        await loadFeatures();
         user = profile.full_name || profile.email || '';
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app').style.display = 'block';
@@ -6001,6 +6052,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
       if (refreshToken) sessionStorage.setItem('ciq_refresh', refreshToken);
       sessionStorage.setItem('ciq_player_id', finalPlayerId);
       sessionStorage.setItem('ciq_role', 'player');
+      await loadFeatures();
 
       showPlayerPanel(profile.full_name || profile.email || '');
       loadPlayerPortal(finalPlayerId);
