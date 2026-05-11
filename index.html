@@ -6962,7 +6962,7 @@ async function giraLoadStaticData() {
 
 async function giraLoadData() {
   try {
-    const url = giraActiveGroup === 'all' ? `${BACKEND_URL}/api/v1/gira` : `${BACKEND_URL}/api/v1/gira?group_id=${giraActiveGroup}`;
+    const url = giraActiveGroup === 'all' ? `${BACKEND_URL}/api/v1/gira?academyId=${ACADEMY_ID}` : `${BACKEND_URL}/api/v1/gira?academyId=${ACADEMY_ID}&group_id=${giraActiveGroup}`;
     const res = await apiFetch(url);
     if (!res || !res.ok) { console.error('giraLoadData error:', res?.status); return; }
     const data = await res.json();
