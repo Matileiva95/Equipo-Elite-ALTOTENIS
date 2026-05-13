@@ -4591,154 +4591,302 @@ async function ppGuardarObjetivos() {
   }
 }
 
-let _scoutingExpandido = null;
+// ───── Estado del scouting del portal ─────
+let _scoutingView      = 'list';   // 'list' | 'form' | 'detail'
+let _scoutingFichas    = null;     // cache de fichas (null = no cargado)
+let _scoutingLoading   = false;
+let _scoutingSelectedId = null;
+let _scoutingEditing   = false;
+let _scoutingError     = '';
 
 function renderPortalScouting() {
-  const p = portalPlayer;
-  const allMatches = [...(p.matches || []), ...(getPlayerMatches(p.name) || [])];
-
-  const rivalesMap = {};
-  allMatches.forEach(m => {
-    const key = (m.rival || 'Desconocido').trim();
-    if (!rivalesMap[key]) rivalesMap[key] = { nombre: key, partidos: [] };
-    rivalesMap[key].partidos.push(m);
-  });
-
-  const rivales = Object.values(rivalesMap).sort((a,b) => b.partidos.length - a.partidos.length);
-  const scoutingNotas = p.scoutingNotas || {};
-  const rivalColors = ['#FF6B00','#1DA1D6','#2ecc71','#9b59b6','#e74c3c','#f39c12','#1abc9c'];
-
-  function initials(nombre) {
-    return nombre.split(' ').slice(0,2).map(w => w[0]?.toUpperCase() || '').join('');
+  if (_scoutingFichas === null && !_scoutingLoading) {
+    loadScoutingFichas();
   }
+  if (_scoutingView === 'form')   return renderScoutingForm();
+  if (_scoutingView === 'detail') return renderScoutingDetail();
+  return renderScoutingList();
+}
 
-  let rivalHtml = '';
-  if (rivales.length === 0) {
-    rivalHtml = `<div style="font-size:13px;color:#bbb;text-align:center;padding:24px 0;">Sin rivales registrados aún</div>`;
-  } else {
-    rivales.forEach((r, idx) => {
-      const color = rivalColors[idx % rivalColors.length];
-      const wins  = r.partidos.filter(m => m.resultado?.toUpperCase() === 'G').length;
-      const loss  = r.partidos.filter(m => m.resultado?.toUpperCase() === 'P').length;
-      const expandido = _scoutingExpandido === r.nombre;
-      const notas = scoutingNotas[r.nombre] || {};
-
-      const historialHtml = r.partidos
-        .sort((a,b) => (a.fecha > b.fecha ? -1 : 1))
-        .map(m => {
-          const gano   = m.resultado?.toUpperCase() === 'G';
-          const perdio = m.resultado?.toUpperCase() === 'P';
-          const bg2    = gano ? '#e8f8ef' : perdio ? '#fdecea' : '#f6f6f6';
-          const col2   = gano ? '#27ae60' : perdio ? '#e74c3c' : '#aaa';
-          const label  = gano ? 'G' : perdio ? 'P' : m.resultado || '?';
-          return `
-            <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;">
-              <span style="font-size:11px;color:#bbb;min-width:72px;">${m.fecha || '—'}</span>
-              <span style="flex:1;font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.torneo || 'Torneo'}</span>
-              ${m.score ? `<span style="font-size:11px;color:#888;">${m.score}</span>` : ''}
-              <span style="font-size:11px;font-weight:700;color:${col2};background:${bg2};padding:2px 7px;border-radius:20px;flex-shrink:0;">${label}</span>
-            </div>`;
-        }).join('');
-
-      const rivalKey = r.nombre.replace(/'/g,"\\'");
-      const detalleHtml = expandido ? `
-        <div style="border-top:1px solid #f0f0f0;margin-top:10px;padding-top:10px;">
-          <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Historial</div>
-          ${historialHtml}
-          <div style="margin-top:14px;">
-            <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Mis notas</div>
-            <textarea id="scout-notas-${idx}" rows="3"
-              style="width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:9px;font-size:13px;color:#333;resize:none;font-family:inherit;box-sizing:border-box;"
-              placeholder="Ej: Tiene revés flojo bajo presión...">${notas.misNotas || ''}</textarea>
-          </div>
-          <div style="margin-top:10px;">
-            <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Plan para la próxima vez</div>
-            <textarea id="scout-plan-${idx}" rows="3"
-              style="width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:9px;font-size:13px;color:#333;resize:none;font-family:inherit;box-sizing:border-box;"
-              placeholder="Ej: Atacar con slice al revés y subir a la red...">${notas.plan || ''}</textarea>
-          </div>
-          <button onclick="ppGuardarScoutingNotas('${rivalKey}', ${idx})"
-            style="margin-top:10px;width:100%;padding:11px;background:#FF6B00;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;">
-            Guardar notas
-          </button>
-          <div id="scout-feedback-${idx}" style="font-size:12px;font-weight:600;margin-top:6px;min-height:16px;"></div>
-        </div>` : '';
-
-      rivalHtml += `
-        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:13px 14px;margin-bottom:9px;">
-          <div style="display:flex;align-items:center;gap:12px;cursor:pointer;"
-               onclick="_scoutingExpandido = _scoutingExpandido === '${rivalKey}' ? null : '${rivalKey}'; switchPortalSection('scouting');">
-            <div style="width:40px;height:40px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">
-              ${initials(r.nombre)}
-            </div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:700;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.nombre}</div>
-              <div style="font-size:12px;color:#aaa;margin-top:1px;">${r.partidos.length} partido${r.partidos.length !== 1 ? 's' : ''}</div>
-            </div>
-            <div style="text-align:right;flex-shrink:0;">
-              <div style="font-size:12px;font-weight:700;">
-                ${wins > 0 ? `<span style="color:#27ae60;">${wins}V</span>` : ''}
-                ${wins > 0 && loss > 0 ? `<span style="color:#ccc;"> · </span>` : ''}
-                ${loss > 0 ? `<span style="color:#e74c3c;">${loss}D</span>` : ''}
-                ${wins === 0 && loss === 0 ? '<span style="color:#aaa;">—</span>' : ''}
-              </div>
-              <div style="font-size:16px;color:#ccc;margin-top:2px;">${expandido ? '▲' : '▼'}</div>
-            </div>
-          </div>
-          ${detalleHtml}
-        </div>`;
+async function loadScoutingFichas() {
+  _scoutingLoading = true;
+  _scoutingError = '';
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const token    = sessionStorage.getItem('ciq_token');
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/scouting`, {
+      headers: { 'Authorization': `Bearer ${token}` }
     });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(d.error || `Error ${res.status}`);
+    _scoutingFichas = Array.isArray(d) ? d : (d.fichas || d.data || []);
+  } catch(e) {
+    _scoutingFichas = [];
+    _scoutingError = e.message || 'No se pudieron cargar las fichas';
+  } finally {
+    _scoutingLoading = false;
+    switchPortalSection('scouting');
+  }
+}
+
+function renderScoutingList() {
+  const fichas = _scoutingFichas || [];
+  let body = '';
+
+  if (_scoutingLoading && fichas.length === 0) {
+    body = `<div style="font-size:13px;color:#bbb;text-align:center;padding:24px 0;">Cargando fichas…</div>`;
+  } else if (_scoutingError) {
+    body = `<div style="font-size:13px;color:#e74c3c;text-align:center;padding:18px 0;">${_scoutingError}</div>`;
+  } else if (fichas.length === 0) {
+    body = `<div style="font-size:13px;color:#bbb;text-align:center;padding:24px 0;">Aún no tienes fichas de scouting</div>`;
+  } else {
+    body = fichas.map(f => {
+      const id = f.id ?? f._id ?? '';
+      const nombre  = f.rival_name || 'Rival';
+      const torneo  = f.tournament || '';
+      const score   = f.score || '';
+      const fecha   = f.created_at ? new Date(f.created_at).toLocaleDateString('es-CL') : (f.fecha || '');
+      const inits   = nombre.split(' ').slice(0,2).map(w => (w[0]||'').toUpperCase()).join('');
+      return `
+        <div onclick="ppScoutingShowDetail('${String(id).replace(/'/g,"\\'")}')"
+             style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;gap:12px;cursor:pointer;">
+          <div style="width:40px;height:40px;border-radius:50%;background:#FF6B00;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">${inits}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nombre}</div>
+            <div style="font-size:12px;color:#888;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${torneo}${torneo && score ? ' · ' : ''}${score}</div>
+            ${fecha ? `<div style="font-size:11px;color:#aaa;margin-top:1px;">${fecha}</div>` : ''}
+          </div>
+          <div style="font-size:18px;color:#ccc;flex-shrink:0;">›</div>
+        </div>`;
+    }).join('');
   }
 
   return `
     <div style="margin-bottom:16px;">
       <div style="font-size:22px;font-weight:700;color:#222;">Scouting de rivales</div>
     </div>
-    ${rivalHtml}
-    <button onclick="ppAgregarRival()"
+    ${body}
+    <button onclick="ppScoutingShowForm()"
       style="width:100%;padding:13px;background:#fff;color:#FF6B00;border:2px dashed #FF6B00;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">
-      + Agregar rival
+      + Nueva ficha
     </button>`;
 }
 
-async function ppGuardarScoutingNotas(nombreRival, idx) {
-  const misNotas = document.getElementById(`scout-notas-${idx}`)?.value || '';
-  const plan     = document.getElementById(`scout-plan-${idx}`)?.value || '';
+function ppScoutingShowList() {
+  _scoutingView = 'list';
+  _scoutingSelectedId = null;
+  _scoutingEditing = false;
+  switchPortalSection('scouting');
+}
+
+function ppScoutingShowForm(id) {
+  _scoutingView = 'form';
+  _scoutingEditing = !!id;
+  _scoutingSelectedId = id || null;
+  switchPortalSection('scouting');
+}
+
+function ppScoutingShowDetail(id) {
+  _scoutingView = 'detail';
+  _scoutingSelectedId = id;
+  _scoutingEditing = false;
+  switchPortalSection('scouting');
+}
+
+function _getFichaSeleccionada() {
+  return (_scoutingFichas || []).find(f =>
+    String(f.id ?? f._id) === String(_scoutingSelectedId)
+  ) || null;
+}
+
+function renderScoutingForm() {
+  const f = _scoutingEditing ? (_getFichaSeleccionada() || {}) : {};
+  const surfaces  = ['Arcilla','Cemento','Hierba','Indoor'];
+  const altitudes = ['Normal (<500m)','Media (500-1500m)','Alta (>1500m)'];
+
+  const opt = (arr, val) => arr.map(o =>
+    `<option value="${o}" ${o === val ? 'selected' : ''}>${o}</option>`
+  ).join('');
+
+  const labelCSS = `font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:block;`;
+  const inputCSS = `width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:10px;font-size:13px;color:#333;font-family:inherit;box-sizing:border-box;background:#fff;`;
+  const taCSS    = inputCSS + 'resize:none;';
+
+  return `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button onclick="ppScoutingShowList()" style="background:none;border:none;font-size:18px;color:#888;cursor:pointer;padding:0;">←</button>
+      <div style="font-size:22px;font-weight:700;color:#222;">${_scoutingEditing ? 'Editar ficha' : 'Nueva ficha'}</div>
+    </div>
+
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:12px;">
+      <label style="${labelCSS}">Nombre del rival</label>
+      <input id="sf-rival" type="text" value="${(f.rival_name||'').replace(/"/g,'&quot;')}" style="${inputCSS}margin-bottom:12px;" placeholder="Ej: Juan Pérez">
+
+      <label style="${labelCSS}">Torneo</label>
+      <input id="sf-torneo" type="text" value="${(f.tournament||'').replace(/"/g,'&quot;')}" style="${inputCSS}margin-bottom:12px;" placeholder="Ej: ITF M15 Santiago">
+
+      <label style="${labelCSS}">Marcador</label>
+      <input id="sf-score" type="text" value="${(f.score||'').replace(/"/g,'&quot;')}" style="${inputCSS}" placeholder="Ej: 6-3 4-6 7-5">
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:6px 0 10px;">Condiciones del partido</div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:12px;">
+      <label style="${labelCSS}">Superficie</label>
+      <select id="sf-surface" style="${inputCSS}margin-bottom:12px;">
+        <option value="">—</option>${opt(surfaces, f.surface || '')}
+      </select>
+
+      <label style="${labelCSS}">Altitud</label>
+      <select id="sf-altitude" style="${inputCSS}margin-bottom:12px;">
+        <option value="">—</option>${opt(altitudes, f.altitude || '')}
+      </select>
+
+      <label style="${labelCSS}">Pelota</label>
+      <input id="sf-ball" type="text" value="${(f.ball||'').replace(/"/g,'&quot;')}" style="${inputCSS}margin-bottom:12px;" placeholder="Ej: Wilson US Open">
+
+      <label style="${labelCSS}">Tensión y encordado</label>
+      <input id="sf-string" type="text" value="${(f.string_tension||'').replace(/"/g,'&quot;')}" style="${inputCSS}" placeholder="Ej: 24kg / Luxilon ALU Power">
+    </div>
+
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:12px;">
+      <label style="${labelCSS}">Análisis del partido</label>
+      <textarea id="sf-analysis" rows="6" style="${taCSS}" placeholder="¿Cómo jugó? ¿Qué funcionó? ¿Qué falló?">${f.analysis || ''}</textarea>
+    </div>
+
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:14px;">
+      <label style="${labelCSS}">Notas adicionales</label>
+      <textarea id="sf-notes" rows="3" style="${taCSS}" placeholder="Cualquier detalle extra">${f.notes || ''}</textarea>
+    </div>
+
+    <button onclick="ppGuardarFichaScouting()"
+      style="width:100%;padding:13px;background:#FF6B00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+      Guardar ficha
+    </button>
+    <div id="sf-feedback" style="font-size:12px;font-weight:600;margin-top:8px;min-height:16px;text-align:center;"></div>`;
+}
+
+function renderScoutingDetail() {
+  const f = _getFichaSeleccionada();
+  if (!f) {
+    return `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <button onclick="ppScoutingShowList()" style="background:none;border:none;font-size:18px;color:#888;cursor:pointer;padding:0;">←</button>
+        <div style="font-size:22px;font-weight:700;color:#222;">Ficha</div>
+      </div>
+      <div style="font-size:13px;color:#bbb;text-align:center;padding:24px 0;">Ficha no encontrada</div>`;
+  }
+
+  const row = (label, val) => val ? `
+    <div style="margin-bottom:12px;">
+      <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">${label}</div>
+      <div style="font-size:14px;color:#222;white-space:pre-wrap;">${String(val).replace(/</g,'&lt;')}</div>
+    </div>` : '';
+
+  const id = f.id ?? f._id ?? '';
+  const idEsc = String(id).replace(/'/g,"\\'");
+
+  return `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button onclick="ppScoutingShowList()" style="background:none;border:none;font-size:18px;color:#888;cursor:pointer;padding:0;">←</button>
+      <div style="font-size:22px;font-weight:700;color:#222;flex:1;">${f.rival_name || 'Rival'}</div>
+    </div>
+
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:12px;">
+      ${row('Torneo', f.tournament)}
+      ${row('Marcador', f.score)}
+    </div>
+
+    ${(f.surface || f.altitude || f.ball || f.string_tension) ? `
+      <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:6px 0 10px;">Condiciones del partido</div>
+      <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:12px;">
+        ${row('Superficie', f.surface)}
+        ${row('Altitud', f.altitude)}
+        ${row('Pelota', f.ball)}
+        ${row('Tensión y encordado', f.string_tension)}
+      </div>` : ''}
+
+    ${(f.analysis || f.notes) ? `
+      <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:14px;">
+        ${row('Análisis del partido', f.analysis)}
+        ${row('Notas adicionales', f.notes)}
+      </div>` : ''}
+
+    <div style="display:flex;gap:8px;">
+      <button onclick="ppScoutingShowList()"
+        style="flex:1;padding:12px;background:#fff;color:#555;border:1px solid #ddd;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+        Volver
+      </button>
+      <button onclick="ppScoutingShowForm('${idEsc}')"
+        style="flex:1;padding:12px;background:#FF6B00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+        Editar
+      </button>
+      <button onclick="ppEliminarFichaScouting('${idEsc}')"
+        style="flex:1;padding:12px;background:#fff;color:#e74c3c;border:1px solid #e74c3c;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+        Eliminar
+      </button>
+    </div>`;
+}
+
+async function ppGuardarFichaScouting() {
   const playerId = sessionStorage.getItem('ciq_player_id');
   const token    = sessionStorage.getItem('ciq_token');
-  const feedbackEl = document.getElementById(`scout-feedback-${idx}`);
+  const feedback = document.getElementById('sf-feedback');
 
-  if (!portalPlayer.scoutingNotas) portalPlayer.scoutingNotas = {};
-  portalPlayer.scoutingNotas[nombreRival] = { misNotas, plan };
+  const body = {
+    rival_name:     document.getElementById('sf-rival')?.value.trim()    || '',
+    tournament:     document.getElementById('sf-torneo')?.value.trim()   || '',
+    score:          document.getElementById('sf-score')?.value.trim()    || '',
+    surface:        document.getElementById('sf-surface')?.value         || '',
+    altitude:       document.getElementById('sf-altitude')?.value        || '',
+    ball:           document.getElementById('sf-ball')?.value.trim()     || '',
+    string_tension: document.getElementById('sf-string')?.value.trim()   || '',
+    analysis:       document.getElementById('sf-analysis')?.value        || '',
+    notes:          document.getElementById('sf-notes')?.value           || ''
+  };
+
+  if (!body.rival_name) {
+    if (feedback) { feedback.textContent = 'El nombre del rival es obligatorio'; feedback.style.color = '#e74c3c'; }
+    return;
+  }
+
+  const isEdit = _scoutingEditing && _scoutingSelectedId;
+  const url    = isEdit
+    ? `${BACKEND_URL}/api/v1/players/${playerId}/scouting/${_scoutingSelectedId}`
+    : `${BACKEND_URL}/api/v1/players/${playerId}/scouting`;
 
   try {
-    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/scouting-notas`, {
-      method: 'POST',
+    const res = await apiFetch(url, {
+      method: isEdit ? 'PUT' : 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rival: nombreRival, misNotas, plan })
+      body: JSON.stringify(body)
     });
     const d = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(d.error || `Error ${res.status}`);
-    if (feedbackEl) {
-      feedbackEl.textContent = '✓ Notas guardadas';
-      feedbackEl.style.color = '#27ae60';
-      setTimeout(() => { feedbackEl.textContent = ''; }, 3000);
-    }
+
+    _scoutingFichas = null;
+    await loadScoutingFichas();
+    ppScoutingShowList();
   } catch(e) {
-    if (feedbackEl) {
-      feedbackEl.textContent = e.message || 'Error al guardar';
-      feedbackEl.style.color = '#e74c3c';
-    }
+    if (feedback) { feedback.textContent = e.message || 'Error al guardar'; feedback.style.color = '#e74c3c'; }
   }
 }
 
-function ppAgregarRival() {
-  const nombre = prompt('Nombre del rival:');
-  if (!nombre?.trim()) return;
-  if (!portalPlayer.matches) portalPlayer.matches = [];
-  portalPlayer.matches.push({ rival: nombre.trim(), fecha: '', torneo: '', resultado: '', score: '' });
-  _scoutingExpandido = nombre.trim();
-  switchPortalSection('scouting');
+async function ppEliminarFichaScouting(id) {
+  if (!confirm('¿Eliminar esta ficha?')) return;
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const token = sessionStorage.getItem('ciq_token');
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/scouting/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Error al eliminar');
+    _scoutingFichas = null;
+    ppScoutingShowList();
+    await loadScoutingFichas();
+  } catch(e) {
+    alert(e.message || 'Error al eliminar');
+  }
 }
 
 function renderPortalProgreso() {
