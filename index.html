@@ -7897,12 +7897,16 @@ window.PuntoAPunto = PuntoAPunto;
 <!-- Panel modal Punto a Punto -->
 <div id="puntoAPuntoPanel" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0;
   background:rgba(0,0,0,0.5); z-index:9999; overflow-y:auto;">
-  <div style="max-width:480px; margin:20px auto; background:white; border-radius:12px;
+  <div id="puntoAPuntoCard" style="max-width:480px; margin:20px auto; background:white; border-radius:12px;
     padding:0; min-height:80vh;">
 
     <div style="padding:16px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
       <h3 style="margin:0; font-size:16px; color:#333;">Análisis punto a punto</h3>
-      <button onclick="closePuntoAPunto()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#999;">✕</button>
+      <div style="display:flex; align-items:center; gap:4px;">
+        <button id="papToggleSizeBtn" onclick="togglePapSize()" title="Maximizar"
+          style="background:none; border:none; font-size:18px; cursor:pointer; color:#999; padding:0 6px; line-height:1;">⛶</button>
+        <button onclick="closePuntoAPunto()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#999;">✕</button>
+      </div>
     </div>
 
     <div id="papInput" style="padding:16px;">
@@ -7942,10 +7946,11 @@ window.PuntoAPunto = PuntoAPunto;
         <label style="font-size:12px; color:#666; display:block; margin-bottom:4px;">
           Pegar datos punto a punto
         </label>
-        <textarea id="papRawText" rows="10" placeholder="Pega aquí el texto de ITF o TenisMath..." style="
+        <textarea id="papRawText" rows="15" oninput="updatePapCharCount()" onpaste="setTimeout(updatePapCharCount,0)" placeholder="Pega aquí el texto de ITF o TenisMath..." style="
           width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:8px;
           font-size:12px; font-family:monospace; resize:vertical; box-sizing:border-box;
           line-height:1.5;"></textarea>
+        <div id="papCharCount" style="font-size:11px; color:#999; margin-top:4px; text-align:right;">0 caracteres detectados</div>
       </div>
 
       <button onclick="processPuntoAPunto()" style="
@@ -8036,10 +8041,12 @@ window.PuntoAPunto = PuntoAPunto;
 let papSelectedFormat = 'auto';
 let papCharts = [];
 let papParsedData = null;
+let papMaximized = false;
 
 function openPuntoAPunto() {
   document.getElementById('puntoAPuntoPanel').style.display = 'block';
   document.body.style.overflow = 'hidden';
+  updatePapCharCount();
 }
 
 function closePuntoAPunto() {
@@ -8048,6 +8055,47 @@ function closePuntoAPunto() {
   papCharts.forEach(c => c.destroy());
   papCharts = [];
 }
+
+function updatePapCharCount() {
+  const ta = document.getElementById('papRawText');
+  const el = document.getElementById('papCharCount');
+  if (!ta || !el) return;
+  const n = ta.value.length;
+  el.textContent = n.toLocaleString('es-CL') + ' caracteres detectados';
+}
+
+function togglePapSize() {
+  const card = document.getElementById('puntoAPuntoCard');
+  const btn = document.getElementById('papToggleSizeBtn');
+  if (!card) return;
+  papMaximized = !papMaximized;
+  if (papMaximized) {
+    card.style.maxWidth = '100vw';
+    card.style.width = '100%';
+    card.style.height = '100vh';
+    card.style.minHeight = '100vh';
+    card.style.margin = '0';
+    card.style.borderRadius = '0';
+    if (btn) { btn.title = 'Restaurar'; btn.textContent = '🗗'; }
+  } else {
+    card.style.maxWidth = '480px';
+    card.style.width = '';
+    card.style.height = '';
+    card.style.minHeight = '80vh';
+    card.style.margin = '20px auto';
+    card.style.borderRadius = '12px';
+    if (btn) { btn.title = 'Maximizar'; btn.textContent = '⛶'; }
+  }
+  requestAnimationFrame(() => {
+    papCharts.forEach(c => { try { c.resize(); } catch(e){} });
+  });
+}
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('puntoAPuntoPanel')?.style.display === 'block') {
+    papCharts.forEach(c => { try { c.resize(); } catch(e){} });
+  }
+});
 
 function setPapFormat(fmt) {
   papSelectedFormat = fmt;
