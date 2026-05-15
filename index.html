@@ -7456,8 +7456,10 @@ const PuntoAPunto = {
         continue;
       }
 
-      const playerMatch = line.match(/^\[([A-Z]{3})\]/);
-      if (playerMatch) {
+      // Player ID: línea con código bare (COL, VER) o en formato [CODE](url) markdown
+      // Acepta 2-5 letras mayúsculas. Excluye palabras reservadas (SET, AD).
+      const playerMatch = line.match(/^\[?([A-Z]{2,5})\]?(?:\(.*\))?$/);
+      if (playerMatch && !/^(SET|AD)$/i.test(playerMatch[1])) {
         const id = playerMatch[1];
         if (!p1Id) {
           p1Id = id;
@@ -7484,10 +7486,10 @@ const PuntoAPunto = {
       }
     }
 
+    // Games dentro de cada set vienen en orden inverso (último game primero)
     sets.forEach(s => s.games.reverse());
-
-    const allWinners = sets.flatMap(s => s.games.map(g => g.winner));
-    const uniqueNames = [...new Set(allWinners)];
+    // Sets también vienen invertidos (SET 2 antes que SET 1) — ordenar ascendente
+    sets.sort((a, b) => a.setNum - b.setNum);
 
     const result = {
       format: 'itf',
@@ -7504,26 +7506,35 @@ const PuntoAPunto = {
         points: { p1: 0, p2: 0 },
       };
 
-      setData.games.forEach((game, gi) => {
-        const p1Pts = this._extractPointScores(game.p1Scores);
-        const p2Pts = this._extractPointScores(game.p2Scores);
+      setData.games.forEach((game) => {
+        // Strip las últimas 2 entradas: son el tally del game (separador + game count)
+        const p1Pts = game.p1Scores.length > 2 ? game.p1Scores.slice(0, -2) : [];
+        const p2Pts = game.p2Scores.length > 2 ? game.p2Scores.slice(0, -2) : [];
 
         const isTB = this._isTiebreak(p1Pts, p2Pts);
 
         let points;
         if (isTB) {
-          points = this._parseTiebreakPoints(game.p1Scores, game.p2Scores, p1Id, p2Id);
+          points = this._parseTiebreakPoints(p1Pts, p2Pts);
         } else {
           points = this._parseGamePoints(p1Pts, p2Pts);
         }
+
+        // Append punto ganador del game (no aparece en running scores)
+        const winnerUpper = (game.winner || '').toUpperCase();
+        let gameWinnerIsP1 = false;
+        if (p1Id && winnerUpper.includes(p1Id)) gameWinnerIsP1 = true;
+        else if (p2Id && winnerUpper.includes(p2Id)) gameWinnerIsP1 = false;
+        else gameWinnerIsP1 = (winnerUpper.split(/\s+/).some(w => p1Id && w.startsWith(p1Id)));
+        points.push(gameWinnerIsP1 ? 2 : 1);
 
         const gameResult = {
           score: game.scoreBefore,
           winner: game.winner,
           points,
           isTB,
-          pointsP1: points.filter(p => p === 1).length,
-          pointsP2: points.filter(p => p === 2).length,
+          pointsP1: points.filter(p => p === 2).length,
+          pointsP2: points.filter(p => p === 1).length,
         };
 
         setResult.games.push(gameResult);
@@ -7565,56 +7576,45 @@ const PuntoAPunto = {
     return !has15or30or40 && allScores.length > 0;
   },
 
-  _parseTiebreakPoints(p1Raw, p2Raw, p1Id, p2Id) {
+  _parseTiebreakPoints(p1Raw, p2Raw) {
     const p1 = p1Raw.filter(s => typeof s === 'number');
     const p2 = p2Raw.filter(s => typeof s === 'number');
-
-    const len = Math.min(p1.length, p2.length);
-    const points = [];
-    let prevP1 = 0, prevP2 = 0;
-
-    for (let i = 0; i < len; i++) {
-      if (p1[i] > prevP1) {
-        points.push(2);
-        prevP1 = p1[i];
-        prevP2 = p2[i];
-      } else if (p2[i] > prevP2) {
-        points.push(1);
-        prevP1 = p1[i];
-        prevP2 = p2[i];
-      }
-    }
-    return points;
+    return this._walkStreams(p1, p2, (a, b) => a > b);
   },
 
   _parseGamePoints(p1Scores, p2Scores) {
+    return this._walkStreams(p1Scores, p2Scores, (a, b) => this._scoreVal(a) > this._scoreVal(b));
+  },
+
+  // Camina ambas filas como streams independientes: avanza el puntero del jugador
+  // que incrementó. Si ambas incrementaron en el mismo step (caso no-lockstep en
+  // running scores de ITF), avanza al que está más atrás en el marcador del game.
+  _walkStreams(p1, p2, gt) {
     const points = [];
-    let prevP1 = 0, prevP2 = 0;
-    const len = Math.max(p1Scores.length, p2Scores.length);
+    let i = 0, j = 0, prev1 = 0, prev2 = 0;
+    let safety = 500;
+    while ((i < p1.length || j < p2.length) && safety-- > 0) {
+      const c1 = i < p1.length ? p1[i] : prev1;
+      const c2 = j < p2.length ? p2[j] : prev2;
+      const p1Up = i < p1.length && gt(c1, prev1);
+      const p2Up = j < p2.length && gt(c2, prev2);
 
-    for (let i = 0; i < len; i++) {
-      const c1 = i < p1Scores.length ? p1Scores[i] : p1Scores[p1Scores.length - 1];
-      const c2 = i < p2Scores.length ? p2Scores[i] : p2Scores[p2Scores.length - 1];
-
-      const v1 = this._scoreVal(c1);
-      const v2 = this._scoreVal(c2);
-      const pv1 = this._scoreVal(prevP1);
-      const pv2 = this._scoreVal(prevP2);
-
-      let winner;
-      if (c1 === 'Ad' && prevP1 !== 'Ad') winner = 2;
-      else if (c2 === 'Ad' && prevP2 !== 'Ad') winner = 1;
-      else if (prevP1 === 'Ad' && c1 === 40 && c2 === 40) winner = 1;
-      else if (prevP2 === 'Ad' && c2 === 40 && c1 === 40) winner = 2;
-      else if (v1 > pv1 && v2 === pv2) winner = 2;
-      else if (v2 > pv2 && v1 === pv1) winner = 1;
-      else if (v1 > pv1) winner = 2;
-      else if (v2 > pv2) winner = 1;
-      else winner = 0;
-
-      points.push(winner);
-      prevP1 = c1;
-      prevP2 = c2;
+      if (p1Up && p2Up) {
+        const v1 = this._scoreVal(prev1);
+        const v2 = this._scoreVal(prev2);
+        if (v1 <= v2) {
+          points.push(2); prev1 = c1; i++;
+        } else {
+          points.push(1); prev2 = c2; j++;
+        }
+      } else if (p1Up) {
+        points.push(2); prev1 = c1; i++;
+      } else if (p2Up) {
+        points.push(1); prev2 = c2; j++;
+      } else {
+        if (i < p1.length) { prev1 = c1; i++; }
+        if (j < p2.length) { prev2 = c2; j++; }
+      }
     }
     return points;
   },
