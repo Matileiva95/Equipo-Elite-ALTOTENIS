@@ -8262,8 +8262,58 @@ function statCard(label, v1, v2) {
     </div>`;
 }
 
-function savePuntoAPunto() {
-  alert('Guardado pendiente de integración — conectar con saveMatchStats()');
+async function savePuntoAPunto() {
+  if (!papParsedData) { alert('Procesa el partido primero.'); return; }
+  const player = (typeof data !== 'undefined' && typeof pid !== 'undefined') ? data.players?.[pid] : null;
+  if (!player || !player.id) {
+    alert('No pude identificar al jugador. Abre el módulo desde el perfil del jugador.');
+    return;
+  }
+
+  const p1 = document.getElementById('papPlayerName').value.trim() || 'Jugador';
+  const p2 = document.getElementById('papRivalName').value.trim() || 'Rival';
+  const raw = document.getElementById('papRawText').value.trim();
+  const setsData = PuntoAPunto.buildMomentumData(papParsedData);
+
+  const payload = {
+    type: 'punto_a_punto',
+    format: papParsedData.format,
+    date: new Date().toISOString().slice(0,10),
+    player: p1,
+    rival: p2,
+    rawText: raw,
+    parsedData: papParsedData,
+    sets: setsData.map(s => ({
+      setNum: s.setNum,
+      points: s.points,
+      totalP1: s.points.filter(p => p.w === 1).length,
+      totalP2: s.points.filter(p => p.w === 2).length,
+    })),
+  };
+
+  const body = {
+    fecha: payload.date,
+    rival: p2,
+    analisis_texto: JSON.stringify(payload),
+  };
+
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${player.id}/match-analysis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      console.error('[PuntoAPunto] Error guardando:', res.status, txt);
+      alert('Error al guardar (' + res.status + ')');
+      return;
+    }
+    alert('Análisis guardado en el perfil del jugador.');
+  } catch (e) {
+    console.error('[PuntoAPunto] Excepción guardando:', e);
+    alert('Error de conexión al guardar.');
+  }
 }
 </script>
 
