@@ -7415,7 +7415,7 @@ async function giraDeleteEvent(id) {
 const PuntoAPunto = {
 
   detectFormat(text) {
-    if (text.includes('SET 1') && text.includes('[COL]') || text.includes('[VER]') || text.includes('won by')) {
+    if (/\bSET\s+\d+\b/i.test(text) && /won\s+by/i.test(text)) {
       return 'itf';
     }
     if (text.includes('is serving') || text.includes('unforced error') || text.includes('winner')) {
@@ -8086,11 +8086,14 @@ function processPuntoAPunto() {
   let format = papSelectedFormat;
   if (format === 'auto') {
     format = PuntoAPunto.detectFormat(raw);
+    console.log('[PuntoAPunto] Formato detectado:', format);
     if (!format) {
       errDiv.textContent = 'No pude detectar el formato. Selecciona ITF o TenisMath manualmente.';
       errDiv.style.display = 'block';
       return;
     }
+  } else {
+    console.log('[PuntoAPunto] Formato seleccionado manualmente:', format);
   }
 
   try {
@@ -8100,14 +8103,20 @@ function processPuntoAPunto() {
       papParsedData = PuntoAPunto.parseTennisMath(raw);
     }
 
+    console.log('[PuntoAPunto] Sets parseados:', papParsedData.sets.length);
+    console.log('[PuntoAPunto] Datos parseados:', papParsedData);
+
     const setsData = PuntoAPunto.buildMomentumData(papParsedData);
+    const totalPts = setsData.reduce((s, set) => s + set.points.length, 0);
+    console.log('[PuntoAPunto] Puntos totales construidos:', totalPts);
+    console.log('[PuntoAPunto] Momentum por set:', setsData.map(s => ({ set: s.setNum, puntos: s.points.length })));
 
     renderPapResults(setsData, p1, p2, format);
 
   } catch (e) {
     errDiv.textContent = 'Error procesando datos: ' + e.message;
     errDiv.style.display = 'block';
-    console.error(e);
+    console.error('[PuntoAPunto] Error:', e);
   }
 }
 
