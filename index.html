@@ -7721,8 +7721,9 @@ const PuntoAPunto = {
     return { winner, type, shot };
   },
 
-  buildMomentumData(parsedData) {
+  buildMomentumData(parsedData, firstServerIsP1 = true) {
     const setsData = [];
+    let totalGameIdx = 0;
 
     parsedData.sets.forEach(set => {
       const setPoints = [];
@@ -7735,7 +7736,16 @@ const PuntoAPunto = {
 
         let isBreak = false;
         if (parsedData.format === 'itf') {
-          isBreak = game.isBreak || false;
+          const serverIsP1 = (totalGameIdx % 2 === 0) === firstServerIsP1;
+          const winnerUpper = (game.winner || '').toUpperCase();
+          const p1IdUpper = (parsedData.p1Id || '').toUpperCase();
+          const p2IdUpper = (parsedData.p2Id || '').toUpperCase();
+          let gameWonByP1 = false;
+          if (p1IdUpper && winnerUpper.includes(p1IdUpper)) gameWonByP1 = true;
+          else if (p2IdUpper && winnerUpper.includes(p2IdUpper)) gameWonByP1 = false;
+          else gameWonByP1 = winnerUpper.split(/\s+/).some(w => p1IdUpper && w.startsWith(p1IdUpper));
+          isBreak = serverIsP1 !== gameWonByP1;
+          totalGameIdx++;
         } else {
           if (game.server && game.winner) {
             isBreak = game.server !== game.winner;
@@ -7930,16 +7940,30 @@ window.PuntoAPunto = PuntoAPunto;
 
       <div style="margin-bottom:12px;">
         <label style="font-size:12px; color:#666; display:block; margin-bottom:4px;">Jugador (tu academia)</label>
-        <input id="papPlayerName" type="text" placeholder="Ej: A. Vergara" style="
+        <input id="papPlayerName" type="text" placeholder="Ej: A. Vergara" oninput="updatePapServerBtns()" style="
           width:100%; padding:8px 12px; border:1px solid #ddd; border-radius:8px;
           font-size:13px; box-sizing:border-box;">
       </div>
 
       <div style="margin-bottom:12px;">
         <label style="font-size:12px; color:#666; display:block; margin-bottom:4px;">Rival</label>
-        <input id="papRivalName" type="text" placeholder="Ej: K. Collins" style="
+        <input id="papRivalName" type="text" placeholder="Ej: K. Collins" oninput="updatePapServerBtns()" style="
           width:100%; padding:8px 12px; border:1px solid #ddd; border-radius:8px;
           font-size:13px; box-sizing:border-box;">
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px; color:#666; display:block; margin-bottom:4px;">¿Quién sirvió primero?</label>
+        <div style="display:flex; gap:0; border:1px solid #ddd; border-radius:8px; overflow:hidden;">
+          <button id="papSrvBtnPlayer" onclick="setPapFirstServer('player')" class="pap-srv-btn pap-format-active"
+            style="flex:1; padding:8px; border:none; cursor:pointer; font-size:12px;">
+            Jugador
+          </button>
+          <button id="papSrvBtnRival" onclick="setPapFirstServer('rival')" class="pap-srv-btn"
+            style="flex:1; padding:8px; border:none; cursor:pointer; font-size:12px; border-left:1px solid #ddd;">
+            Rival
+          </button>
+        </div>
       </div>
 
       <div style="margin-bottom:12px;">
@@ -8033,12 +8057,14 @@ window.PuntoAPunto = PuntoAPunto;
 
 <style>
   .pap-format-btn { background: white; color: #666; transition: all 0.2s; }
+  .pap-srv-btn { background: white; color: #666; transition: all 0.2s; }
   .pap-format-active { background: #534AB7 !important; color: white !important; }
   .pap-tab-active { color: #534AB7 !important; border-bottom-color: #534AB7 !important; font-weight: 500; }
 </style>
 
 <script>
 let papSelectedFormat = 'auto';
+let papFirstServer = 'player';
 let papCharts = [];
 let papParsedData = null;
 let papMaximized = false;
@@ -8103,6 +8129,21 @@ function setPapFormat(fmt) {
   document.getElementById('papBtn' + (fmt === 'auto' ? 'Auto' : fmt === 'itf' ? 'Itf' : 'Tm')).classList.add('pap-format-active');
 }
 
+function setPapFirstServer(who) {
+  papFirstServer = who;
+  document.querySelectorAll('.pap-srv-btn').forEach(b => b.classList.remove('pap-format-active'));
+  document.getElementById(who === 'player' ? 'papSrvBtnPlayer' : 'papSrvBtnRival').classList.add('pap-format-active');
+}
+
+function updatePapServerBtns() {
+  const p1 = document.getElementById('papPlayerName')?.value.trim();
+  const p2 = document.getElementById('papRivalName')?.value.trim();
+  const btn1 = document.getElementById('papSrvBtnPlayer');
+  const btn2 = document.getElementById('papSrvBtnRival');
+  if (btn1) btn1.textContent = p1 || 'Jugador';
+  if (btn2) btn2.textContent = p2 || 'Rival';
+}
+
 function setPapTab(tab) {
   document.getElementById('papMomentum').style.display = tab === 'momentum' ? 'block' : 'none';
   document.getElementById('papStats').style.display = tab === 'stats' ? 'block' : 'none';
@@ -8154,7 +8195,7 @@ function processPuntoAPunto() {
     console.log('[PuntoAPunto] Sets parseados:', papParsedData.sets.length);
     console.log('[PuntoAPunto] Datos parseados:', papParsedData);
 
-    const setsData = PuntoAPunto.buildMomentumData(papParsedData);
+    const setsData = PuntoAPunto.buildMomentumData(papParsedData, papFirstServer === 'player');
     const totalPts = setsData.reduce((s, set) => s + set.points.length, 0);
     console.log('[PuntoAPunto] Puntos totales construidos:', totalPts);
     console.log('[PuntoAPunto] Momentum por set:', setsData.map(s => ({ set: s.setNum, puntos: s.points.length })));
@@ -8264,8 +8305,8 @@ function statCard(label, v1, v2) {
 
 async function savePuntoAPunto() {
   if (!papParsedData) { alert('Procesa el partido primero.'); return; }
-  const player = (typeof data !== 'undefined' && typeof pid !== 'undefined') ? data.players?.[pid] : null;
-  if (!player || !player.id) {
+  const player = (typeof data !== 'undefined' && pid != null) ? data.players?.[pid] : null;
+  if (!player || player.id == null) {
     alert('No pude identificar al jugador. Abre el módulo desde el perfil del jugador.');
     return;
   }
@@ -8273,7 +8314,7 @@ async function savePuntoAPunto() {
   const p1 = document.getElementById('papPlayerName').value.trim() || 'Jugador';
   const p2 = document.getElementById('papRivalName').value.trim() || 'Rival';
   const raw = document.getElementById('papRawText').value.trim();
-  const setsData = PuntoAPunto.buildMomentumData(papParsedData);
+  const setsData = PuntoAPunto.buildMomentumData(papParsedData, papFirstServer === 'player');
 
   const payload = {
     type: 'punto_a_punto',
