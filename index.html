@@ -7489,48 +7489,63 @@ function giraCloseModal() {
 function giraRenderPlayerSel(selectedIds = []) {
   const container = document.getElementById('gira-player-sel');
   if (!container) return;
+
+  window._giraSelectedPlayers = [...selectedIds.map(String)];
+
   const players = giraPlayers || [];
-  if (!players.length) { container.innerHTML = '<div style="color:#aaa;font-size:13px">Sin jugadores</div>'; return; }
-  const groups = GIRA_GROUPS.filter(g => g.id !== 'all');
+  if (players.length === 0) {
+    container.innerHTML = '<div style="color:#aaa;font-size:13px">Sin jugadores</div>';
+    return;
+  }
 
   function renderList(query) {
-    const q = (query || '').toLowerCase().trim();
+    const q = query.toLowerCase().trim();
+    const selected = window._giraSelectedPlayers;
     if (q === '') {
+      const groups = (GIRA_GROUPS||[]).filter(g => g.id !== 'all');
       return groups.map(group => {
         const gp = players.filter(p => p.group_id === group.id);
-        if (!gp.length) return '';
+        if (gp.length === 0) return '';
         return `<div style="margin-bottom:8px">
           <div style="font-size:11px;font-weight:600;color:${group.color};margin-bottom:4px;text-transform:uppercase">${group.name}</div>
           ${gp.map(p => `
             <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">
-              <input type="checkbox" value="${p.id}" ${selectedIds.includes(p.id)?'checked':''} style="cursor:pointer;accent-color:#FF6B00">
+              <input type="checkbox" value="${p.id}" ${selected.includes(String(p.id))?'checked':''}
+                onchange="if(this.checked){window._giraSelectedPlayers.push(String(this.value))}else{window._giraSelectedPlayers=window._giraSelectedPlayers.filter(x=>x!==String(this.value))}"
+                style="cursor:pointer">
               <span style="font-size:13px">${p.full_name}</span>
             </label>
           `).join('')}
         </div>`;
       }).join('');
     } else {
-      const filtered = players.filter(p => p.full_name.toLowerCase().includes(q));
-      if (!filtered.length) return '<div style="font-size:13px;color:#aaa;padding:8px 0">Sin resultados</div>';
-      return filtered.map(p => {
+      const filteredPlayers = players.filter(p => p.full_name.toLowerCase().includes(q));
+      if (filteredPlayers.length === 0) return '<div style="font-size:13px;color:#aaa;padding:8px 0">Sin resultados</div>';
+      const groups = (GIRA_GROUPS||[]).filter(g => g.id !== 'all');
+      return filteredPlayers.map(p => {
         const group = groups.find(g => g.id === p.group_id);
         return `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">
-          <input type="checkbox" value="${p.id}" ${selectedIds.includes(p.id)?'checked':''} style="cursor:pointer;accent-color:#FF6B00">
+          <input type="checkbox" value="${p.id}" ${selected.includes(String(p.id))?'checked':''}
+            onchange="if(this.checked){window._giraSelectedPlayers.push(String(this.value))}else{window._giraSelectedPlayers=window._giraSelectedPlayers.filter(x=>x!==String(this.value))}"
+            style="cursor:pointer">
           <span style="font-size:13px;flex:1">${p.full_name}</span>
-          ${group ? `<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:99px;background:${group.color}22;color:${group.color}">${group.name}</span>` : ''}
+          ${group ? `<span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px;background:${group.color};color:#fff">${group.name}</span>` : ''}
         </label>`;
       }).join('');
     }
   }
 
   container.innerHTML = `
-    <input type="text" id="gira-player-search"
-      placeholder="Buscar jugador..."
-      oninput="document.getElementById('gira-player-list').innerHTML = (window._gpRenderList||function(){})(this.value)"
-      style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;outline:none;">
-    <div id="gira-player-list">${renderList('')}</div>`;
+    <input id="gira-player-search" type="text" placeholder="Buscar jugador..."
+      style="width:100%;padding:6px 10px;font-size:13px;border:1px solid #ddd;border-radius:8px;margin-bottom:8px;box-sizing:border-box;outline:none">
+    <div id="gira-player-list" style="max-height:200px;overflow-y:auto">
+      ${renderList('')}
+    </div>
+  `;
 
-  window._gpRenderList = renderList;
+  document.getElementById('gira-player-search').addEventListener('input', function() {
+    document.getElementById('gira-player-list').innerHTML = renderList(this.value);
+  });
 }
 
 function giraTogglePlayer(cb) {
@@ -7574,7 +7589,7 @@ async function giraSaveEvent() {
   const city = document.getElementById('gira-city').value.trim();
   const country = document.getElementById('gira-country').value.trim();
   if (!city || !country) { alert('Ciudad y país son requeridos'); return; }
-  const player_ids = Array.from(document.querySelectorAll('#gira-player-sel input:checked')).map(cb => cb.value);
+  const player_ids = window._giraSelectedPlayers || Array.from(document.querySelectorAll('#gira-player-sel input:checked')).map(cb => cb.value);
   const coach_ids = Array.from(document.querySelectorAll('#gira-coach-sel input:checked')).map(cb => cb.value);
   const group_sel = document.getElementById('gira-group-sel').value;
   const body = {
