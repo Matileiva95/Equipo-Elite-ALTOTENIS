@@ -7421,7 +7421,7 @@ function giraRenderPlayerSel(selectedIds = []) {
   if (!container) return;
   const players = giraPlayers || [];
   if (!players.length) { container.innerHTML = '<div style="color:#aaa;font-size:13px">Sin jugadores</div>'; return; }
-  const groups = getGiraGroups().filter(g => g.id !== 'all');
+  const groups = GIRA_GROUPS.filter(g => g.id !== 'all');
 
   function renderList(query) {
     const q = (query || '').toLowerCase().trim();
