@@ -7045,7 +7045,9 @@ const GIRA_GROUPS = [
   { id: 'e15be2e1-a5e3-4318-b55a-a24d293a799d', name: 'F1', color: '#06B6D4' }
 ];
 function weekToRangeGira(w) {
+  if (!w || !w.includes('-W')) return w || 'Fecha inválida';
   const [year, week] = w.split('-W').map(Number);
+  if (!year || !week) return w;
   const d = new Date(year, 0, 1 + (week-1)*7);
   const day = d.getDay();
   const mon = new Date(d);
