@@ -7085,10 +7085,13 @@ let giraCoaches = [];
 
 function giraSetTab(tab) {
   giraActiveTab = tab;
+  giraActiveGroup = 'all';
   document.querySelectorAll('.gira-tab').forEach(t => t.classList.remove('active'));
-  const btn = document.getElementById('gtab-' + tab);
-  if (btn) btn.classList.add('active');
-  giraRenderCalendar();
+  document.getElementById('gtab-' + tab).classList.add('active');
+  document.querySelectorAll('.gira-group-chip').forEach(c => c.classList.remove('active'));
+  const allChip = document.querySelector('.gira-group-chip[data-id="all"]');
+  if (allChip) allChip.classList.add('active');
+  giraLoadData();
 }
 
 async function renderGira() {
