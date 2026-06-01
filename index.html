@@ -351,6 +351,26 @@ input,select,textarea,button{font-family:'DM Sans',sans-serif;}
 .pp-tipo-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;flex-shrink:0;margin-top:1px;}
 .pp-analysis-item{padding:12px 0;border-bottom:1px solid var(--border);}
 .pp-analysis-item:last-child{border-bottom:none;}
+.gira-tabs{display:flex;gap:0;border-bottom:0.5px solid var(--border);margin-bottom:1rem;}
+.gira-tab{padding:8px 18px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;color:var(--g3);}
+.gira-tab.active{color:#1A6FD4;border-bottom-color:#1A6FD4;}
+.gira-week-block{margin-bottom:1.5rem;}
+.gira-week-past{opacity:0.85;}
+.gira-week-header{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:2px solid #1A6FD4;margin-bottom:10px;font-size:13px;font-weight:600;}
+.gira-week-current{border-bottom-color:#22C55E !important;color:#22C55E;}
+.gira-week-badge{font-size:11px;font-weight:400;background:#f0f0f0;padding:2px 8px;border-radius:99px;color:#666;}
+.gira-event-card{background:#fff;border:0.5px solid #e8e8e8;border-radius:12px;padding:12px;margin-bottom:8px;}
+.gira-event-past{opacity:0.55;}
+.gira-event-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.gira-level-badge{color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;}
+.gira-surface-badge{background:#f0f0f0;color:#666;font-size:11px;padding:2px 8px;border-radius:99px;}
+.gira-players{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;}
+.gira-player-chip{font-size:11px;background:#f0f0f0;color:#555;padding:2px 8px;border-radius:99px;}
+.gira-coach-row{font-size:12px;color:#888;}
+.gira-status-badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;display:inline-block;margin-bottom:6px;}
+.gira-status-ok{background:#22C55E20;color:#166534;}
+.gira-status-pending{background:#f0f0f0;color:#888;}
+.gira-empty{text-align:center;padding:2rem;color:#aaa;font-size:13px;}
 .pp-plan-day{background:var(--g5);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;}
 .pp-plan-day-head{padding:8px 12px;font-size:12px;font-weight:600;background:var(--white);border-bottom:1px solid var(--border);}
 .pp-plan-session{padding:8px 12px;font-size:12px;color:var(--g2);}
@@ -7042,11 +7062,20 @@ const GIRA_LEVELS = [
   'J500','J300','J200','J100','J60','J30','ENTRENAMIENTO','OTRO'
 ];
 let giraActiveGroup = 'all';
+let giraActiveTab = 'proximos';
 let giraDestinos = JSON.parse(localStorage.getItem('gira_destinos') || '{"ciudades":[],"paises":[]}');
 let giraEvents = [];
 let gira_loading = false;
 let giraPlayers = [];
 let giraCoaches = [];
+
+function giraSetTab(tab) {
+  giraActiveTab = tab;
+  document.querySelectorAll('.gira-tab').forEach(t => t.classList.remove('active'));
+  const btn = document.getElementById('gtab-' + tab);
+  if (btn) btn.classList.add('active');
+  giraRenderCalendar();
+}
 
 async function renderGira() {
   document.querySelectorAll('.mnav-btn').forEach(b => b.classList.remove('active'));
@@ -7069,6 +7098,11 @@ async function renderGira() {
             background:${giraActiveGroup===g.id ? g.color : 'transparent'};
             color:${giraActiveGroup===g.id ? '#fff' : g.color};
             font-size:13px;font-weight:600;cursor:pointer">${g.name}</button>`).join('')}
+      </div>
+      <div class="gira-tabs">
+        <button class="gira-tab active" id="gtab-proximos" onclick="giraSetTab('proximos')">Próximos</button>
+        <button class="gira-tab" id="gtab-historial" onclick="giraSetTab('historial')">Historial</button>
+        <button class="gira-tab" id="gtab-torneos" onclick="giraSetTab('torneos')">Torneos</button>
       </div>
       <div id="gira-metrics" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px"></div>
       <div id="gira-body"><div style="text-align:center;padding:40px;color:#aaa;font-size:13px">Cargando...</div></div>
@@ -7219,40 +7253,130 @@ function giraLevelBadge(level) {
 function giraRenderCalendar() {
   const body = document.getElementById('gira-body');
   if (!body) return;
-  const byWeek = {};
-  giraEvents.forEach(e => { if (!byWeek[e.week]) byWeek[e.week] = []; byWeek[e.week].push(e); });
-  const weeksToShow = GIRA_WEEKS.filter(w => byWeek[w] && byWeek[w].length > 0);
-  if (!weeksToShow.length) {
-    body.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa;font-size:13px">Sin eventos — agrega el primero con + Evento</div>';
+
+  function getISOWeek(d) {
+    const date = new Date(d);
+    date.setHours(0,0,0,0);
+    date.setDate(date.getDate() + 3 - (date.getDay()+6)%7);
+    const week1 = new Date(date.getFullYear(),0,4);
+    return [date.getFullYear(), 1 + Math.round(((date-week1)/86400000 - 3 + (week1.getDay()+6)%7)/7)];
+  }
+  const now = new Date();
+  const [curYear, curWeek] = getISOWeek(now);
+  const currentWeekStr = `${curYear}-W${String(curWeek).padStart(2,'0')}`;
+
+  function weekToRange(w) {
+    const [year, week] = w.split('-W').map(Number);
+    const d = new Date(year, 0, 1 + (week-1)*7);
+    const day = d.getDay();
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - (day<=0?6:day-1));
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate()+6);
+    const fmt = x => x.toLocaleDateString('es-CL',{day:'2-digit',month:'short'});
+    return `${fmt(mon)} – ${fmt(sun)}`;
+  }
+
+  function levelColor(level) {
+    if (!level) return '#6366F1';
+    if (level.toUpperCase().includes('GRAND SLAM')) return '#FFD700';
+    if (level.toUpperCase().startsWith('CH')) return '#1A6FD4';
+    if (level.match(/^[MW]\d/)) return '#EC4899';
+    if (level.toUpperCase().startsWith('J')) return '#22C55E';
+    return '#6366F1';
+  }
+
+  function isPast(week) { return week < currentWeekStr; }
+  function isCurrent(week) { return week === currentWeekStr; }
+
+  let events = [...giraEvents];
+  if (giraActiveTab === 'proximos') {
+    events = events.filter(e => e.week >= currentWeekStr);
+  } else if (giraActiveTab === 'historial') {
+    events = events.filter(e => e.week < currentWeekStr).reverse();
+  } else if (giraActiveTab === 'torneos') {
+    events = events.filter(e => e.week >= currentWeekStr);
+  }
+
+  if (!events.length) {
+    body.innerHTML = `<div class="gira-empty">Sin eventos ${giraActiveTab === 'historial' ? 'anteriores' : 'próximos'}</div>`;
     return;
   }
-  body.innerHTML = weeksToShow.map(week => {
-    const events = byWeek[week];
-    return `<div style="background:#fff;border-radius:12px;border:1px solid #eee;overflow:hidden">
-      <div style="background:#f7f7f5;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee">
-        <span style="font-size:13px;font-weight:600">📅 ${week}</span>
-        <span style="font-size:11px;background:#eee;color:#666;padding:2px 8px;border-radius:10px">${events.length} evento${events.length>1?'s':''}</span>
-      </div>
-      ${events.map(ev => {
-        const playerNames = (ev.player_ids||[]).map(pid => { const p = giraPlayers.find(x=>x.id===pid); return p?p.full_name:null; }).filter(Boolean);
-        const coachNames = (ev.coach_ids||[]).map(cid => { const c = giraCoaches.find(x=>x.id===cid); return c?c.profiles?.full_name:null; }).filter(Boolean);
-        return `<div style="padding:10px 14px;border-top:1px solid #f0f0f0;display:flex;align-items:flex-start;gap:10px">
-          <div style="flex:1">
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
-              ${giraLevelBadge(ev.level)}
-              ${ev.surface?`<span style="background:#eee;color:#555;font-size:10px;padding:2px 7px;border-radius:5px">${ev.surface}</span>`:''}
+
+  const porSemana = {};
+  events.forEach(ev => { if (!porSemana[ev.week]) porSemana[ev.week] = []; porSemana[ev.week].push(ev); });
+
+  if (giraActiveTab === 'torneos') {
+    body.innerHTML = Object.entries(porSemana).map(([week, evs]) => `
+      <div class="gira-week-block">
+        <div class="gira-week-header">
+          <span>${weekToRange(week)}</span>
+          <span class="gira-week-badge">${evs.length} torneo${evs.length>1?'s':''}</span>
+        </div>
+        ${evs.map(ev => {
+          const coaches = (ev.coach_ids||[]).map(id => { const c = (giraCoaches||[]).find(x=>x.id===id); return c?(c.profiles?.full_name||c.full_name||''):''; }).filter(Boolean);
+          return `<div class="gira-event-card">
+            <div class="gira-event-row">
+              <div><strong>${ev.city}</strong> <span style="color:#888;font-size:12px">${ev.country}</span></div>
+              <span class="gira-level-badge" style="background:${levelColor(ev.level)}">${ev.level||'—'}</span>
             </div>
-            <div style="font-size:14px;font-weight:600;color:#333">${ev.city} · <span style="font-weight:400;color:#666">${ev.country}</span></div>
-            ${playerNames.length?`<div style="font-size:12px;color:#888;margin-top:3px">👤 ${playerNames.join(', ')}</div>`:''}
-            ${coachNames.length?`<div style="font-size:12px;color:#888;margin-top:2px">🎾 ${coachNames.join(', ')}</div>`:''}
-          </div>
-          <div style="display:flex;gap:6px">
-            <button onclick="giraOpenEdit('${ev.id}')" style="background:#f0f4ff;color:#1A6FD4;border:none;padding:6px 10px;border-radius:6px;font-size:12px;cursor:pointer">✏</button>
-            <button onclick="giraDeleteEvent('${ev.id}')" style="background:#fff0f0;color:#e55;border:none;padding:6px 10px;border-radius:6px;font-size:12px;cursor:pointer">✕</button>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
+            <div style="font-size:12px;color:#888;margin-top:4px">${ev.surface||''} ${coaches.length?'· Coach: '+coaches.join(', '):''}</div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <button onclick="giraOpenEdit('${ev.id}')" style="background:#f0f4ff;color:#1A6FD4;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer">✏</button>
+              <button onclick="giraDeleteEvent('${ev.id}')" style="background:#fff0f0;color:#e55;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer">✕</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`).join('');
+    return;
+  }
+
+  body.innerHTML = Object.entries(porSemana).map(([week, evs]) => {
+    const current = isCurrent(week);
+    const past = isPast(week);
+    return `
+      <div class="gira-week-block${past?' gira-week-past':''}">
+        <div class="gira-week-header${current?' gira-week-current':''}">
+          <span>${current?'⬤ ':''}${weekToRange(week)}</span>
+          <span class="gira-week-badge">${evs.length} evento${evs.length>1?'s':''}</span>
+        </div>
+        ${evs.map(ev => {
+          const players = (ev.player_ids||[]).map(id => { const p=(giraPlayers||[]).find(x=>x.id===id); return p?p.full_name:''; }).filter(Boolean);
+          const coaches = (ev.coach_ids||[]).map(id => { const c=(giraCoaches||[]).find(x=>x.id===id); return c?(c.profiles?.full_name||c.full_name||''):''; }).filter(Boolean);
+          let statusBadge = '';
+          if (past) {
+            const hasResults = players.some(pName => {
+              const playerObj = (giraPlayers||[]).find(x=>x.full_name===pName);
+              if (!playerObj || !playerObj.matches) return false;
+              const [yr, wk] = week.split('-W').map(Number);
+              const wkStart = new Date(yr,0,1+(wk-1)*7);
+              const day = wkStart.getDay();
+              const mon = new Date(wkStart); mon.setDate(wkStart.getDate()-(day<=0?6:day-1));
+              const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+              return playerObj.matches.some(m => { const fd = new Date(m.fecha||m.date||m.created_at); return fd >= mon && fd <= sun; });
+            });
+            statusBadge = hasResults
+              ? `<span class="gira-status-badge gira-status-ok">✓ Con resultados</span>`
+              : `<span class="gira-status-badge gira-status-pending">○ Sin registrar</span>`;
+          }
+          return `<div class="gira-event-card${past?' gira-event-past':''}">
+            ${statusBadge}
+            <div class="gira-event-row">
+              <div><strong>${ev.city}</strong><span style="color:#888;font-size:12px;margin-left:4px">${ev.country}</span></div>
+              <div style="display:flex;gap:4px">
+                <span class="gira-level-badge" style="background:${levelColor(ev.level)}">${ev.level||'—'}</span>
+                ${ev.surface?`<span class="gira-surface-badge">${ev.surface}</span>`:''}
+              </div>
+            </div>
+            ${players.length?`<div class="gira-players">${players.map(p=>`<span class="gira-player-chip">${p}</span>`).join('')}</div>`:''}
+            ${coaches.length?`<div class="gira-coach-row">Coach: <strong>${coaches.join(', ')}</strong></div>`:''}
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <button onclick="giraOpenEdit('${ev.id}')" style="background:#f0f4ff;color:#1A6FD4;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer">✏</button>
+              <button onclick="giraDeleteEvent('${ev.id}')" style="background:#fff0f0;color:#e55;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer">✕</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
   }).join('');
 }
 
@@ -7292,18 +7416,51 @@ function giraCloseModal() {
   document.getElementById('gira-modal').style.display = 'none';
 }
 
-function giraRenderPlayerSel(selected) {
-  const el = document.getElementById('gira-player-sel');
-  if (!el) return;
-  const groupSel = document.getElementById('gira-group-sel')?.value || 'all';
-  const filtered = groupSel === 'all' ? giraPlayers : giraPlayers.filter(p => p.group_id === groupSel);
-  el.innerHTML = filtered.map(p => {
-    const checked = selected.includes(p.id);
-    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;border:2px solid ${checked?'#FF6B00':'#eee'};background:${checked?'#fff5ee':'#fff'};margin-bottom:4px">
-      <input type="checkbox" value="${p.id}" ${checked?'checked':''} onchange="giraTogglePlayer(this)" style="accent-color:#FF6B00">
-      <span style="font-size:13px">${p.full_name}</span>
-    </label>`;
-  }).join('') || '<div style="color:#aaa;font-size:13px">Sin jugadores</div>';
+function giraRenderPlayerSel(selectedIds = []) {
+  const container = document.getElementById('gira-player-sel');
+  if (!container) return;
+  const players = giraPlayers || [];
+  if (!players.length) { container.innerHTML = '<div style="color:#aaa;font-size:13px">Sin jugadores</div>'; return; }
+  const groups = getGiraGroups().filter(g => g.id !== 'all');
+
+  function renderList(query) {
+    const q = (query || '').toLowerCase().trim();
+    if (q === '') {
+      return groups.map(group => {
+        const gp = players.filter(p => p.group_id === group.id);
+        if (!gp.length) return '';
+        return `<div style="margin-bottom:8px">
+          <div style="font-size:11px;font-weight:600;color:${group.color};margin-bottom:4px;text-transform:uppercase">${group.name}</div>
+          ${gp.map(p => `
+            <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">
+              <input type="checkbox" value="${p.id}" ${selectedIds.includes(p.id)?'checked':''} style="cursor:pointer;accent-color:#FF6B00">
+              <span style="font-size:13px">${p.full_name}</span>
+            </label>
+          `).join('')}
+        </div>`;
+      }).join('');
+    } else {
+      const filtered = players.filter(p => p.full_name.toLowerCase().includes(q));
+      if (!filtered.length) return '<div style="font-size:13px;color:#aaa;padding:8px 0">Sin resultados</div>';
+      return filtered.map(p => {
+        const group = groups.find(g => g.id === p.group_id);
+        return `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">
+          <input type="checkbox" value="${p.id}" ${selectedIds.includes(p.id)?'checked':''} style="cursor:pointer;accent-color:#FF6B00">
+          <span style="font-size:13px;flex:1">${p.full_name}</span>
+          ${group ? `<span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:99px;background:${group.color}22;color:${group.color}">${group.name}</span>` : ''}
+        </label>`;
+      }).join('');
+    }
+  }
+
+  container.innerHTML = `
+    <input type="text" id="gira-player-search"
+      placeholder="Buscar jugador..."
+      oninput="document.getElementById('gira-player-list').innerHTML = (window._gpRenderList||function(){})(this.value)"
+      style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;outline:none;">
+    <div id="gira-player-list">${renderList('')}</div>`;
+
+  window._gpRenderList = renderList;
 }
 
 function giraTogglePlayer(cb) {
