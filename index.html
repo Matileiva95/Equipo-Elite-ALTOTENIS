@@ -572,8 +572,9 @@ body{background:#faf7f2;color:#1a1a1a;}
     <button class="pp-nav-btn" id="ppnav-hoy"      onclick="switchPortalSection('hoy')">      <span class="pp-nav-icon">🟠</span>Hoy</button>
     <button class="pp-nav-btn" id="ppnav-semana"   onclick="switchPortalSection('semana')">   <span class="pp-nav-icon">📅</span>Semana</button>
     <button class="pp-nav-btn" id="ppnav-progreso" onclick="switchPortalSection('progreso')"> <span class="pp-nav-icon">📈</span>Progreso</button>
-    <button class="pp-nav-btn" id="ppnav-scouting" onclick="switchPortalSection('scouting')"> <span class="pp-nav-icon">🔍</span>Scouting</button>
-    <button class="pp-nav-btn" id="ppnav-perfil"   onclick="switchPortalSection('perfil')">   <span class="pp-nav-icon">👤</span>Perfil</button>
+    <button class="pp-nav-btn" id="ppnav-scouting"    onclick="switchPortalSection('scouting')">    <span class="pp-nav-icon">🔍</span>Scouting</button>
+    <button class="pp-nav-btn" id="ppnav-calendario" onclick="switchPortalSection('calendario')"> <span class="pp-nav-icon">🗓️</span>Gira</button>
+    <button class="pp-nav-btn" id="ppnav-perfil"     onclick="switchPortalSection('perfil')">     <span class="pp-nav-icon">👤</span>Perfil</button>
   </nav>
 </div>
 
@@ -4460,6 +4461,7 @@ let portalSection = 'plan';
 let portalPlayer = null;
 let portalObjectives = [];
 let portalAnalyses = [];
+let portalCalendario = [];
 let _ppRpe = 0, _ppMood = 0, _ppEditIdx = null;
 let _coachPortalCache = {};  // { [playerId]: { objectives, analyses, ts } }
 
@@ -4468,15 +4470,17 @@ async function loadPlayerPortal(playerId) {
   const token = sessionStorage.getItem('ciq_token');
   const h = {'Authorization': `Bearer ${token}`};
   try {
-    const [playerRes, objRes, anlRes] = await Promise.all([
+    const [playerRes, objRes, anlRes, calRes] = await Promise.all([
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/my-data`, {headers: h}),
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {headers: h}),
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {headers: h}),
+      apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/calendar`, {headers: h}),
     ]);
-    const [playerData, objData, anlData] = await Promise.all([playerRes.json(), objRes.json(), anlRes.json()]);
-    portalPlayer = playerData.player || null;
+    const [playerData, objData, anlData, calData] = await Promise.all([playerRes.json(), objRes.json(), anlRes.json(), calRes.json()]);
+    portalPlayer     = playerData.player || null;
     portalObjectives = objData.objectives || [];
-    portalAnalyses = anlData.analyses || [];
+    portalAnalyses   = anlData.analyses || [];
+    portalCalendario = Array.isArray(calData) ? calData : [];
   } catch(e) {
     portalPlayer = null;
   }
@@ -4499,13 +4503,95 @@ function renderPortalSection() {
   if (portalSection === 'plan')      return renderPortalPlan();
   if (portalSection === 'semana')    return renderPortalSemana();
   if (portalSection === 'progreso')  return renderPortalProgreso();
-  if (portalSection === 'scouting')  return renderPortalScouting();
-  if (portalSection === 'perfil')    return renderPortalPerfil();
+  if (portalSection === 'scouting')    return renderPortalScouting();
+  if (portalSection === 'calendario')  return renderPortalCalendario();
+  if (portalSection === 'perfil')      return renderPortalPerfil();
   if (portalSection === 'session')   return renderPortalSession();
   if (portalSection === 'matches')   return renderPortalMatches();
   if (portalSection === 'objectives')return renderPortalObjectives();
   if (portalSection === 'analysis')  return renderPortalAnalysis();
   return '';
+}
+
+function renderPortalCalendario() {
+  const eventos = portalCalendario;
+
+  const SURFACE_ICON = { ARCILLA: '🟤', CEMENTO: '⬜', HIERBA: '🟢', INDOOR: '🔵' };
+
+  function weekToRange(week) {
+    const [year, wPart] = week.split('-W');
+    const w = parseInt(wPart, 10);
+    const jan4 = new Date(parseInt(year, 10), 0, 4);
+    const startOfWeek1 = new Date(jan4);
+    startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
+    const lunes = new Date(startOfWeek1);
+    lunes.setDate(startOfWeek1.getDate() + (w - 1) * 7);
+    const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const desde = `${lunes.getDate()} ${meses[lunes.getMonth()]}`;
+    const hasta = `${domingo.getDate()} ${meses[domingo.getMonth()]} ${domingo.getFullYear()}`;
+    return `${desde} – ${hasta}`;
+  }
+
+  function isPast(week) {
+    const [year, wPart] = week.split('-W');
+    const w = parseInt(wPart, 10);
+    const jan4 = new Date(parseInt(year, 10), 0, 4);
+    const startOfWeek1 = new Date(jan4);
+    startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
+    const domingo = new Date(startOfWeek1);
+    domingo.setDate(startOfWeek1.getDate() + (w - 1) * 7 + 6);
+    return domingo < new Date();
+  }
+
+  if (!eventos.length) return `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:22px;font-weight:700;color:#222;">Mi calendario</div>
+    </div>
+    <div style="text-align:center;padding:48px 16px;color:#bbb;font-size:14px;">
+      No hay eventos de gira registrados aún.
+    </div>`;
+
+  const proximos = eventos.filter(e => !isPast(e.week));
+  const pasados  = eventos.filter(e =>  isPast(e.week));
+
+  function renderCard(ev) {
+    const past = isPast(ev.week);
+    const surfIcon = SURFACE_ICON[ev.surface] || '🎾';
+    const jugadores = (ev.players || []).map(p => p.full_name || '—').join(', ') || '—';
+    const coaches   = (ev.coaches  || []).map(c => c.full_name || '—').join(', ') || '—';
+    return `
+      <div style="background:#fff;border:1px solid ${past ? '#f0f0f0' : '#e8e8e8'};border-radius:14px;padding:14px 16px;margin-bottom:10px;opacity:${past ? '.6' : '1'};">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#222;">${ev.city}, ${ev.country}</div>
+            <div style="font-size:12px;color:#999;margin-top:1px;">${weekToRange(ev.week)}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:11px;font-weight:700;color:#FF6B00;background:#FFF3EC;border-radius:6px;padding:3px 8px;display:inline-block;">${ev.level}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#666;border-top:1px solid #f5f5f5;padding-top:8px;margin-top:2px;">
+          <span>${surfIcon} ${ev.surface.charAt(0) + ev.surface.slice(1).toLowerCase()}</span>
+          <span>👥 ${jugadores}</span>
+          ${coaches !== '—' ? `<span>🎓 ${coaches}</span>` : ''}
+        </div>
+      </div>`;
+  }
+
+  let html = `<div style="margin-bottom:16px;"><div style="font-size:22px;font-weight:700;color:#222;">Mi calendario</div></div>`;
+
+  if (proximos.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Próximos eventos</div>`;
+    html += proximos.map(renderCard).join('');
+  }
+
+  if (pasados.length) {
+    html += `<div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:${proximos.length ? '20px' : '0px'} 0 10px;">Historial</div>`;
+    html += pasados.map(renderCard).join('');
+  }
+
+  return html;
 }
 
 function renderPortalPerfil() {
