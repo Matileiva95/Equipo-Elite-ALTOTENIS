@@ -2271,6 +2271,7 @@ function switchDtab(t){
   dtab=t;selMode=false;selectedDays=new Set();
   document.querySelectorAll('.tab-btn').forEach(b=>{const m={perfil:'Perfil',plan:'Plan semanal',calendario:'Calendario',carga:'Carga',torneos:'Torneos',stats:'Estadísticas',rivales:'Rivales',portal:'Portal'};b.classList.toggle('active',b.textContent===m[t]);});
   const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
+  if(t==='carga')loadCargaPlayerEvals();
 }
 function renderDtab(){const p=data.players[pid];if(dtab==='perfil')return renderPerfil(p);if(dtab==='plan')return renderPlan(p);if(dtab==='calendario')return renderCal(p);if(dtab==='torneos')return renderTorneos(p);if(dtab==='stats')return renderStats(p);if(dtab==='rivales')return renderPlayerScouting(p);if(dtab==='carga')return renderCarga(p);if(dtab==='portal')return renderCoachPortalView(p);return '';}
 
@@ -2808,38 +2809,39 @@ function renderCarga(p) {
         <div style="font-size:13px;color:var(--g3);">Cargando...</div>
       </div>
     </div>`;
+}
+
+async function loadCargaPlayerEvals() {
+  const evalContainer = document.getElementById('carga-player-evals');
+  if (!evalContainer) return;
   const playerLegacyId = data.players[pid]?.id;
-  setTimeout(async () => {
-    const evalContainer = document.getElementById('carga-player-evals');
-    if (!evalContainer) return;
-    try {
-      console.log('Cargando evaluaciones para playerLegacyId:', playerLegacyId);
-      const token = sessionStorage.getItem('ciq_token');
-      const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerLegacyId}/progress`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      const progData = await res.json();
-      const evals = progData.week_evaluations || [];
-      if (evals.length === 0) {
-        evalContainer.innerHTML = '<div style="font-size:13px;color:var(--g3);">Sin evaluaciones registradas</div>';
-        return;
-      }
-      evalContainer.innerHTML = evals.map(e => {
-        const moodEmoji = e.mood === 1 ? '😔' : e.mood === 2 ? '😐' : '😊';
-        const notaColor = e.nota >= 6 ? '#22C55E' : e.nota >= 4 ? '#F59E0B' : '#EF4444';
-        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #eee;">
-          <span style="font-size:12px;color:#666;min-width:80px;">${e.fecha}</span>
-          <span style="font-size:13px;font-weight:700;color:${notaColor};">${e.nota}/7</span>
-          <span style="font-size:12px;">RPE ${e.rpe}/5</span>
-          <span style="font-size:16px;">${moodEmoji}</span>
-          ${e.reflexion ? `<span style="font-size:12px;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.reflexion}</span>` : ''}
-        </div>`;
-      }).join('');
-    } catch(err) {
-      console.error('Error cargando evaluaciones jugador:', err);
-      if (evalContainer) evalContainer.innerHTML = `<div style="color:red;font-size:12px">Error: ${err.message}</div>`;
+  console.log('Cargando evaluaciones para playerLegacyId:', playerLegacyId);
+  try {
+    const token = sessionStorage.getItem('ciq_token');
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerLegacyId}/progress`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const progData = await res.json();
+    const evals = progData.week_evaluations || [];
+    if (evals.length === 0) {
+      evalContainer.innerHTML = '<div style="font-size:13px;color:var(--g3);">Sin evaluaciones registradas</div>';
+      return;
     }
-  }, 100);
+    evalContainer.innerHTML = evals.map(e => {
+      const moodEmoji = e.mood === 1 ? '😔' : e.mood === 2 ? '😐' : '😊';
+      const notaColor = e.nota >= 6 ? '#22C55E' : e.nota >= 4 ? '#F59E0B' : '#EF4444';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #eee;">
+        <span style="font-size:12px;color:#666;min-width:80px;">${e.fecha}</span>
+        <span style="font-size:13px;font-weight:700;color:${notaColor};">${e.nota}/7</span>
+        <span style="font-size:12px;">RPE ${e.rpe}/5</span>
+        <span style="font-size:16px;">${moodEmoji}</span>
+        ${e.reflexion ? `<span style="font-size:12px;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.reflexion}</span>` : ''}
+      </div>`;
+    }).join('');
+  } catch(err) {
+    console.error('Error cargando evaluaciones jugador:', err);
+    if (evalContainer) evalContainer.innerHTML = `<div style="color:red;font-size:12px">Error: ${err.message}</div>`;
+  }
 }
 
 function selRpe(v) {
