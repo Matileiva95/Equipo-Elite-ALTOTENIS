@@ -2801,7 +2801,43 @@ function renderCarga(p) {
           <button onclick="eliminarCarga(${i})" style="padding:2px 8px;border:1px solid var(--border);border-radius:var(--rsm);background:transparent;color:var(--g3);font-size:11px;cursor:pointer;">✕</button>
         </div>`).join('')
       }
+    </div>
+    <div style="margin-top:1.5rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">📊 Evaluaciones del jugador (14 días)</div>
+      <div id="carga-player-evals">
+        <div style="font-size:13px;color:var(--g3);">Cargando...</div>
+      </div>
     </div>`;
+  const playerLegacyId = data.players[pid]?.id;
+  setTimeout(async () => {
+    const evalContainer = document.getElementById('carga-player-evals');
+    if (!evalContainer) return;
+    try {
+      const token = sessionStorage.getItem('ciq_token');
+      const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerLegacyId}/progress`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const progData = await res.json();
+      const evals = progData.week_evaluations || [];
+      if (evals.length === 0) {
+        evalContainer.innerHTML = '<div style="font-size:13px;color:var(--g3);">Sin evaluaciones registradas</div>';
+        return;
+      }
+      evalContainer.innerHTML = evals.map(e => {
+        const moodEmoji = e.mood === 1 ? '😔' : e.mood === 2 ? '😐' : '😊';
+        const notaColor = e.nota >= 6 ? '#22C55E' : e.nota >= 4 ? '#F59E0B' : '#EF4444';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #eee;">
+          <span style="font-size:12px;color:#666;min-width:80px;">${e.fecha}</span>
+          <span style="font-size:13px;font-weight:700;color:${notaColor};">${e.nota}/7</span>
+          <span style="font-size:12px;">RPE ${e.rpe}/5</span>
+          <span style="font-size:16px;">${moodEmoji}</span>
+          ${e.reflexion ? `<span style="font-size:12px;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.reflexion}</span>` : ''}
+        </div>`;
+      }).join('');
+    } catch(err) {
+      console.error('Error cargando evaluaciones jugador:', err);
+    }
+  }, 100);
 }
 
 function selRpe(v) {
