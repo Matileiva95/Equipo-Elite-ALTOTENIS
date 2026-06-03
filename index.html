@@ -4462,6 +4462,7 @@ let portalPlayer = null;
 let portalObjectives = [];
 let portalAnalyses = [];
 let portalCalendario = [];
+let portalProgreso = null;
 let _ppRpe = 0, _ppMood = 0, _ppEditIdx = null;
 let _coachPortalCache = {};  // { [playerId]: { objectives, analyses, ts } }
 
@@ -4470,17 +4471,19 @@ async function loadPlayerPortal(playerId) {
   const token = sessionStorage.getItem('ciq_token');
   const h = {'Authorization': `Bearer ${token}`};
   try {
-    const [playerRes, objRes, anlRes, calRes] = await Promise.all([
+    const [playerRes, objRes, anlRes, calRes, progRes] = await Promise.all([
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/my-data`, {headers: h}),
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {headers: h}),
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {headers: h}),
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/calendar`, {headers: h}),
+      apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/progress`, {headers: h}),
     ]);
-    const [playerData, objData, anlData, calData] = await Promise.all([playerRes.json(), objRes.json(), anlRes.json(), calRes.json()]);
+    const [playerData, objData, anlData, calData, progData] = await Promise.all([playerRes.json(), objRes.json(), anlRes.json(), calRes.json(), progRes.json()]);
     portalPlayer     = playerData.player || null;
     portalObjectives = objData.objectives || [];
     portalAnalyses   = anlData.analyses || [];
     portalCalendario = Array.isArray(calData) ? calData : [];
+    portalProgreso   = progData || null;
   } catch(e) {
     portalPlayer = null;
   }
@@ -5104,10 +5107,29 @@ function renderPortalProgreso() {
           </div>`;
       }).join('');
 
+  const evalHtml = portalProgreso && portalProgreso.week_evaluations && portalProgreso.week_evaluations.length > 0
+    ? `<div class="pp-card" style="margin-bottom:1rem">
+        <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">📊 Últimas evaluaciones (14 días)</div>
+        ${portalProgreso.week_evaluations.map(e => {
+          const moodEmoji = e.mood === 1 ? '😔' : e.mood === 2 ? '😐' : '😊';
+          const notaColor = e.nota >= 6 ? '#22C55E' : e.nota >= 4 ? '#F59E0B' : '#EF4444';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #e8e8e8;">
+            <span style="font-size:12px;color:#999;min-width:80px;">${e.fecha}</span>
+            <span style="font-size:13px;font-weight:700;color:${notaColor};">${e.nota}/7</span>
+            <span style="font-size:12px;color:#555;">RPE ${e.rpe}/5</span>
+            <span style="font-size:16px;">${moodEmoji}</span>
+            ${e.reflexion ? `<span style="font-size:12px;color:#999;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.reflexion}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>`
+    : '';
+
   return `
     <div style="margin-bottom:16px;">
       <div style="font-size:22px;font-weight:700;color:#222;">Mi progreso</div>
     </div>
+
+    ${evalHtml}
 
     <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Calidad esta semana</div>
     <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:14px;">
