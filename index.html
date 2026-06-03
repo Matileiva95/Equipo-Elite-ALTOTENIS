@@ -2813,6 +2813,7 @@ function renderCarga(p) {
     const evalContainer = document.getElementById('carga-player-evals');
     if (!evalContainer) return;
     try {
+      console.log('Cargando evaluaciones para playerLegacyId:', playerLegacyId);
       const token = sessionStorage.getItem('ciq_token');
       const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerLegacyId}/progress`, {
         headers: { 'Authorization': 'Bearer ' + token }
@@ -2836,6 +2837,7 @@ function renderCarga(p) {
       }).join('');
     } catch(err) {
       console.error('Error cargando evaluaciones jugador:', err);
+      if (evalContainer) evalContainer.innerHTML = `<div style="color:red;font-size:12px">Error: ${err.message}</div>`;
     }
   }, 100);
 }
