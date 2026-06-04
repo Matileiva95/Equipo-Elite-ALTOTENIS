@@ -1,9 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="80" fill="#FF6B00"/>
-  <circle cx="180" cy="320" r="65" fill="none" stroke="white" stroke-width="18"/>
-  <line x1="135" y1="275" x2="225" y2="365" stroke="white" stroke-width="18"/>
-  <line x1="225" y1="275" x2="135" y2="365" stroke="white" stroke-width="18"/>
-  <polygon points="220,140 240,185 290,185 250,215 265,260 220,232 175,260 190,215 150,185 200,185" fill="white"/>
-  <polygon points="310,100 325,140 368,140 333,165 346,205 310,182 274,205 287,165 252,140 295,140" fill="white" opacity="0.85"/>
-  <text x="256" y="430" font-family="Arial Black, sans-serif" font-size="72" font-weight="900" fill="white" text-anchor="middle">AT</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Fondo naranja -->
+  <rect width="1024" height="1024" rx="224" fill="#FD5F00"/>
+
+  <!-- Pelota superior (naranjo tonal) con costura en S -->
+  <circle cx="215" cy="485" r="72" fill="#C43F00"/>
+  <path d="M 144.2,480.4 C 186.4,393.1 243.6,576.9 285.8,489.6"
+        fill="none" stroke="#FD5F00" stroke-width="12.2" stroke-linecap="round"/>
+
+  <!-- Pelota inferior (naranjo tonal) con costura en S -->
+  <circle cx="205" cy="680" r="58" fill="#C43F00"/>
+  <path d="M 148.7,676.1 C 185.7,603.4 224.3,756.6 261.3,683.9"
+        fill="none" stroke="#FD5F00" stroke-width="9.9" stroke-linecap="round"/>
+
+  <!-- Estrella mediana (naranjo tonal) -->
+  <polygon
+    points="420.0,275.0 449.2,362.7 541.5,362.7 468.1,415.6 496.1,503.7 420.0,452.0 343.9,503.7 371.9,415.6 298.5,362.7 390.8,362.7"
+    fill="#C43F00"
+    transform="rotate(-8 420 395)"
+    stroke-linejoin="round"/>
+
+  <!-- Estrella grande (naranjo tonal) -->
+  <polygon
+    points="645.0,123.0 692.2,268.4 844.1,268.4 722.9,355.6 769.9,501.4 645.0,415.0 520.1,501.4 567.1,355.6 445.9,268.4 597.8,268.4"
+    fill="#C43F00"
+    transform="rotate(6 645 295)"
+    stroke-linejoin="round"/>
+
+  <!-- Wordmark AT: A negra, T azul — fuente Saira italic 900 -->
+  <text x="530" y="840"
+        text-anchor="middle"
+        font-family="Saira, Arial Black, sans-serif"
+        font-weight="900"
+        font-style="italic"
+        font-size="400"
+        letter-spacing="-8">
+    <tspan fill="#161616">A</tspan><tspan fill="#0090CA">T</tspan>
+  </text>
 </svg>
