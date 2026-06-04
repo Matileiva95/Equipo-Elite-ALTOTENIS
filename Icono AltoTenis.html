@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AltoTenis · Ícono AT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@1,800;1,900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e9e7e2; font-family: Inter, sans-serif; color: #2a2520; }
+
+  /* ── Canvas layout ─────────────────────────── */
+  .canvas { padding: 40px 32px 60px; max-width: 1340px; margin: 0 auto; }
+  .canvas-title { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #8a857c; margin-bottom: 6px; }
+  .canvas-subtitle { font-size: 13px; color: #8a857c; margin-bottom: 28px; }
+
+  /* ── Section ────────────────────────────────── */
+  .section { margin-bottom: 52px; }
+  .section-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #aea99f; margin-bottom: 20px; border-bottom: 1px solid #d6d2cc; padding-bottom: 8px; }
+  .artboards { display: flex; flex-wrap: wrap; gap: 28px; }
+
+  /* ── Artboard card ──────────────────────────── */
+  .artboard {
+    background: #f0ede8;
+    border-radius: 14px;
+    padding: 28px 24px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 320px;
+  }
+  .artboard-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #aea99f;
+    margin-bottom: 20px;
+    align-self: flex-start;
+  }
+
+  /* ── Icon display ───────────────────────────── */
+  .ico-shadow { filter: drop-shadow(0 10px 24px rgba(0,0,0,.18)); line-height: 0; }
+  .ico-shadow svg { display: block; border-radius: 22%; overflow: hidden; }
+
+  .size-row { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+  .size-label { font-size: 11px; color: #8a857c; }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="canvas-title">AltoTenis · Ícono AT</div>
+  <div class="canvas-subtitle">5 variaciones — fondo naranja, A negra, T azul. Pelotas y estrellas negras o naranjo tonal.</div>
+
+  <!-- Section 1: Con motivo fiel al logo -->
+  <div class="section">
+    <div class="section-label">Con motivo de pelotas y estrellas · Fiel al logo</div>
+    <div class="artboards">
+      <div class="artboard">
+        <div class="artboard-label">A · Trail (negro)</div>
+        <div class="ico-shadow" id="icon-trail-lg"></div>
+        <div class="size-row">
+          <span class="size-label">Tamaños reales</span>
+          <div class="ico-shadow" id="icon-trail-64"></div>
+          <div class="ico-shadow" id="icon-trail-44"></div>
+        </div>
+      </div>
+      <div class="artboard">
+        <div class="artboard-label">B · Trail (naranjo tonal)</div>
+        <div class="ico-shadow" id="icon-tonal-lg"></div>
+        <div class="size-row">
+          <span class="size-label">Tamaños reales</span>
+          <div class="ico-shadow" id="icon-tonal-64"></div>
+          <div class="ico-shadow" id="icon-tonal-44"></div>
+        </div>
+      </div>
+      <div class="artboard">
+        <div class="artboard-label">C · Estrellas arriba + AT</div>
+        <div class="ico-shadow" id="icon-stacked-lg"></div>
+        <div class="size-row">
+          <span class="size-label">Tamaños reales</span>
+          <div class="ico-shadow" id="icon-stacked-64"></div>
+          <div class="ico-shadow" id="icon-stacked-44"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Composiciones limpias -->
+  <div class="section">
+    <div class="section-label">Composiciones limpias · Máxima legibilidad en tamaño pequeño</div>
+    <div class="artboards">
+      <div class="artboard">
+        <div class="artboard-label">D · Minimal + estrella</div>
+        <div class="ico-shadow" id="icon-minimal-lg"></div>
+        <div class="size-row">
+          <span class="size-label">Tamaños reales</span>
+          <div class="ico-shadow" id="icon-minimal-64"></div>
+          <div class="ico-shadow" id="icon-minimal-44"></div>
+        </div>
+      </div>
+      <div class="artboard">
+        <div class="artboard-label">E · Estrella badge</div>
+        <div class="ico-shadow" id="icon-bigstar-lg"></div>
+        <div class="size-row">
+          <span class="size-label">Tamaños reales</span>
+          <div class="ico-shadow" id="icon-bigstar-64"></div>
+          <div class="ico-shadow" id="icon-bigstar-44"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Colores ──────────────────────────────────────
+const ORANGE       = '#FD5F00';
+const ORANGE_DEEP  = '#C43F00';
+const BLUE         = '#0090CA';
+const BLACK        = '#161616';
+
+// ── Helpers ──────────────────────────────────────
+function starPoints(cx, cy, r, inner = 0.42) {
+  const pts = [];
+  for (let i = 0; i < 10; i++) {
+    const rad = (i % 2 === 0) ? r : r * inner;
+    const a = -Math.PI / 2 + i * Math.PI / 5;
+    pts.push(`${(cx + rad * Math.cos(a)).toFixed(1)},${(cy + rad * Math.sin(a)).toFixed(1)}`);
+  }
+  return pts.join(' ');
+}
+
+function svgEl(tag, attrs, ...children) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v !== undefined && v !== null) el.setAttribute(k, v);
+  }
+  for (const child of children) {
+    if (child) el.appendChild(child);
+  }
+  return el;
+}
+
+function makeStar(cx, cy, r, fill, rot) {
+  const el = svgEl('polygon', {
+    points: starPoints(cx, cy, r),
+    fill,
+    transform: rot ? `rotate(${rot} ${cx} ${cy})` : null,
+    'stroke-linejoin': 'round',
+  });
+  return el;
+}
+
+function makeBall(cx, cy, r, fill, seam) {
+  const g = svgEl('g', {});
+  g.appendChild(svgEl('circle', { cx, cy, r, fill }));
+  g.appendChild(svgEl('path', {
+    d: `M ${cx - r * 0.97},${cy - r * 0.05} C ${cx - r * 0.4},${cy - r * 0.92} ${cx + r * 0.4},${cy + r * 0.92} ${cx + r * 0.97},${cy + r * 0.05}`,
+    fill: 'none',
+    stroke: seam,
+    'stroke-width': r * 0.17,
+    'stroke-linecap': 'round',
+  }));
+  return g;
+}
+
+function makeATWord(x, y, size, aFill = BLACK) {
+  const text = svgEl('text', {
+    x, y,
+    'text-anchor': 'middle',
+    'font-family': 'Saira, sans-serif',
+    'font-weight': '900',
+    'font-style': 'italic',
+    'font-size': size,
+    'letter-spacing': -size * 0.02,
+  });
+  const tA = svgEl('tspan', { fill: aFill });
+  tA.textContent = 'A';
+  const tT = svgEl('tspan', { fill: BLUE });
+  tT.textContent = 'T';
+  text.appendChild(tA);
+  text.appendChild(tT);
+  return text;
+}
+
+// ── Icon builder ─────────────────────────────────
+function buildIcon(variant, size) {
+  const R = 1024;
+  const rx = Math.round(R * 0.219); // ≈22% → matches 224 on 1024
+  const uid = variant + '_' + size + '_' + Math.random().toString(36).slice(2, 7);
+  const clipId = 'clip_' + uid;
+
+  const svg = svgEl('svg', {
+    viewBox: `0 0 ${R} ${R}`,
+    width: size,
+    height: size,
+    xmlns: 'http://www.w3.org/2000/svg',
+  });
+
+  const defs = svgEl('defs', {});
+  const clipPath = svgEl('clipPath', { id: clipId });
+  clipPath.appendChild(svgEl('rect', { width: R, height: R, rx }));
+  defs.appendChild(clipPath);
+  svg.appendChild(defs);
+
+  const g = svgEl('g', { 'clip-path': `url(#${clipId})` });
+  g.appendChild(svgEl('rect', { width: R, height: R, fill: ORANGE }));
+
+  if (variant === 'trail') {
+    g.appendChild(makeBall(215, 485, 72, BLACK, ORANGE));
+    g.appendChild(makeBall(205, 680, 58, BLACK, ORANGE));
+    g.appendChild(makeStar(420, 395, 120, BLACK, -8));
+    g.appendChild(makeStar(645, 295, 172, BLACK, 6));
+    g.appendChild(makeATWord(530, 840, 400));
+  }
+
+  if (variant === 'tonal') {
+    g.appendChild(makeBall(215, 485, 72, ORANGE_DEEP, ORANGE));
+    g.appendChild(makeBall(205, 680, 58, ORANGE_DEEP, ORANGE));
+    g.appendChild(makeStar(420, 395, 120, ORANGE_DEEP, -8));
+    g.appendChild(makeStar(645, 295, 172, ORANGE_DEEP, 6));
+    g.appendChild(makeATWord(530, 840, 400));
+  }
+
+  if (variant === 'stacked') {
+    g.appendChild(makeBall(330, 310, 66, BLACK, ORANGE));
+    g.appendChild(makeStar(512, 300, 104, BLACK, -6));
+    g.appendChild(makeStar(710, 300, 140, BLACK, 8));
+    g.appendChild(makeATWord(530, 830, 420));
+  }
+
+  if (variant === 'minimal') {
+    g.appendChild(makeStar(790, 250, 120, BLACK, 4));
+    g.appendChild(makeATWord(512, 680, 460));
+  }
+
+  if (variant === 'bigstar') {
+    g.appendChild(makeStar(512, 470, 430, BLACK, 0));
+    const text = svgEl('text', {
+      x: 512, y: 600,
+      'text-anchor': 'middle',
+      'font-family': 'Saira, sans-serif',
+      'font-weight': '900',
+      'font-style': 'italic',
+      'font-size': 360,
+      'letter-spacing': -7,
+    });
+    const tA = svgEl('tspan', { fill: '#FFFFFF' }); tA.textContent = 'A';
+    const tT = svgEl('tspan', { fill: BLUE });       tT.textContent = 'T';
+    text.appendChild(tA); text.appendChild(tT);
+    g.appendChild(text);
+  }
+
+  svg.appendChild(g);
+  return svg;
+}
+
+// ── Render all ───────────────────────────────────
+const variants = ['trail', 'tonal', 'stacked', 'minimal', 'bigstar'];
+for (const v of variants) {
+  document.getElementById(`icon-${v}-lg`)  ?.appendChild(buildIcon(v, 300));
+  document.getElementById(`icon-${v}-64`)  ?.appendChild(buildIcon(v, 64));
+  document.getElementById(`icon-${v}-44`)  ?.appendChild(buildIcon(v, 44));
+}
+</script>
+</body>
+</html>
