@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#FF6B00"/>
+  <circle cx="180" cy="320" r="65" fill="none" stroke="white" stroke-width="18"/>
+  <line x1="135" y1="275" x2="225" y2="365" stroke="white" stroke-width="18"/>
+  <line x1="225" y1="275" x2="135" y2="365" stroke="white" stroke-width="18"/>
+  <polygon points="220,140 240,185 290,185 250,215 265,260 220,232 175,260 190,215 150,185 200,185" fill="white"/>
+  <polygon points="310,100 325,140 368,140 333,165 346,205 310,182 274,205 287,165 252,140 295,140" fill="white" opacity="0.85"/>
+  <text x="256" y="430" font-family="Arial Black, sans-serif" font-size="72" font-weight="900" fill="white" text-anchor="middle">AT</text>
+</svg>
