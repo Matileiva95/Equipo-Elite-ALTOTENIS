@@ -1411,6 +1411,11 @@ function renderAsistencia() {
       <div class="page-sub">Registro diario por jugador y turno</div></div>
     </div>
 
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button onclick="activeGroup=null;renderMain();" style="font-size:13px;padding:6px 12px;border-radius:20px;border:1px solid #FF6B00;cursor:pointer;background:${activeGroup===null?'#FF6B00':'#fff'};color:${activeGroup===null?'#fff':'#FF6B00'};font-weight:500;">Todos</button>
+      ${(window._groups||[]).filter(g=>canViewGroup(g.id)).map(g=>`<button onclick="activeGroup='${g.id}';renderMain();" style="font-size:13px;padding:6px 12px;border-radius:20px;border:1px solid #FF6B00;cursor:pointer;background:${activeGroup===g.id?'#FF6B00':'#fff'};color:${activeGroup===g.id?'#fff':'#FF6B00'};font-weight:500;">${g.name}</button>`).join('')}
+    </div>
+
     <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
       <button class="bib-filter-btn${asistVista==='dia'?' active':''}" onclick="asistVista='dia';renderMain();">Vista diaria</button>
       <button class="bib-filter-btn${asistVista==='mes'?' active':''}" onclick="asistVista='mes';renderMain();">Vista mensual</button>
