@@ -7932,6 +7932,7 @@ const PuntoAPunto = {
         }
 
         // Append punto ganador del game (no aparece en running scores)
+        console.log('DEBUG winner:', game.winner, 'p1Id:', p1Id, 'p2Id:', p2Id);
         const winnerUpper = (game.winner || '').toUpperCase();
         let gameWinnerIsP1 = false;
         if (p1Id && winnerUpper.includes(p1Id)) gameWinnerIsP1 = true;
@@ -8193,7 +8194,7 @@ const PuntoAPunto = {
     const mom = [], bg = [], bd = [], rad = [], lbls = [], gameBounds = [];
 
     setPoints.forEach((p, i) => {
-      if (p.w === 1) c1++; else c2++;
+      if (p.w === 2) c1++; else c2++;
       mom.push(c1 - c2);
       lbls.push(i + 1);
       if (p.gameWon && i < setPoints.length - 1) gameBounds.push(i + 1);
