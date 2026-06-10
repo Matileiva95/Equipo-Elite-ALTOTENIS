@@ -7826,7 +7826,7 @@ const PuntoAPunto = {
     return null;
   },
 
-  parseITF(text) {
+  parseITF(text, playerName = null) {
     const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const sets = [];
     let currentSet = null;
@@ -7886,6 +7886,14 @@ const PuntoAPunto = {
           }
         }
       }
+    }
+
+    // Si se conoce el nombre del jugador, verificar que p1Id le corresponda
+    if (playerName && p1Id && p2Id) {
+      const nameUpper = playerName.toUpperCase();
+      const matchP1 = nameUpper.startsWith(p1Id) ? 2 : (nameUpper.includes(p1Id) ? 1 : 0);
+      const matchP2 = nameUpper.startsWith(p2Id) ? 2 : (nameUpper.includes(p2Id) ? 1 : 0);
+      if (matchP2 > matchP1) [p1Id, p2Id] = [p2Id, p1Id];
     }
 
     // Games dentro de cada set vienen en orden inverso (último game primero)
@@ -8848,7 +8856,7 @@ function openPuntoAPunto(matchIndex) {
     document.getElementById('papResults').style.display = 'none';
     const p1El = document.getElementById('papPlayerName');
     const p2El = document.getElementById('papRivalName');
-    if (p1El && player) p1El.value = player.name?.split(' ')[0] || '';
+    if (p1El && player) p1El.value = player.full_name?.split(' ')[1] || player.full_name?.split(' ')[0] || '';
     if (p2El && match) p2El.value = match.rival || '';
     updatePapServerBtns();
     updatePapCharCount();
@@ -8971,7 +8979,7 @@ function processPuntoAPunto() {
 
   try {
     if (format === 'itf') {
-      papParsedData = PuntoAPunto.parseITF(raw);
+      papParsedData = PuntoAPunto.parseITF(raw, p1);
     } else {
       papParsedData = PuntoAPunto.parseTennisMath(raw);
     }
