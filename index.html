@@ -8856,7 +8856,7 @@ function openPuntoAPunto(matchIndex) {
     document.getElementById('papResults').style.display = 'none';
     const p1El = document.getElementById('papPlayerName');
     const p2El = document.getElementById('papRivalName');
-    if (p1El && player) p1El.value = player.full_name?.split(' ')[1] || player.full_name?.split(' ')[0] || '';
+    if (p1El && player) p1El.value = player.name?.split(' ').at(-1) || '';
     if (p2El && match) p2El.value = match.rival || '';
     updatePapServerBtns();
     updatePapCharCount();
