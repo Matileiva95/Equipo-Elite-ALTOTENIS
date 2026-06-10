@@ -7888,6 +7888,7 @@ const PuntoAPunto = {
       }
     }
 
+    console.log('DEBUG ids:', p1Id, p2Id, 'playerName:', playerName);
     // Si se conoce el nombre del jugador, verificar que p1Id le corresponda
     if (playerName && p1Id && p2Id) {
       const nameUpper = playerName.toUpperCase();
@@ -8952,7 +8953,10 @@ function showPapInput() {
 
 function processPuntoAPunto() {
   const raw = document.getElementById('papRawText').value.trim();
-  const p1 = document.getElementById('papPlayerName').value.trim() || 'Jugador';
+  const player = (typeof data !== 'undefined' && pid != null) ? data.players?.[pid] : null;
+  const p1 = document.getElementById('papPlayerName').value.trim()
+           || player?.name?.split(' ').at(-1)
+           || 'Jugador';
   const p2 = document.getElementById('papRivalName').value.trim() || 'Rival';
   const errDiv = document.getElementById('papError');
 
@@ -8979,6 +8983,7 @@ function processPuntoAPunto() {
 
   try {
     if (format === 'itf') {
+      console.log('DEBUG p1:', p1);
       papParsedData = PuntoAPunto.parseITF(raw, p1);
     } else {
       papParsedData = PuntoAPunto.parseTennisMath(raw);
