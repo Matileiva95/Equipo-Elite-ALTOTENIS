@@ -9121,7 +9121,7 @@ function savePuntoAPunto() {
     return;
   }
 
-  const p1 = document.getElementById('papPlayerName').value.trim() || player.name?.split(' ')[0] || 'Jugador';
+  const p1 = document.getElementById('papPlayerName').value.trim() || player.name?.split(' ').at(-1) || 'Jugador';
   const p2 = document.getElementById('papRivalName').value.trim() || player.matchStats[papMatchIndex].rival || 'Rival';
   const raw = document.getElementById('papRawText').value.trim();
   const setsData = PuntoAPunto.buildMomentumData(papParsedData, papFirstServer === 'player');
@@ -9132,8 +9132,8 @@ function savePuntoAPunto() {
     sets: setsData.map(s => ({
       setNum: s.setNum,
       points: s.points,
-      totalP1: s.points.filter(p => p.w === 1).length,
-      totalP2: s.points.filter(p => p.w === 2).length,
+      totalP1: s.points.filter(p => p.w === 2).length,
+      totalP2: s.points.filter(p => p.w === 1).length,
     })),
     rawText: raw,
     format: papParsedData.format,
