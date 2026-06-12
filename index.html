@@ -9031,8 +9031,8 @@ function renderPapResults(setsData, p1Name, p2Name, format) {
   papCharts = [];
 
   const headerDiv = document.getElementById('papMatchHeader');
-  const totalP1 = setsData.reduce((s, set) => s + set.points.filter(p => p.w === 1).length, 0);
-  const totalP2 = setsData.reduce((s, set) => s + set.points.filter(p => p.w === 2).length, 0);
+  const totalP1 = setsData.reduce((s, set) => s + set.points.filter(p => p.w === 2).length, 0);
+  const totalP2 = setsData.reduce((s, set) => s + set.points.filter(p => p.w === 1).length, 0);
 
   headerDiv.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -9074,14 +9074,14 @@ function renderPapResults(setsData, p1Name, p2Name, format) {
 }
 
 function buildStatsHTML(setsData, p1, p2, format) {
-  const totalP1 = setsData.reduce((s, set) => s + set.points.filter(p => p.w === 1).length, 0);
-  const totalP2 = setsData.reduce((s, set) => s + set.points.filter(p => p.w === 2).length, 0);
+  const totalP1 = setsData.reduce((s, set) => s + set.points.filter(p => p.w === 2).length, 0);
+  const totalP2 = setsData.reduce((s, set) => s + set.points.filter(p => p.w === 1).length, 0);
 
-  const games1 = setsData.reduce((s, set) => s + set.points.filter(p => p.gameWon && p.w === 1).length, 0);
-  const games2 = setsData.reduce((s, set) => s + set.points.filter(p => p.gameWon && p.w === 2).length, 0);
+  const games1 = setsData.reduce((s, set) => s + set.points.filter(p => p.gameWon && p.w === 2).length, 0);
+  const games2 = setsData.reduce((s, set) => s + set.points.filter(p => p.gameWon && p.w === 1).length, 0);
 
-  const breaks1 = setsData.reduce((s, set) => s + set.points.filter(p => p.isBreak && p.w === 1).length, 0);
-  const breaks2 = setsData.reduce((s, set) => s + set.points.filter(p => p.isBreak && p.w === 2).length, 0);
+  const breaks1 = setsData.reduce((s, set) => s + set.points.filter(p => p.isBreak && p.w === 2).length, 0);
+  const breaks2 = setsData.reduce((s, set) => s + set.points.filter(p => p.isBreak && p.w === 1).length, 0);
 
   const pct1 = Math.round((totalP1 / (totalP1 + totalP2)) * 100);
 
