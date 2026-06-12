@@ -8212,9 +8212,9 @@ const PuntoAPunto = {
       let b, d, r = 3;
       if (p.setWon) { b = C_SET; d = '#3B6D11'; r = 9; }
       else if (p.isBreak) { b = C_BRK; d = '#BA7517'; r = 7; }
-      else if (p.gameWon && p.w === 1) { b = C_P1; d = '#3C3489'; r = 6; }
-      else if (p.gameWon && p.w === 2) { b = C_P2; d = '#085041'; r = 6; }
-      else if (p.w === 1) {
+      else if (p.gameWon && p.w === 2) { b = C_P1; d = '#3C3489'; r = 6; }
+      else if (p.gameWon && p.w === 1) { b = C_P2; d = '#085041'; r = 6; }
+      else if (p.w === 2) {
         b = isDark ? 'rgba(83,74,183,0.5)' : 'rgba(83,74,183,0.35)';
         d = isDark ? 'rgba(83,74,183,0.7)' : 'rgba(83,74,183,0.55)';
       } else {
@@ -8265,7 +8265,7 @@ const PuntoAPunto = {
               },
               label: ctx => {
                 const p = setPoints[ctx.dataIndex];
-                const who = p.w === 1 ? p1Name : p2Name;
+                const who = p.w === 2 ? p1Name : p2Name;
                 return `${who} gana el punto`;
               },
               afterLabel: ctx => {
@@ -9094,8 +9094,8 @@ function buildStatsHTML(setsData, p1, p2, format) {
     </div>`;
 
   setsData.forEach(set => {
-    const sp1 = set.points.filter(p => p.w === 1).length;
-    const sp2 = set.points.filter(p => p.w === 2).length;
+    const sp1 = set.points.filter(p => p.w === 2).length;
+    const sp2 = set.points.filter(p => p.w === 1).length;
     html += `
       <div style="margin-top:8px;">
         ${statCard('Set ' + set.setNum + ' puntos', sp1, sp2)}
