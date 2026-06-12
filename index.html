@@ -7888,7 +7888,7 @@ const PuntoAPunto = {
       }
     }
 
-    console.log('DEBUG ids:', p1Id, p2Id, 'playerName:', playerName);
+    console.log('DEBUG parser:', { p1Id, p2Id, playerName });
     // Si se conoce el nombre del jugador, verificar que p1Id le corresponda
     if (playerName && p1Id && p2Id) {
       const words = playerName.toUpperCase().split(/\s+/).filter(w => w.length >= 3);
@@ -7896,6 +7896,7 @@ const PuntoAPunto = {
         Math.max(best, w.startsWith(id) ? 2 : (w.includes(id) ? 1 : 0)), 0);
       const matchP1 = scoreFor(p1Id);
       const matchP2 = scoreFor(p2Id);
+      console.log('DEBUG match:', { matchP1, matchP2, swapActivado: matchP2 > matchP1 });
       if (matchP2 > matchP1) {
         [p1Id, p2Id] = [p2Id, p1Id];
         // Intercambiar también las filas de scores: fueron asignadas por orden de aparición
@@ -7967,6 +7968,7 @@ const PuntoAPunto = {
       result.totalPoints.p2 += setResult.points.p2;
     });
 
+    console.log('DEBUG game1:', JSON.stringify(sets[0]?.games[0]));
     return result;
   },
 
