@@ -8135,9 +8135,9 @@ const PuntoAPunto = {
 
     let winner;
     if (type === 'w' || type === 'ace') {
-      winner = loser === p1Name ? 1 : 2;
-    } else {
       winner = loser === p1Name ? 2 : 1;
+    } else {
+      winner = loser === p1Name ? 1 : 2;
     }
 
     return { winner, type, shot };
@@ -8401,9 +8401,9 @@ const TennisMathStats = {
       if (pt.shot === 'BH') actualSide = 'bh';
 
       let playerKey;
-      if (pt.type === 'w' || pt.type === 'rw') playerKey = pt.winner === 1 ? 'p1' : 'p2';
-      else if (pt.type === 'ue') playerKey = pt.winner === 1 ? 'p2' : 'p1';
-      else if (pt.type === 'fe') playerKey = pt.winner === 1 ? 'p2' : 'p1';
+      if (pt.type === 'w' || pt.type === 'rw') playerKey = pt.winner === 2 ? 'p1' : 'p2';
+      else if (pt.type === 'ue') playerKey = pt.winner === 2 ? 'p2' : 'p1';
+      else if (pt.type === 'fe') playerKey = pt.winner === 2 ? 'p2' : 'p1';
       else return;
 
       const category = pt.type === 'w' || pt.type === 'rw' ? 'winners' :
@@ -8437,8 +8437,8 @@ const TennisMathStats = {
     const basic = this._calcService(pts, p1, p2, parsed);
     const p1ServePts = pts.filter(pt => pt.server === p1);
     const p2ServePts = pts.filter(pt => pt.server === p2);
-    const p1ServeWon = p1ServePts.filter(pt => pt.winner === 1).length;
-    const p2ServeWon = p2ServePts.filter(pt => pt.winner === 2).length;
+    const p1ServeWon = p1ServePts.filter(pt => pt.winner === 2).length;
+    const p2ServeWon = p2ServePts.filter(pt => pt.winner === 1).length;
     return {
       ...basic,
       p1: { ...basic.p1, servicePointsWon: p1ServeWon, servicePointsWonPct: p1ServePts.length > 0 ? Math.round((p1ServeWon / p1ServePts.length) * 100) : 0 },
@@ -8447,13 +8447,13 @@ const TennisMathStats = {
   },
 
   _calcPoints(pts, p1, p2) {
-    const p1Winners = pts.filter(pt => pt.winner === 1 && (pt.type === 'w' || pt.type === 'rw'));
-    const p2Winners = pts.filter(pt => pt.winner === 2 && (pt.type === 'w' || pt.type === 'rw'));
-    const p1UE = pts.filter(pt => pt.winner === 2 && pt.type === 'ue');
-    const p2UE = pts.filter(pt => pt.winner === 1 && pt.type === 'ue');
+    const p1Winners = pts.filter(pt => pt.winner === 2 && (pt.type === 'w' || pt.type === 'rw'));
+    const p2Winners = pts.filter(pt => pt.winner === 1 && (pt.type === 'w' || pt.type === 'rw'));
+    const p1UE = pts.filter(pt => pt.winner === 1 && pt.type === 'ue');
+    const p2UE = pts.filter(pt => pt.winner === 2 && pt.type === 'ue');
     return {
       p1: {
-        total: pts.filter(pt => pt.winner === 1).length,
+        total: pts.filter(pt => pt.winner === 2).length,
         winners: p1Winners.length,
         winnersFH: p1Winners.filter(pt => pt.shot === 'FH').length,
         winnersBH: p1Winners.filter(pt => pt.shot === 'BH').length,
@@ -8463,7 +8463,7 @@ const TennisMathStats = {
         aggressiveMargin: p1Winners.length - p1UE.length,
       },
       p2: {
-        total: pts.filter(pt => pt.winner === 2).length,
+        total: pts.filter(pt => pt.winner === 1).length,
         winners: p2Winners.length,
         winnersFH: p2Winners.filter(pt => pt.shot === 'FH').length,
         winnersBH: p2Winners.filter(pt => pt.shot === 'BH').length,
@@ -8476,8 +8476,8 @@ const TennisMathStats = {
   },
 
   _calcForcedErrors(pts, p1, p2) {
-    const p1FE = pts.filter(pt => pt.winner === 2 && pt.type === 'fe');
-    const p2FE = pts.filter(pt => pt.winner === 1 && pt.type === 'fe');
+    const p1FE = pts.filter(pt => pt.winner === 1 && pt.type === 'fe');
+    const p2FE = pts.filter(pt => pt.winner === 2 && pt.type === 'fe');
     return {
       p1: { total: p1FE.length, fh: p1FE.filter(pt => pt.shot === 'FH').length, bh: p1FE.filter(pt => pt.shot === 'BH').length },
       p2: { total: p2FE.length, fh: p2FE.filter(pt => pt.shot === 'FH').length, bh: p2FE.filter(pt => pt.shot === 'BH').length },
@@ -8485,8 +8485,8 @@ const TennisMathStats = {
   },
 
   _calcReturn(pts, p1, p2) {
-    const p1RW = pts.filter(pt => pt.winner === 1 && pt.type === 'rw');
-    const p2RW = pts.filter(pt => pt.winner === 2 && pt.type === 'rw');
+    const p1RW = pts.filter(pt => pt.winner === 2 && pt.type === 'rw');
+    const p2RW = pts.filter(pt => pt.winner === 1 && pt.type === 'rw');
     return {
       p1: { returnWinners: p1RW.length, returnWinnersFH: p1RW.filter(pt => pt.shot === 'FH').length, returnWinnersBH: p1RW.filter(pt => pt.shot === 'BH').length },
       p2: { returnWinners: p2RW.length, returnWinnersFH: p2RW.filter(pt => pt.shot === 'FH').length, returnWinnersBH: p2RW.filter(pt => pt.shot === 'BH').length },
@@ -8496,8 +8496,8 @@ const TennisMathStats = {
   _calcConversion(pts, p1, p2, parsed) {
     const p1RecvPts = pts.filter(pt => pt.server === p2);
     const p2RecvPts = pts.filter(pt => pt.server === p1);
-    const p1RecvWon = p1RecvPts.filter(pt => pt.winner === 1).length;
-    const p2RecvWon = p2RecvPts.filter(pt => pt.winner === 2).length;
+    const p1RecvWon = p1RecvPts.filter(pt => pt.winner === 2).length;
+    const p2RecvWon = p2RecvPts.filter(pt => pt.winner === 1).length;
 
     let p1BP = 0, p1BPC = 0, p2BP = 0, p2BPC = 0;
     parsed.sets.forEach(set => {
@@ -8509,8 +8509,8 @@ const TennisMathStats = {
     });
 
     const netShots = ['volley', 'smash'];
-    const p1NetWon = pts.filter(pt => pt.winner === 1 && netShots.includes((pt.shot || '').toLowerCase())).length;
-    const p2NetWon = pts.filter(pt => pt.winner === 2 && netShots.includes((pt.shot || '').toLowerCase())).length;
+    const p1NetWon = pts.filter(pt => pt.winner === 2 && netShots.includes((pt.shot || '').toLowerCase())).length;
+    const p2NetWon = pts.filter(pt => pt.winner === 1 && netShots.includes((pt.shot || '').toLowerCase())).length;
     const netAll = pts.filter(pt => netShots.includes((pt.shot || '').toLowerCase())).length;
 
     return {
