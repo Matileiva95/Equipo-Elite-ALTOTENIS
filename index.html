@@ -7894,7 +7894,13 @@ const PuntoAPunto = {
       const nameUpper = playerName.toUpperCase();
       const matchP1 = nameUpper.startsWith(p1Id) ? 2 : (nameUpper.includes(p1Id) ? 1 : 0);
       const matchP2 = nameUpper.startsWith(p2Id) ? 2 : (nameUpper.includes(p2Id) ? 1 : 0);
-      if (matchP2 > matchP1) [p1Id, p2Id] = [p2Id, p1Id];
+      if (matchP2 > matchP1) {
+        [p1Id, p2Id] = [p2Id, p1Id];
+        // Intercambiar también las filas de scores: fueron asignadas por orden de aparición
+        sets.forEach(s => s.games.forEach(g => {
+          [g.p1Scores, g.p2Scores] = [g.p2Scores, g.p1Scores];
+        }));
+      }
     }
 
     // Games dentro de cada set vienen en orden inverso (último game primero)
