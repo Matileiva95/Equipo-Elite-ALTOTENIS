@@ -7891,9 +7891,11 @@ const PuntoAPunto = {
     console.log('DEBUG ids:', p1Id, p2Id, 'playerName:', playerName);
     // Si se conoce el nombre del jugador, verificar que p1Id le corresponda
     if (playerName && p1Id && p2Id) {
-      const nameUpper = playerName.toUpperCase();
-      const matchP1 = nameUpper.startsWith(p1Id) ? 2 : (nameUpper.includes(p1Id) ? 1 : 0);
-      const matchP2 = nameUpper.startsWith(p2Id) ? 2 : (nameUpper.includes(p2Id) ? 1 : 0);
+      const words = playerName.toUpperCase().split(/\s+/).filter(w => w.length >= 3);
+      const scoreFor = (id) => words.reduce((best, w) =>
+        Math.max(best, w.startsWith(id) ? 2 : (w.includes(id) ? 1 : 0)), 0);
+      const matchP1 = scoreFor(p1Id);
+      const matchP2 = scoreFor(p2Id);
       if (matchP2 > matchP1) {
         [p1Id, p2Id] = [p2Id, p1Id];
         // Intercambiar también las filas de scores: fueron asignadas por orden de aparición
