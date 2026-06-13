@@ -5055,17 +5055,16 @@ function renderPortalProgreso() {
   const p = portalPlayer;
 
   // ── Calidad esta semana ───────────────────────────────────
-  const today = new Date(); today.setHours(0,0,0,0);
-  const wKey  = weekKey(today);
-  const lunes = new Date(wKey + 'T12:00:00');
-  const loads  = p.trainingLoad || [];
+  // Fuente: portalProgreso.week_evaluations (campos fecha/nota del backend).
+  // Fechas como strings YYYY-MM-DD en hora de Chile, sin pasar por Date local.
+  const lunesStr = lunesDeSemana(hoyChile());
+  const evalsSemana = (portalProgreso?.week_evaluations || []).filter(e => typeof e.nota === 'number');
 
   const diasNombres = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
   const notasPorDia = diasNombres.map((_, i) => {
-    const fecha = new Date(lunes); fecha.setDate(lunes.getDate() + i);
-    const key   = fecha.toISOString().slice(0,10);
-    const sess  = loads.filter(l => l.date === key && l.session_nota);
-    return sess.length ? sess.reduce((a,b) => a + b.session_nota, 0) / sess.length : null;
+    const key  = sumarDias(lunesStr, i);
+    const sess = evalsSemana.filter(e => e.fecha === key);
+    return sess.length ? sess.reduce((a,b) => a + b.nota, 0) / sess.length : null;
   });
 
   const notasValidas = notasPorDia.filter(n => n !== null);
@@ -5407,7 +5406,7 @@ async function ppGuardarEval() {
   const playerId   = sessionStorage.getItem('ciq_player_id');
   const token      = sessionStorage.getItem('ciq_token');
   const reflexion  = (document.getElementById('pp-reflexion')?.value || '').trim();
-  const payload    = { fecha: new Date().toISOString().slice(0,10), rpe: parseInt(_ppRpe), mood: parseInt(_ppMood), nota: parseInt(_ppNota), reflexion };
+  const payload    = { fecha: hoyChile(), rpe: parseInt(_ppRpe), mood: parseInt(_ppMood), nota: parseInt(_ppNota), reflexion };
   try {
     const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-evaluation`, {
       method: 'POST', headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
@@ -5417,6 +5416,12 @@ async function ppGuardarEval() {
     if (portalPlayer) {
       if (!portalPlayer.trainingLoad) portalPlayer.trainingLoad = [];
       portalPlayer.trainingLoad.unshift(payload);
+    }
+    if (portalProgreso) {
+      if (!Array.isArray(portalProgreso.week_evaluations)) portalProgreso.week_evaluations = [];
+      const wIdx = portalProgreso.week_evaluations.findIndex(e => e.fecha === payload.fecha);
+      if (wIdx !== -1) portalProgreso.week_evaluations[wIdx] = payload;
+      else portalProgreso.week_evaluations.unshift(payload);
     }
     alert('¡Evaluación guardada!');
     _ppNota = 0; _ppRpe = 0; _ppMood = 0;
@@ -6268,6 +6273,9 @@ function initCourtEditor() {
 // ── UTILS ─────────────────────────────────────────────────
 function ini(n){return n.split(' ').slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('');}
 function weekKey(d){const monday=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()-((d.getUTCDay()+6)%7)));return monday.toISOString().slice(0,10);}
+function hoyChile(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Santiago'}).format(new Date());}
+function lunesDeSemana(ymd){const d=new Date(ymd+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));return d.toISOString().slice(0,10);}
+function sumarDias(ymd,n){const d=new Date(ymd+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
 function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDate(d.getDate()+6);return `${d.getDate()} ${MONTHS[d.getMonth()]} – ${e.getDate()} ${MONTHS[e.getMonth()]} ${e.getFullYear()}`;}
 
 // ── INIT: session restore + magic link handler ─────────────
