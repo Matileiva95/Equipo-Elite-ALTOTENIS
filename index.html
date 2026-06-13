@@ -957,6 +957,22 @@ async function loadCoachTeam() {
     _coachTeamCache = [];
   }
 }
+let portalEvalsCache = null; // { [legacy_id]: [{fecha,nota,rpe,mood,reflexion}] } — evaluaciones del portal, últimos 7 días
+async function loadPortalEvals() {
+  const token = sessionStorage.getItem('ciq_token');
+  if (!token) return;
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/portal-evaluations?days=7`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const d = await res.json();
+    const byLegacyId = {};
+    (d.players || []).forEach(p => { if (p.legacy_id != null) byLegacyId[p.legacy_id] = p.evaluations || []; });
+    portalEvalsCache = byLegacyId;
+    if (page === 'dashboard') renderMain();
+  } catch(e) { /* sin portal evals el dashboard sigue con el blob */ }
+}
 function renderCoachTeamList(coaches) {
   if (!coaches) return `<div class="empty" style="padding:12px 0;">Cargando...</div>`;
   if (!coaches.length) return `<div class="empty" style="padding:12px 0;">Sin entrenadores registrados aún.</div>`;
@@ -1051,6 +1067,7 @@ async function loadData(){
   loadCoachTeam(); // non-blocking, will trigger re-render when done
   loadGroups();
   loadUserPermissions();
+  loadPortalEvals(); // non-blocking, re-renderiza el dashboard al llegar
   renderAll();setInterval(refreshData,30000);
 }
 async function refreshData(){
@@ -1126,6 +1143,20 @@ function renderMain(){const m=document.getElementById('main');if(page==='dashboa
 function postRender(){document.querySelectorAll('canvas.court-ro').forEach(c=>{try{drawCourtReadOnly(c,JSON.parse(c.dataset.diagram||'[]'));}catch(e){}});if(document.getElementById('court-canvas'))initCourtEditor();if(page==='grupal')renderGrupalContent();}
 
 // ── DASHBOARD ─────────────────────────────────────────────
+// RPE diario fusionado: sesiones del blob (trainingLoad) + evaluaciones del
+// portal (portalEvalsCache), deduplicando por fecha — si un día tiene ambas
+// fuentes, todas sus mediciones se promedian en un solo punto del día.
+// Devuelve un array de promedios diarios (un valor por día con registro).
+function rpeDiarioFusionado(p, sinceKey) {
+  const porDia = {};
+  (p.trainingLoad || []).forEach(l => {
+    if (l.date >= sinceKey && l.rpe) (porDia[l.date] = porDia[l.date] || []).push(l.rpe);
+  });
+  ((portalEvalsCache || {})[Number(p.id)] || []).forEach(e => {
+    if (e.fecha >= sinceKey && e.rpe) (porDia[e.fecha] = porDia[e.fecha] || []).push(e.rpe);
+  });
+  return Object.values(porDia).map(arr => arr.reduce((a, b) => a + b, 0) / arr.length);
+}
 function renderDashboard(){
   const today=new Date();today.setHours(0,0,0,0);
   const todayKey=today.toISOString().slice(0,10);
@@ -1181,9 +1212,9 @@ function renderDashboard(){
   const d5k=new Date(today);d5k.setDate(today.getDate()-5);
   const d5key=d5k.toISOString().slice(0,10);
   allPlayers.forEach((p,i)=>{
-    const loads=(p.trainingLoad||[]).filter(l=>l.date>=d5key);
-    if(loads.length>=3){
-      const avg=loads.reduce((a,b)=>a+b.rpe,0)/loads.length;
+    const dias=rpeDiarioFusionado(p,d5key);
+    if(dias.length>=3){
+      const avg=dias.reduce((a,b)=>a+b,0)/dias.length;
       if(avg>=4.5)alertsAmber.push({name:p.name,pid:i,msg:`Carga alta — RPE ${avg.toFixed(1)}/5`});
     }
   });
@@ -1217,9 +1248,9 @@ function renderDashboard(){
   const grpRpe={};
   allPlayers.forEach(p=>{
     if(!p.group_id)return;
-    const loads=(p.trainingLoad||[]).filter(l=>l.date>=d7key);
-    if(!loads.length)return;
-    const avg=loads.reduce((a,b)=>a+b.rpe,0)/loads.length;
+    const dias=rpeDiarioFusionado(p,d7key);
+    if(!dias.length)return;
+    const avg=dias.reduce((a,b)=>a+b,0)/dias.length;
     if(!grpRpe[p.group_id])grpRpe[p.group_id]={sum:0,n:0};
     grpRpe[p.group_id].sum+=avg;grpRpe[p.group_id].n++;
   });
@@ -5826,10 +5857,15 @@ function renderCoachPortalView(p) {
     loadCoachPortalData(p.id);
     return `<div class="card"><div style="padding:20px 0;color:var(--g3);text-align:center;">Cargando datos del portal...</div></div>`;
   }
-  const { objectives, analyses } = cache;
+  const { objectives, analyses, progress } = cache;
   const loads = p.trainingLoad || [];
   const lastLoad = loads[0];
-  const { svg: chartSvg, highLoad, avg5 } = buildCargaChart(loads);
+  // Evaluaciones del portal (tabla players via /progress): alimentan los puntos
+  // naranjos (session_nota) del gráfico y la card de evaluaciones. Su rpe entra
+  // a la línea RPE como una sesión más del día (misma fusión que el dashboard).
+  const portalEvals = (progress?.week_evaluations || []).filter(e => typeof e.nota === 'number');
+  const chartLoads = [...loads, ...portalEvals.map(e => ({ date: e.fecha, rpe: e.rpe, session_nota: e.nota }))];
+  const { svg: chartSvg, highLoad, avg5 } = buildCargaChart(chartLoads);
   const rpeColors = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
   const moodIcons = ['','😞','😐','😊'];
   const tipoBadge = {
@@ -5857,6 +5893,23 @@ function renderCoachPortalView(p) {
         <span style="font-size:12px;color:var(--g2);">${(lastLoad.tipos||[]).join(', ')||''}</span>
         ${lastLoad.notas?`<div style="width:100%;font-size:11px;color:var(--g3);margin-top:2px;">📝 ${lastLoad.notas}</div>`:''}
       </div>` : '<div style="color:var(--g3);font-size:13px;">Sin sesiones registradas aún</div>'}
+    </div>
+
+    <div class="card" style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">📊 Evaluaciones del jugador (14 días)</div>
+      ${portalEvals.length === 0 ? '<div style="color:var(--g3);font-size:13px;">Sin evaluaciones registradas</div>' :
+        portalEvals.map(e => {
+          const moodEmoji = e.mood === 1 ? '😔' : e.mood === 2 ? '😐' : '😊';
+          const notaColor = e.nota >= 6 ? '#22C55E' : e.nota >= 4 ? '#F59E0B' : '#EF4444';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #eee;">
+            <span style="font-size:12px;color:#666;min-width:80px;">${e.fecha}</span>
+            <span style="font-size:13px;font-weight:700;color:${notaColor};">${e.nota}/7</span>
+            <span style="font-size:12px;">RPE ${e.rpe}/5</span>
+            <span style="font-size:16px;">${moodEmoji}</span>
+            ${e.reflexion ? `<span style="font-size:12px;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.reflexion}</span>` : ''}
+          </div>`;
+        }).join('')
+      }
     </div>
 
     <div class="card" style="margin-bottom:14px;">
@@ -5892,20 +5945,22 @@ async function loadCoachPortalData(playerId) {
   const token = sessionStorage.getItem('ciq_token');
   const h = {'Authorization': `Bearer ${token}`};
   try {
-    const [objRes, anlRes] = await Promise.all([
+    const [objRes, anlRes, progRes] = await Promise.all([
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {headers: h}),
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {headers: h}),
+      apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/progress`, {headers: h}),
     ]);
-    const [objData, anlData] = await Promise.all([objRes.json(), anlRes.json()]);
+    const [objData, anlData, progData] = await Promise.all([objRes.json(), anlRes.json(), progRes.json()]);
     _coachPortalCache[playerId] = {
       objectives: objData.objectives || [],
       analyses: anlData.analyses || [],
+      progress: progData || null,
       ts: Date.now()
     };
     const el = document.getElementById('dtab-content');
     if (el && dtab === 'portal') el.innerHTML = renderDtab();
   } catch(e) {
-    _coachPortalCache[playerId] = { objectives: [], analyses: [], ts: Date.now() };
+    _coachPortalCache[playerId] = { objectives: [], analyses: [], progress: null, ts: Date.now() };
     const el = document.getElementById('dtab-content');
     if (el && dtab === 'portal') el.innerHTML = renderDtab();
   }
