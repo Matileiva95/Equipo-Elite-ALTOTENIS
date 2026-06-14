@@ -3135,13 +3135,12 @@ function getAvailabilityConfig() {
       .map(c => c.profiles?.full_name)
       .filter(Boolean);
     const current = data.availabilityConfig.coaches;
-    const added   = realNames.filter(n => !current.includes(n));
-    const removed = current.filter(n => !realNames.includes(n));
-    if (added.length || removed.length) {
-      data.availabilityConfig.coaches = [
-        ...current.filter(n => realNames.includes(n)),
-        ...added
-      ];
+    const next = [
+      ...current.filter(n => realNames.includes(n)),
+      ...realNames.filter(n => !current.includes(n))
+    ];
+    if (next.length !== current.length || next.some((n,i) => n !== current[i])) {
+      data.availabilityConfig.coaches = next;
       scheduleSync();
     }
   } else if (data.availabilityConfig.coaches.length === 0) {
@@ -3229,6 +3228,12 @@ function renderAvailGroup(label, people, wk, isAdmin, type, canEditStatus) {
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;">${summaryItems}</div>
     </div>`;
 }
+window.forceSyncCoaches = function() {
+  const realNames = (_coachTeamCache||[]).map(c => c.profiles?.full_name).filter(Boolean);
+  data.availabilityConfig.coaches = realNames;
+  scheduleSync();
+  renderMain();
+};
 function renderCoachAvailability() {
   const role = sessionStorage.getItem('ciq_role');
   const isAdmin = role === 'admin' || role === 'super_admin';
@@ -3238,6 +3243,9 @@ function renderCoachAvailability() {
   const label = availWeekLabel(wk);
   const cfg = getAvailabilityConfig();
   return `
+    <div style="text-align:right;margin-bottom:8px;">
+      <button onclick="forceSyncCoaches()" style="padding:5px 12px;border:1.5px solid var(--border);border-radius:var(--rsm);background:var(--white);color:var(--g2);font-size:12px;cursor:pointer;">🔄 Sincronizar coaches</button>
+    </div>
     <div class="card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:${availWeekOffset!==0?'10px':'18px'};">
         <button onclick="availWeekOffset--;renderMain();" style="flex-shrink:0;padding:7px 13px;border:1px solid var(--border);border-radius:var(--rsm);background:var(--white);color:var(--g2);font-size:13px;cursor:pointer;line-height:1;">‹</button>
