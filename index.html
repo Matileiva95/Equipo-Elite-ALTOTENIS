@@ -3130,7 +3130,21 @@ function getAvailabilityConfig() {
   data.availabilityConfig = data.availabilityConfig || {coaches:[], pfs:[]};
   data.availabilityConfig.coaches = data.availabilityConfig.coaches || [];
   data.availabilityConfig.pfs = data.availabilityConfig.pfs || [];
-  if (data.availabilityConfig.coaches.length === 0) {
+  if (_coachTeamCache && _coachTeamCache.length > 0) {
+    const realNames = _coachTeamCache
+      .map(c => c.profiles?.full_name)
+      .filter(Boolean);
+    const current = data.availabilityConfig.coaches;
+    const added   = realNames.filter(n => !current.includes(n));
+    const removed = current.filter(n => !realNames.includes(n));
+    if (added.length || removed.length) {
+      data.availabilityConfig.coaches = [
+        ...current.filter(n => realNames.includes(n)),
+        ...added
+      ];
+      scheduleSync();
+    }
+  } else if (data.availabilityConfig.coaches.length === 0) {
     data.availabilityConfig.coaches = [...AVAIL_DEFAULT_COACHES];
     scheduleSync();
   }
