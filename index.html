@@ -442,10 +442,11 @@ body{background:#faf7f2;color:#1a1a1a;}
         <span class="role-icon">👤</span>Soy jugador
       </button>
     </div>
-    <input type="email" id="li-user" placeholder="Tu email" autocomplete="email" />
+    <input type="email" id="li-user" placeholder="Tu correo" autocomplete="email" />
     <input type="password" id="li-pass" placeholder="Contraseña" />
-    <div id="li-magic-msg" style="display:none;font-size:12px;color:var(--g3);text-align:center;margin-bottom:8px;line-height:1.5;">Te enviaremos un link a tu email para entrar sin contraseña</div>
+    <div id="li-magic-msg" style="display:none;font-size:12px;color:var(--g3);text-align:center;margin-bottom:8px;line-height:1.5;">Te enviaremos un enlace a tu correo para entrar sin contraseña</div>
     <button class="login-btn" id="login-btn-main" onclick="doLogin()">Ingresar</button>
+    <button type="button" id="li-forgot" onclick="forgotPassword()" style="display:block;width:100%;background:none;border:none;color:var(--g3);font-size:12px;cursor:pointer;text-decoration:underline;margin-top:10px;padding:6px;text-align:center;">¿Olvidaste tu contraseña? Te enviamos un enlace de acceso al correo</button>
     <div class="login-err" id="li-err"></div>
     <div id="li-magic-ok" style="display:none;background:#eefaf3;border:1px solid #a7d7b8;border-radius:8px;padding:12px;font-size:13px;color:#1a7a3f;text-align:center;margin-top:8px;"></div>
     <p style="margin-top:20px; font-size:10px; color:#888; text-align:center; line-height:1.5;">
@@ -750,13 +751,13 @@ function setLoginRole(r) {
   document.getElementById('rbtn-coach').classList.toggle('active', r === 'coach');
   document.getElementById('rbtn-player').classList.toggle('active', r === 'player');
   const isPlayer = r === 'player';
-  document.getElementById('li-user').placeholder = isPlayer ? 'Tu email de jugador' : 'Tu email';
+  document.getElementById('li-user').placeholder = isPlayer ? 'Tu correo de jugador' : 'Tu correo';
   document.getElementById('li-pass').style.display = '';
-  document.getElementById('li-pass').placeholder = isPlayer ? 'Contraseña (si ya creaste una)' : 'Contraseña (dejá en blanco para recibir un link)';
+  document.getElementById('li-pass').placeholder = isPlayer ? 'Contraseña (si ya creaste una)' : 'Contraseña (deja en blanco para recibir un enlace)';
   document.getElementById('li-magic-msg').style.display = 'block';
   document.getElementById('li-magic-msg').textContent = isPlayer
-    ? 'Sin contraseña aún? Dejá el campo en blanco y te enviamos un link.'
-    : 'Dejá la contraseña en blanco para recibir un link de acceso a tu email.';
+    ? '¿Sin contraseña aún? Deja el campo en blanco y te enviamos un enlace.'
+    : 'Deja la contraseña en blanco para recibir un enlace de acceso a tu correo.';
   document.getElementById('login-btn-main').textContent = 'Ingresar';
   document.getElementById('li-err').textContent = '';
   document.getElementById('li-magic-ok').style.display = 'none';
@@ -797,34 +798,34 @@ async function doLogin() {
         loadPlayerPortal(String(d.playerId || ''));
       } else {
         // Magic link flow: jugador sin contraseña aún
-        errEl.textContent = 'Enviando link...';
+        errEl.textContent = 'Enviando enlace...';
         const res = await fetch(`${BACKEND_URL}/api/v1/auth/request-magic-link`, {
           method: 'POST', headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({email: u}),
           signal: AbortSignal.timeout(15000)
         });
         const d = await res.json();
-        if (!res.ok) { errEl.textContent = d.error || 'No se pudo enviar el link'; btn.disabled = false; return; }
+        if (!res.ok) { errEl.textContent = d.error || 'No se pudo enviar el enlace'; btn.disabled = false; return; }
         errEl.textContent = '';
         const okEl = document.getElementById('li-magic-ok');
-        okEl.textContent = `✓ Link enviado a ${u}. Revisá tu email y hacé click en el enlace para ingresar.`;
+        okEl.textContent = `✓ Enlace enviado a ${u}. Revisa tu correo y haz clic en el enlace para ingresar.`;
         okEl.style.display = 'block';
         btn.disabled = false;
       }
     } else {
       if (!pass) {
         // Coach blank password → send magic link
-        errEl.textContent = 'Enviando link...';
+        errEl.textContent = 'Enviando enlace...';
         const res = await fetch(`${BACKEND_URL}/api/v1/auth/request-coach-magic-link`, {
           method: 'POST', headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({email: u}),
           signal: AbortSignal.timeout(15000)
         });
         const d = await res.json();
-        if (!res.ok) { errEl.textContent = d.error || 'No se pudo enviar el link'; btn.disabled = false; return; }
+        if (!res.ok) { errEl.textContent = d.error || 'No se pudo enviar el enlace'; btn.disabled = false; return; }
         errEl.textContent = '';
         const okEl = document.getElementById('li-magic-ok');
-        okEl.textContent = `✓ Link enviado a ${u}. Revisá tu email y hacé click en el enlace para ingresar.`;
+        okEl.textContent = `✓ Enlace enviado a ${u}. Revisa tu correo y haz clic en el enlace para ingresar.`;
         okEl.style.display = 'block';
         btn.disabled = false;
       } else {
@@ -839,7 +840,7 @@ async function doLogin() {
         const detectedRole = d.user?.user_metadata?.role || 'coach';
         // Bloqueo de seguridad: solo admin, coach y viewer pueden acceder al panel
         if (!['admin', 'coach', 'viewer', 'super_admin'].includes(detectedRole)) {
-          errEl.textContent = 'Esta cuenta es de jugador. Usá el acceso de jugador.';
+          errEl.textContent = 'Esta cuenta es de jugador. Usa el acceso de jugador.';
           btn.disabled = false;
           return;
         }
@@ -860,6 +861,13 @@ async function doLogin() {
     errEl.textContent = e.name === 'TimeoutError' ? 'El servidor tardó demasiado. Intenta de nuevo.' : 'Error de conexión';
     btn.disabled = false;
   }
+}
+// "¿Olvidaste tu contraseña?" → reutiliza el flujo de magic link de doLogin:
+// vacía la contraseña y deja que doLogin ramifique según el loginRole activo
+// (request-magic-link para jugador, request-coach-magic-link para coach).
+function forgotPassword() {
+  document.getElementById('li-pass').value = '';
+  doLogin();
 }
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
