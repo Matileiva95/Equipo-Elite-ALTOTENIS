@@ -981,20 +981,42 @@ async function loadPortalEvals() {
     if (page === 'dashboard') renderMain();
   } catch(e) { /* sin portal evals el dashboard sigue con el blob */ }
 }
+// Escape HTML para texto controlado por el usuario (nombres de coaches, etc.).
+// Relevante de cara a multi-tenant: no controlamos quién escribe nombres en
+// otras academias.
+function escHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+// Resuelve el nombre del coach desde el cache a partir de su id. Evita interpolar
+// el nombre en los onclick (que se rompería con comillas/apóstrofos).
+function _coachName(coachId) {
+  const c = (_coachTeamCache || []).find(x => String(x.id) === String(coachId));
+  return c?.profiles?.full_name || 'este entrenador';
+}
 function renderCoachTeamList(coaches) {
   if (!coaches) return `<div class="empty" style="padding:12px 0;">Cargando...</div>`;
   if (!coaches.length) return `<div class="empty" style="padding:12px 0;">Sin entrenadores registrados aún.</div>`;
   return coaches.map(c => {
     const name = c.profiles?.full_name || '—';
     const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const activo = c.is_active !== false;
+    const conexion = c.last_sign_in_at
+      ? 'Última conexión: ' + new Date(c.last_sign_in_at).toLocaleDateString('es-CL', {day:'2-digit',month:'short',year:'numeric'})
+      : 'Nunca ingresó';
+    const espec = c.specialization?.join(', ') || 'Entrenador';
     return `
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
-        <div style="width:36px;height:36px;border-radius:50%;background:#FF6B00;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${initials}</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${activo?'':'opacity:.55;'}">
+        <div style="width:36px;height:36px;border-radius:50%;background:#FF6B00;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${escHtml(initials)}</div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:600;color:var(--gray);">${name}</div>
-          <div style="font-size:11px;color:var(--g3);">${c.specialization?.join(', ') || 'Entrenador'}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--gray);">${escHtml(name)}${activo?'':' <span style="font-size:10px;font-weight:600;color:#e74c3c;background:#fdecea;border-radius:20px;padding:1px 7px;vertical-align:middle;">Desactivado</span>'}</div>
+          <div style="font-size:11px;color:var(--g3);">${escHtml(espec)} · ${conexion}</div>
         </div>
-        <button class="btn btn-g btn-sm" style="font-size:11px;padding:5px 10px;" onclick="resendCoachInvite('${c.id}','${name.replace(/'/g,"\\'")}')">Reenviar inv.</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0;">
+          ${activo ? `<button class="btn btn-g btn-sm" style="font-size:11px;padding:5px 10px;" onclick="resendCoachInvite('${c.id}')">Reenviar inv.</button>
+          <button class="btn btn-sm" style="font-size:11px;padding:5px 10px;background:#fff3e8;color:var(--orange);border:1px solid var(--orange);" onclick="deactivateCoach('${c.id}')">Desactivar</button>`
+          : `<button class="btn btn-sm" style="font-size:11px;padding:5px 10px;background:#eafaf1;color:#1e8449;border:1px solid #82e0aa;" onclick="reactivateCoach('${c.id}')">Reactivar</button>`}
+          <button class="btn btn-sm" style="font-size:11px;padding:5px 10px;background:transparent;color:#e74c3c;border:1px solid #f5c6c6;" onclick="deleteCoachPermanent('${c.id}')">Eliminar</button>
+        </div>
       </div>`;
   }).join('');
 }
@@ -1031,7 +1053,8 @@ async function submitInviteCoach() {
     errEl.textContent = 'Error de conexión'; btn.disabled = false; btn.textContent = 'Enviar invitación';
   }
 }
-async function resendCoachInvite(coachId, name) {
+async function resendCoachInvite(coachId) {
+  const name = _coachName(coachId);
   if (!confirm(`¿Reenviar invitación a ${name}?`)) return;
   const token = sessionStorage.getItem('ciq_token');
   try {
@@ -1042,6 +1065,56 @@ async function resendCoachInvite(coachId, name) {
     const d = await res.json().catch(() => ({}));
     if (!res.ok) { alert(d.error || 'No se pudo reenviar la invitación'); return; }
     alert(`Invitación reenviada a ${name}.`);
+  } catch(e) {
+    alert('Error de conexión');
+  }
+}
+async function deactivateCoach(coachId) {
+  const name = _coachName(coachId);
+  if (!confirm(`¿Desactivar a ${name}? No podrá ingresar hasta que lo reactives. Sus datos y su historial se conservan.`)) return;
+  const token = sessionStorage.getItem('ciq_token');
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches/${coachId}/deactivate`, {
+      method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(d.error || 'No se pudo desactivar el coach'); return; }
+    alert(`${name} fue desactivado.`);
+    _coachTeamCache = null; await loadCoachTeam(); renderAll();
+  } catch(e) {
+    alert('Error de conexión');
+  }
+}
+async function reactivateCoach(coachId) {
+  const name = _coachName(coachId);
+  if (!confirm(`¿Reactivar el acceso de ${name}?`)) return;
+  const token = sessionStorage.getItem('ciq_token');
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches/${coachId}/reactivate`, {
+      method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(d.error || 'No se pudo reactivar el coach'); return; }
+    alert(`${name} fue reactivado.`);
+    _coachTeamCache = null; await loadCoachTeam(); renderAll();
+  } catch(e) {
+    alert('Error de conexión');
+  }
+}
+async function deleteCoachPermanent(coachId) {
+  const name = _coachName(coachId);
+  if (!confirm(`Esto elimina la cuenta de ${name} de forma PERMANENTE e irreversible. Sus datos registrados se conservan (figuran con su nombre), pero su acceso y perfil se eliminan. ¿Continuar?`)) return;
+  const typed = prompt(`Escribe el nombre completo del coach para confirmar: ${name}`);
+  if (typed === null) return;
+  if (typed !== name) { alert('El nombre no coincide. Cancelado.'); return; }
+  const token = sessionStorage.getItem('ciq_token');
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/coaches/${coachId}`, {
+      method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || 'No se pudo eliminar el coach'); return; }
+    alert(`${name} fue eliminado definitivamente.`);
+    _coachTeamCache = null; await loadCoachTeam(); renderAll();
   } catch(e) {
     alert('Error de conexión');
   }
