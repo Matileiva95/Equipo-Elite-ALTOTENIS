@@ -1900,7 +1900,7 @@ function _generarReportePDF({ titulo, tipo, filename }) {
     doc.text(b.label, bx+boxW/2, boxY+11, {align:'center'});
   });
 
-  const grupoOrden = ['Elite','F2','F1','F1C','Naranja','Verde'];
+  const grupoOrden = (window._groups || []).map(g => g.name);
   const grupoMap = {};
   grupoOrden.forEach(g => grupoMap[g] = []);
   allPlayers.forEach(p => {
@@ -1988,7 +1988,10 @@ function _generarReportePDF({ titulo, tipo, filename }) {
       if(meta.isHeader){
         doc.setFillColor(26,26,46);
         doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height,'F');
-        if(data.column.index === 0){
+        // El rótulo se dibuja en la ÚLTIMA columna para que quede ENCIMA de la
+        // banda: didDrawCell corre por celda de izq. a der., así que dibujarlo en
+        // la col 0 lo pinta antes de que las celdas del medio rellenen la banda.
+        if(data.column.index === totalCols - 1){
           const tableWidth = pageW - marginL - marginR;
           doc.setTextColor(255,255,255);
           doc.setFontSize(7.5); doc.setFont('helvetica','bold');
