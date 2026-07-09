@@ -1549,7 +1549,7 @@ let asistModalIdx = null;
 function renderAsistDia() {
   const players = activeGroup ? data.players.filter(p => p.group_id === activeGroup) : data.players;
   const dateKey = asistFecha.toISOString().slice(0,10);
-  const isToday = dateKey === new Date().toISOString().slice(0,10);
+  const isToday = dateKey === hoyChile();
   const dayName = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][asistFecha.getDay()];
   const dateLabel = dayName + ' ' + asistFecha.getDate() + ' de ' + ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][asistFecha.getMonth()] + ' ' + asistFecha.getFullYear();
 
@@ -1763,7 +1763,7 @@ function renderAsistMes() {
           const chipHtml = asistTipo === 'fisico'
             ? (f1?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===f1)?.color||'#ccc'};">F</div>`:'')
             : `${t1?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===t1)?.color||'#ccc'};">T1</div>`:''}${t2?`<div class="mes-turno-chip" style="background:${ESTADOS.find(e=>e.id===t2)?.color||'#ccc'};">T2</div>`:''}`;
-          const isToday=key===new Date().toISOString().slice(0,10);
+          const isToday=key===hoyChile();
           return `<div class="mes-day" style="${isToday?'border-color:var(--orange);border-width:2px;':''}">
             <div class="mes-day-num" style="${isToday?'color:var(--orange);':''}">${d}</div>
             <div class="mes-turnos">
@@ -2555,7 +2555,7 @@ const DIAS_GP_ABR  = ['L','M','X','J','V','S','D'];
 const TIPO_DIA_OPTS = ['Entrenamiento','Físico','Partido','Competencia'];
 
 function renderPlan(p){
-  const today=new Date(),wKey=weekKey(today),wLbl=weekLabel(wKey);
+  const wKey=lunesDeSemana(hoyChile()),wLbl=weekLabel(wKey);
   const plans=p.weekPlans||[];
   const cur=plans.find(pl=>pl.week===wKey&&!pl.grupal)||{week:wKey,dias:{}};
   const grupalEntry=plans.find(pl=>pl.week===wKey&&pl.grupal)||null;
@@ -3001,7 +3001,7 @@ function toggleTipo(btn) {
 function registrarCarga() {
   if(!_cargaRpe){alert('Seleccioná un RPE');return;}
   if(!_cargaMood){alert('Seleccioná el estado de ánimo');return;}
-  const fecha=document.getElementById('carga-fecha')?.value||new Date().toISOString().slice(0,10);
+  const fecha=document.getElementById('carga-fecha')?.value||hoyChile();
   const dur=parseInt(document.getElementById('carga-dur')?.value||'90');
   const notas=document.getElementById('carga-notas')?.value?.trim()||'';
   const tipos=Array.from(document.querySelectorAll('#tipo-btns button')).filter(b=>b.dataset.active==='1').map(b=>b.dataset.tipo);
@@ -3197,10 +3197,13 @@ const AVAIL_CFG = {
   LICENCIA:   {bg:'#ffebee',color:'#c62828',border:'#ef9a9a'}
 };
 function getWeekMonday(offset) {
-  const now = new Date();
-  const utcDay = now.getUTCDay();
-  const diff = (utcDay === 0 ? -6 : 1 - utcDay);
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff + offset * 7));
+  // Ancla en el día calendario de Chile (no en el offset UTC del navegador
+  // ni en la hora cruda del instante actual) para evitar que después de
+  // ~20-21h Chile el cálculo salte al lunes de la semana siguiente.
+  // offset = semanas relativas a la actual (negativo = atrás, positivo = adelante).
+  const mondayStr = sumarDias(lunesDeSemana(hoyChile()), offset * 7);
+  // weekKey() (único consumidor) espera un Date con métodos getUTC*, no un string.
+  return new Date(mondayStr + 'T00:00:00Z');
 }
 function availWeekLabel(key) {
   const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -3766,7 +3769,7 @@ function buildTorneosHtml(matches, storedMatches) {
 let editingMatchIdx = null;
 
 function renderAddMatchForm(p, editIdx) {
-  const today = new Date().toISOString().slice(0,10);
+  const today = hoyChile();
   const isEdit = editIdx !== null && editIdx !== undefined;
   const m = isEdit ? (p.matches || [])[editIdx] : null;
   editingMatchIdx = isEdit ? editIdx : null;
@@ -3980,7 +3983,7 @@ function renderStats(p, editIdx) {
 }
 
 function renderStatsForm(p, editIdx) {
-  const today = new Date().toISOString().slice(0,10);
+  const today = hoyChile();
   const pName = p.name.split(' ')[0];
   const isEdit = editIdx !== null && editIdx !== undefined;
   const stats = p.matchStats || [];
@@ -5448,7 +5451,7 @@ function renderPortalHoy() {
   const msg = p.coachMessage || mensajes[Math.floor(Math.random() * mensajes.length)];
 
   const diaKey = diasSemana[now.getDay()];
-  const wKey = weekKey(now);
+  const wKey = lunesDeSemana(hoyChile());
   const plans = p.weekPlans || [];
   const planSemana = plans.find(pl => pl.week === wKey && !pl.grupal);
   const diaData = planSemana?.dias?.[diaKey] || {};
@@ -5642,7 +5645,7 @@ function renderPortalSession() {
   const moodIcons = ['','😞','😐','😊'];
   const editing = _ppEditIdx !== null;
   const editSess = editing ? loads[_ppEditIdx] : null;
-  const defDate = editSess ? editSess.date : new Date().toISOString().slice(0,10);
+  const defDate = editSess ? editSess.date : hoyChile();
   const defDur = editSess ? editSess.duration : 90;
   const defNotas = editSess ? (editSess.notas || '') : '';
   const activeTipos = editSess ? (editSess.tipos || []) : [];
@@ -5745,7 +5748,7 @@ async function submitPortalSession() {
   if (!_ppMood) { alert('Seleccioná el estado de ánimo'); return; }
   const playerId = sessionStorage.getItem('ciq_player_id');
   const token = sessionStorage.getItem('ciq_token');
-  const fecha = document.getElementById('pp-fecha')?.value || new Date().toISOString().slice(0,10);
+  const fecha = document.getElementById('pp-fecha')?.value || hoyChile();
   const dur = parseInt(document.getElementById('pp-dur')?.value || '90');
   const notas = document.getElementById('pp-notas')?.value?.trim() || '';
   const tipos = Array.from(document.querySelectorAll('#pp-tipos button')).filter(b=>b.dataset.active==='1').map(b=>b.dataset.tipo);
@@ -5876,7 +5879,7 @@ function renderPortalAnalysis() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         <div>
           <div class="pp-label">Fecha</div>
-          <input type="date" id="pp-an-fecha" value="${new Date().toISOString().slice(0,10)}"
+          <input type="date" id="pp-an-fecha" value="${hoyChile()}"
             style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;background:var(--g5);outline:none;box-sizing:border-box;"/>
         </div>
         <div>
@@ -5925,7 +5928,7 @@ async function addPortalAnalysis() {
   const playerId = sessionStorage.getItem('ciq_player_id');
   const token = sessionStorage.getItem('ciq_token');
   const body = {
-    fecha: document.getElementById('pp-an-fecha')?.value || new Date().toISOString().slice(0,10),
+    fecha: document.getElementById('pp-an-fecha')?.value || hoyChile(),
     torneo: document.getElementById('pp-an-torneo')?.value?.trim() || undefined,
     rival: document.getElementById('pp-an-rival')?.value?.trim() || undefined,
     resultado: document.getElementById('pp-an-resultado')?.value?.trim() || undefined,
@@ -6954,7 +6957,7 @@ function renderGrupalMensual() {
 function editGrupalSemanaHist(wKey) {
   const plan = (data.grupalPlanes || []).find(p => p.week === wKey);
   if (plan) grupalGrupo = plan.grupo || null;
-  const todayMonday = weekKey(new Date());
+  const todayMonday = lunesDeSemana(hoyChile());
   grupalSemanaOffset = Math.round((new Date(wKey+'T12:00:00') - new Date(todayMonday+'T12:00:00')) / 604800000);
   grupalTab = 'semanal';
   renderMain();
@@ -6971,7 +6974,7 @@ function deleteGrupalPlan(wKey) {
 }
 
 function printGrupalSemanaHist(wKey) {
-  const todayMonday = weekKey(new Date());
+  const todayMonday = lunesDeSemana(hoyChile());
   const diff = Math.round((new Date(wKey+'T12:00:00') - new Date(todayMonday+'T12:00:00')) / 604800000);
   grupalSemanaOffset = diff;
   grupalTab = 'semanal';
@@ -7082,14 +7085,11 @@ function renderGrupalHistorial() {
 
 function renderGroupPlanForm(editId) {
   const gp = editId ? (data.groupPlans || []).find(p => p.id === editId) : null;
-  const today = new Date();
-  const wKey = weekKey(today);
+  const wKey = lunesDeSemana(hoyChile());
   // Build week options: current + 4 ahead + 4 behind
   const weeks = [];
   for (let i = -4; i <= 4; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i * 7);
-    const k = weekKey(d);
+    const k = sumarDias(wKey, i * 7);
     weeks.push(k);
   }
   // Deduplicate while preserving order
@@ -7188,7 +7188,7 @@ function cancelGroupPlanForm() {
 
 function saveGroupPlan(editId) {
   const title = document.getElementById('gp-title')?.value?.trim() || '';
-  const week = document.getElementById('gp-week')?.value || weekKey(new Date());
+  const week = document.getElementById('gp-week')?.value || lunesDeSemana(hoyChile());
   const dia = document.getElementById('gp-dia')?.value || 'Lunes';
   const sesion = document.getElementById('gp-sesion')?.value || 'Sesión 1';
   const desc = document.getElementById('gp-desc')?.value?.trim() || '';
@@ -9317,7 +9317,7 @@ function savePuntoAPunto() {
     rawText: raw,
     format: papParsedData.format,
     player: p1,
-    date: new Date().toISOString().slice(0,10),
+    date: hoyChile(),
   };
 
   scheduleSync();
