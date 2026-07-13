@@ -6596,7 +6596,7 @@ function weekLabel(key){const d=new Date(key+'T12:00:00'),e=new Date(d);e.setDat
 function renderGrupal() {
   if (!grupalTab) grupalTab = 'semanal';
   if (grupalGrupo === undefined || grupalGrupo === 'todos') grupalGrupo = null;
-  const grupos = ['Elite','F2','F1','F1C','Naranja','Verde'];
+  const grupos = (window._groups || []).map(g => g.name);
   const tabItems = [
     { id: 'mensual',   label: 'Mensual'   },
     { id: 'semanal',   label: 'Semanal'   },
@@ -7367,6 +7367,21 @@ async function saveChangePassword(){
   }catch(e){errEl.textContent='Error de conexión.';}
 }
 /* ─── MÓDULO GIRA ─── */
+// TODO — Fase 2 QA / Sesión F: configuración de grupos por academia
+// Esta lista es intencionalmente hardcodeada e incompleta (solo 3
+// de los 6 grupos de Altotenis) porque en la práctica solo Elite,
+// F2 y F1 hacen giras. Migrar a window._groups sin filtrar
+// agregaría F1C/Naranja/Verde al selector aunque no participen en
+// giras, degradando la UX.
+//
+// El fix correcto requiere que cada academia pueda configurar qué
+// grupos participan en giras (mismo problema de fondo que
+// getATROpts). Se posterga a una sesión futura dedicada al diseño
+// de "propiedades por grupo por academia".
+//
+// Referencia: Fase2QA_Inventario_2026-07-09.md sección
+// "Nombres de grupo hardcodeados" + decisión tomada en Sesión B
+// (2026-07-13).
 const GIRA_GROUPS = [
   { id: 'all', name: 'Todos', color: '#333333' },
   { id: 'af18ac1d-9ea2-441f-b83b-023afd315bfc', name: 'Elite', color: '#1A1A2E' },
