@@ -1355,7 +1355,7 @@ function renderDashboard(){
   // ── 6. RENDIMIENTO ──
   const ELITE_ID='af18ac1d-9ea2-441f-b83b-023afd315bfc';
   const rendPlayers=(activeGroup?allPlayers.filter(p=>p.group_id===activeGroup):allPlayers.filter(p=>p.group_id===ELITE_ID))
-    .filter(p=>(p.matches||[]).length>0||(getPlayerMatches(p.name)||[]).length>0);
+    .filter(p=>(p.matches||[]).length>0);
 
   return `
   <!-- 1. SALUDO -->
@@ -1469,7 +1469,7 @@ function renderDashboard(){
       ${!rendPlayers.length?`<div style="font-size:13px;color:#aaa;">Sin partidos registrados</div>`:
         rendPlayers.map(p=>{
           const pidx=allPlayers.indexOf(p);
-          const allM=[...(p.matches||[]),...(getPlayerMatches(p.name)||[])];
+          const allM=p.matches||[];
           const w=allM.filter(m=>m.resultado?.toUpperCase()==='G').length;
           const l=allM.filter(m=>m.resultado?.toUpperCase()==='P').length;
           const t=w+l;
@@ -3612,34 +3612,9 @@ async function callAI(prompt){
   }
 }
 
-// ── DATOS TORNEOS (del Excel) ─────────────────────────────
-const MATCH_DATA = {"Benjamin Torrealba":[{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-13","rival":"Benjamin Torres","rankingRival":1330,"resultado":"G","marcador":"6-3 6-0","ronda":"R32","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-15","rival":"Hanamichi Carvajal","rankingRival":null,"resultado":"G","marcador":"6-1 6-3","ronda":"Octavos de final","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-16","rival":"Mat\u00edas Soto","rankingRival":385,"resultado":"P","marcador":"6-2 6-3","ronda":"Cuartos de final","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-21","rival":"Joaquin Leon","rankingRival":null,"resultado":"G","marcador":"6-2 6-3","ronda":"R32","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-22","rival":"L. Ambrogi","rankingRival":402,"resultado":"P","marcador":"6-3 6-3","ronda":"Octavos de final","observaciones":""},{"torneo":"CHALLENGER 100","superficie":"ARCILLA","pais":"CHILE","ciudad":"CONCEPCI\u00d3N","fecha":"28/0!/2026","rival":"G. Justo","rankingRival":280,"resultado":"P","marcador":"6-2 7-6","ronda":"R32","observaciones":""},{"torneo":"ATP250","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-02-21","rival":"H. Dellien ","rankingRival":159,"resultado":"p","marcador":"6-1 6-1","ronda":"Qualy R1","observaciones":"No existi\u00f3"},{"torneo":"CHALLENGER 75","superficie":"ARCILLA","pais":"BRAZIL","ciudad":"BRASILIA","fecha":"2026-03-01","rival":"M. Bellorio","rankingRival":null,"resultado":"G","marcador":"6-0 6-0","ronda":"Qualy R1","observaciones":""},{"torneo":"CHALLENGER 75","superficie":"ARCILLA","pais":"BRAZIL","ciudad":"BRASILIA","fecha":"2026-03-02","rival":"S. Dos Santos","rankingRival":598,"resultado":"G","marcador":"6-4 6-2","ronda":"Qualy R2","observaciones":""},{"torneo":"CHALLENGER 75","superficie":"ARCILLA","pais":"BRAZIL","ciudad":"BRASILIA","fecha":"2026-03-03","rival":"J. Varillas","rankingRival":290,"resultado":"P","marcador":"6-2 6-2","ronda":"R32","observaciones":""},{"torneo":"CHALLENGER 75","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-03-08","rival":"H. Del Pino","rankingRival":733,"resultado":"G","marcador":"6-4 6-4","ronda":"QUALY R1","observaciones":""},{"torneo":"CHALLENGER 75","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-03-09","rival":"G. Justo","rankingRival":280,"resultado":"G","marcador":"7-5 2-0","ronda":"QUALY R2","observaciones":""},{"torneo":"CHALLENGER 75","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-03-10","rival":"F. Meligeni ","rankingRival":240,"resultado":"P","marcador":"7-5 1-6 3-6","ronda":"R32","observaciones":"Gran nivel el primer set pero mentalmente desapareci\u00f3 en el segundo y tercero."},{"torneo":"CHALLENGER 50","superficie":"ARCILLA","pais":"COLOMBIA","ciudad":"BUCARAMANGA","fecha":"2026-03-22","rival":"P. ALVARADO","rankingRival":null,"resultado":"G","marcador":"6-4 6-1","ronda":"QUALY R1","observaciones":""},{"torneo":"CHALLENGER 50","superficie":"ARCILLA","pais":"COLOMBIA","ciudad":"BUCARAMANGA","fecha":"2026-03-23","rival":"N Schachter ","rankingRival":927,"resultado":"G","marcador":"2-2 RET","ronda":"QUALY R2","observaciones":""},{"torneo":"CHALLENGER 50","superficie":"ARCILLA","pais":"COLOMBIA","ciudad":"BUCARAMANGA","fecha":"2026-03-24","rival":"J. Nikles","rankingRival":546,"resultado":"P","marcador":"5-7 6-3 2-6","ronda":"R32","observaciones":""}],"Nicolas Villal\u00f3n":[{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-14","rival":"V. Grippo","rankingRival":1440,"resultado":"G","marcador":"6-2 6-4","ronda":"R32","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-15","rival":"S. Cuenin","rankingRival":333,"resultado":"P","marcador":"3-6 6-4 5-7","ronda":"R16","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-20","rival":"L. Ambrogi","rankingRival":402,"resultado":"P","marcador":"2-6 4-6","ronda":"R32","observaciones":""},{"torneo":"CHALLENGER 100","superficie":"ARCILLA","pais":"CHILE","ciudad":"CONCEPCI\u00d3N","fecha":"2026-01-27","rival":"L. Midon","rankingRival":225,"resultado":"P","marcador":"3-6 6-2 4-6","ronda":"R32","observaciones":""},{"torneo":"ATP 250","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-02-21","rival":"A. Pellegrino","rankingRival":128,"resultado":"P","marcador":"3-6 4-6","ronda":"QR1","observaciones":""},{"torneo":"CHALLENGER 75","superficie":"ARCILLA","pais":"BRASIL","ciudad":"BRASILIA","fecha":"2026-03-01","rival":"R. Tosetto","rankingRival":1303,"resultado":"G","marcador":"6-4 6-2","ronda":"QR1","observaciones":""},{"torneo":"CHALLENGER 75","superficie":"ARCILLA","pais":"BRASIL","ciudad":"BRASILIA","fecha":"2026-03-02","rival":"J. Schiessl","rankingRival":467,"resultado":"P","marcador":"2-6 2-6","ronda":"QR2","observaciones":""},{"torneo":"CHALLENGER 75","superficie":"ARCILLA","pais":"SANTIAGO","ciudad":"CHILE ","fecha":"2026-03-08","rival":"R. Dickerson","rankingRival":660,"resultado":"G","marcador":"7-5 6-4","ronda":"QR1","observaciones":""},{"torneo":"CHALLENGER 75","superficie":"ARCILLA","pais":"SANTIAGO","ciudad":"CHILE ","fecha":"2026-03-09","rival":"G. Villanueva","rankingRival":366,"resultado":"P","marcador":"6-1 0-6 4-6","ronda":"QR2","observaciones":""},{"torneo":"CHALLENGER","superficie":"ARCILLA","pais":"COLOMBIA","ciudad":"BUCARAMANGA","fecha":"2026-03-22","rival":"N. Arias","rankingRival":null,"resultado":"G","marcador":"6-0 6-4","ronda":"QR1","observaciones":""},{"torneo":"CHALLENGER","superficie":"ARCILLA","pais":"COLOMBIA","ciudad":"BUCARAMANGA","fecha":"2026-03-23","rival":"N.RODRIGUES","rankingRival":842,"resultado":"G","marcador":"7-6 0-1 Ret","ronda":"QR2","observaciones":""},{"torneo":"CHALLENGER","superficie":"ARCILLA","pais":"COLOMBIA","ciudad":"BUCARAMANGA","fecha":"2026-03-24","rival":"V. Orlov","rankingRival":512,"resultado":"G","marcador":"7-5 7-5","ronda":"R32","observaciones":""},{"torneo":"CHALLENGER","superficie":"ARCILLA","pais":"COLOMBIA","ciudad":"BUCARAMANGA","fecha":"2026-03-25","rival":"M, Janvier","rankingRival":550,"resultado":"G","marcador":"6-4 6-1","ronda":"R16","observaciones":""}],"Thomas Menzel":[{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-14","rival":"V. Basel","rankingRival":null,"resultado":"P","marcador":"4-6 1-6","ronda":"R32","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-19","rival":"J. Blando","rankingRival":null,"resultado":"G","marcador":"6-4 6-4","ronda":"QR1","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-20","rival":"M. Rojas","rankingRival":null,"resultado":"G","marcador":"7-5 6-4","ronda":"QR2","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-21","rival":"S. Flores","rankingRival":null,"resultado":"G","marcador":"6-1 6-2","ronda":"QR3","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-22","rival":"L. Bocchi","rankingRival":null,"resultado":"P","marcador":"3-6 2-6","ronda":"R32","observaciones":""},{"torneo":"CHALLENGER","superficie":"ARCILLA","pais":"CHILE","ciudad":"CONCEPCI\u00d3N","fecha":"2026-01-26","rival":"F. Agamenone","rankingRival":null,"resultado":"P","marcador":"0-6 0-1","ronda":"QR1","observaciones":""},{"torneo":"ITF M15","superficie":"ARCILLA","pais":"URUGUAY","ciudad":"PUNTA DEL ESTE","fecha":"2026-03-23","rival":"T. Galera","rankingRival":null,"resultado":"P","marcador":"2-6 4-6","ronda":"QR2","observaciones":""}],"Antonia Vergara":[{"torneo":"ITF W35","superficie":"ARCILLA","pais":"TURQU\u00cdA","ciudad":"ANTALYA","fecha":"2026-02-10","rival":"E. YILMAZ","rankingRival":null,"resultado":"G","marcador":"6-2 6-0","ronda":"R32","observaciones":""},{"torneo":"ITF W35","superficie":"ARCILLA","pais":"TURQU\u00cdA","ciudad":"ANTALYA","fecha":"2026-02-12","rival":"A. Zantedeschi","rankingRival":null,"resultado":"P","marcador":"1-6 1-6","ronda":"R16","observaciones":""},{"torneo":"ITF W15","superficie":"ARCILLA","pais":"TURQU\u00cdA","ciudad":"ANTALYA","fecha":"2026-02-18","rival":"K. Mrazikova","rankingRival":null,"resultado":"G","marcador":"4-6 6-4 6-2","ronda":"R32","observaciones":""},{"torneo":"ITF W15","superficie":"ARCILLA","pais":"TURQU\u00cdA","ciudad":"ANTALYA","fecha":"2026-02-19","rival":"E. Korokozidi","rankingRival":null,"resultado":"G","marcador":"6-2 1-6 6-4","ronda":"R16","observaciones":""},{"torneo":"ITF W15","superficie":"ARCILLA","pais":"TURQU\u00cdA","ciudad":"ANTALYA","fecha":"2026-02-20","rival":"G. Pedone","rankingRival":null,"resultado":"P","marcador":"0-6 4-6","ronda":"Cuartos","observaciones":""},{"torneo":"ITF W35","superficie":"ARCILLA","pais":"TURQU\u00cdA","ciudad":"ANTALYA","fecha":"2026-02-24","rival":"A. Lazar","rankingRival":null,"resultado":"G","marcador":"6-3 6-1","ronda":"R32","observaciones":""},{"torneo":"ITF W35","superficie":"ARCILLA","pais":"TURQU\u00cdA","ciudad":"ANTALYA","fecha":"2026-02-26","rival":"L. Giovannini","rankingRival":null,"resultado":"P","marcador":"3-6 0-6","ronda":"R16","observaciones":""},{"torneo":"ITF W15","superficie":"ARCILLA","pais":"TURQU\u00cdA","ciudad":"ANTALYA","fecha":"2026-03-04","rival":"F. Gandolfi","rankingRival":null,"resultado":"P","marcador":"2-6 6-2 4-6","ronda":"R32","observaciones":""},{"torneo":"ITF W15","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-03-18","rival":"J. Konishi","rankingRival":null,"resultado":"G","marcador":"6-2 6-4","ronda":"R32","observaciones":""},{"torneo":"ITF W15","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-03-19","rival":"L. Moyano","rankingRival":null,"resultado":"P","marcador":"6-4 2-6 5-7","ronda":"R16","observaciones":""},{"torneo":"ITF W15","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-03-24","rival":"G. Schincariol","rankingRival":null,"resultado":"G","marcador":"6-3 6-1","ronda":"R32","observaciones":""},{"torneo":"ITF W15","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-03-25","rival":"L. Blatter","rankingRival":null,"resultado":"G","marcador":"6-2 6-1","ronda":"R16","observaciones":""},{"torneo":"ITF W15","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-03-26","rival":"V. Barros","rankingRival":null,"resultado":"G","marcador":"6-4 6-3","ronda":"Cuartos de final","observaciones":""}],"Diego Jarry":[{"torneo":"ITF M15","superficie":"ARCILLA","pais":"URUGUAY","ciudad":"PUNTA  DEL ESTE","fecha":"2026-03-18","rival":"V. Aliano","rankingRival":null,"resultado":"G","marcador":"6-3 6-3","ronda":"R32","observaciones":""},{"torneo":"ITF M15","superficie":"ARCILLA","pais":"URUGUAY","ciudad":"PUNTA  DEL ESTE","fecha":"2026-03-20","rival":"T. Martinez","rankingRival":982,"resultado":"P","marcador":"6-7 6-0 6-1","ronda":"Octavos","observaciones":""},{"torneo":"ITF M15","superficie":"ARCILLA","pais":"URUGUAY","ciudad":"PUNTA  DEL ESTE","fecha":"2026-03-25","rival":"T. Grandinetti","rankingRival":null,"resultado":"P","marcador":"4-6 5-7","ronda":"R32","observaciones":""}],"Fernanda Rain":[{"torneo":"ITF W15","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-03-17","rival":"J. Dourado","rankingRival":1224,"resultado":"P","marcador":"1-6 3-6","ronda":"R32","observaciones":""},{"torneo":"ITF W15","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-03-24","rival":"L. Blatter","rankingRival":null,"resultado":"P","marcador":"6-7 3-6","ronda":"R32","observaciones":""}],"Diego Ortiz":[{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-12","rival":"A. Zu\u00f1iga","rankingRival":null,"resultado":"G","marcador":"6-3 6-2","ronda":"QR2","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-13","rival":"E. Rimoli","rankingRival":null,"resultado":"G","marcador":"6-4 6-7 10-4","ronda":"QR3","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-14","rival":"M. Rojas","rankingRival":null,"resultado":"G","marcador":"6-2 7-5","ronda":"R32","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-15","rival":"M. Zielinski","rankingRival":671,"resultado":"P","marcador":"6-7 4-6","ronda":"Octavos","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-19","rival":"J. Chocano","rankingRival":null,"resultado":"G","marcador":"6-0 6-0","ronda":"QR1","observaciones":""},{"torneo":"ITF M25","superficie":"ARCILLA","pais":"CHILE","ciudad":"SANTIAGO","fecha":"2026-01-20","rival":"E. Rimoli","rankingRival":null,"resultado":"P","marcador":"3-6 6-4 7-10","ronda":"QR2","observaciones":""}]};
-
-// Mapeo nombre jugador app -> nombre en Excel
-const PLAYER_NAME_MAP = {
-  'Antonia Vergara': 'Antonia Vergara',
-  'Thomas Menzel': 'Thomas Menzel',
-  'Nicolas Villalón': 'Nicolas Villalón',
-  'Benjamin Torrealba': 'Benjamin Torrealba',
-  'Fernanda Rain': 'Fernanda Rain',
-  'Diego Jarry': 'Diego Jarry',
-  'Diego Ortiz': 'Diego Ortiz',
-  'León Achurra': null,
-  'Max Becerra': null
-};
-
-function getPlayerMatches(playerName) {
-  const key = PLAYER_NAME_MAP[playerName];
-  if (!key) return [];
-  return MATCH_DATA[key] || [];
-}
-
 function renderTorneos(p) {
   const storedMatches = p.matches || [];
-  const excelMatches = getPlayerMatches(p.name);
-  const allKeys = new Set(excelMatches.map(m=>m.fecha+'|'+m.rival));
-  const manualOnly = storedMatches.filter(m=>!allKeys.has(m.fecha+'|'+m.rival));
-  const matches = [...excelMatches, ...manualOnly].sort((a,b)=>a.fecha>b.fecha?1:-1);
+  const matches = [...storedMatches].sort((a,b)=>a.fecha>b.fecha?1:-1);
   const addFormHtml = renderAddMatchForm(p, null);
   if (matches.length === 0) return addFormHtml + `<div class="card" style="margin-top:14px;"><div class="empty">Sin partidos registrados aún. Agrega el primero arriba.</div></div>`;
   return addFormHtml + buildTorneosHtml(matches, storedMatches);
@@ -3883,10 +3858,7 @@ function editMatch(idx) {
 
 function renderTorneosWithEdit(p, editIdx) {
   const storedMatches = p.matches || [];
-  const excelMatches = getPlayerMatches(p.name);
-  const allKeys = new Set(excelMatches.map(m=>m.fecha+'|'+m.rival));
-  const manualOnly = storedMatches.filter(m=>!allKeys.has(m.fecha+'|'+m.rival));
-  const matches = [...excelMatches, ...manualOnly].sort((a,b)=>a.fecha>b.fecha?1:-1);
+  const matches = [...storedMatches].sort((a,b)=>a.fecha>b.fecha?1:-1);
   const addFormHtml = renderAddMatchForm(p, editIdx);
   if(matches.length === 0) return addFormHtml + '<div class="card" style="margin-top:14px;"><div class="empty">Sin partidos registrados aún.</div></div>';
   const wins = matches.filter(m=>m.resultado&&m.resultado.toUpperCase()==='G').length;
@@ -4365,7 +4337,7 @@ function renderScouting() {
 function buildMatchHistory() {
   const history = {};
   data.players.forEach(p => {
-    const allMatches = [...(p.matches || []), ...(getPlayerMatches(p.name) || [])];
+    const allMatches = p.matches || [];
     allMatches.forEach(m => {
       if (!m.rival) return;
       const key = m.rival.trim();
@@ -4580,7 +4552,7 @@ async function deleteScout(idx) {
 // Scouting dentro del perfil de jugador
 function renderPlayerScouting(p) {
   const matchHistory = buildMatchHistory();
-  const allMatches = [...(p.matches || []), ...(getPlayerMatches(p.name) || [])];
+  const allMatches = p.matches || [];
   const rivalNames = [...new Set(allMatches.map(m => m.rival?.trim()).filter(Boolean))];
   const scouts = data.scouting || [];
 
@@ -5273,7 +5245,7 @@ function renderPortalProgreso() {
   }
 
   // ── Últimos partidos ──────────────────────────────────────
-  const allMatches = [...(p.matches || []), ...(getPlayerMatches(p.name) || [])]
+  const allMatches = [...(p.matches || [])]
     .sort((a,b) => (a.fecha > b.fecha ? -1 : 1))
     .slice(0, 5);
 
