@@ -3620,17 +3620,6 @@ function renderTorneos(p) {
   return addFormHtml + buildTorneosHtml(matches, storedMatches);
 }
 
-function renderTorneosWithEdit(p, editIdx) {
-  const storedMatches = p.matches || [];
-  const excelMatches = getPlayerMatches(p.name);
-  const allKeys = new Set(excelMatches.map(m=>m.fecha+'|'+m.rival));
-  const manualOnly = storedMatches.filter(m=>!allKeys.has(m.fecha+'|'+m.rival));
-  const matches = [...excelMatches, ...manualOnly].sort((a,b)=>a.fecha>b.fecha?1:-1);
-  const addFormHtml = renderAddMatchForm(p, editIdx);
-  if (matches.length === 0) return addFormHtml + '<div class="card" style="margin-top:14px;"><div class="empty">Sin partidos.</div></div>';
-  return addFormHtml + buildTorneosHtml(matches, storedMatches);
-}
-
 function buildTorneosHtml(matches, storedMatches) {
   const wins = matches.filter(m => m.resultado && m.resultado.toUpperCase() === 'G').length;
   const losses = matches.filter(m => m.resultado && m.resultado.toUpperCase() === 'P').length;
