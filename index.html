@@ -476,7 +476,10 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button class="nav-btn" onclick="navTo('asistencia')">✓ &nbsp;Asistencia</button>
       <button class="nav-btn" onclick="navTo('grupal')">⊞ &nbsp;Grupal</button>
       <button class="nav-btn" onclick="navTo('gira')">✈ &nbsp;Torneo/Gira</button>
-      <div class="nav-lbl" style="margin-top:14px;">Jugadores</div>
+      <div class="nav-lbl" style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;">
+        <span>Jugadores</span>
+        <button class="btn-manage-groups" onclick="openGroupsManager()" title="Gestionar grupos" style="display:none;background:none;border:none;cursor:pointer;font-size:13px;color:var(--g3);padding:2px 4px;">⚙</button>
+      </div>
       <div id="group-filter" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 2px 6px;"></div>
       <div id="player-nav"></div>
       <button class="nav-btn" style="margin-top:8px;color:var(--orange);" onclick="openAddPlayer()">+ Agregar jugador</button>
@@ -522,7 +525,10 @@ body{background:#faf7f2;color:#1a1a1a;}
 
   <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
   <div class="player-drawer" id="player-drawer">
-    <div class="drawer-title">Seleccionar jugador</div>
+    <div class="drawer-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Seleccionar jugador</span>
+      <button class="btn-manage-groups" onclick="openGroupsManager()" title="Gestionar grupos" style="display:none;background:none;border:none;cursor:pointer;font-size:13px;color:var(--g3);padding:2px 4px;">⚙</button>
+    </div>
     <div id="group-filter-mobile" style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 8px 8px;"></div>
     <div id="drawer-list"></div>
   </div>
@@ -544,6 +550,16 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button class="btn btn-o" onclick="saveChangePassword()">Guardar</button>
       <button class="btn btn-g" onclick="closeChangePassword()">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="groups-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title" id="groups-modal-title">Gestión de grupos</div>
+      <button class="modal-close" onclick="closeGroupsManager()">×</button>
+    </div>
+    <div id="groups-modal-body"></div>
   </div>
 </div>
 
@@ -908,7 +924,7 @@ function setSS(s,l){const d=document.getElementById('sync-dot'),lb=document.getE
 let _coachTeamCache = null;
 async function loadUserPermissions() {
   const token = sessionStorage.getItem('ciq_token');
-  if (!token) { window._userPermissions = { role: 'admin', canEdit: [], canView: [] }; return; }
+  if (!token) { window._userPermissions = { role: 'admin', canEdit: [], canView: [] }; updateGroupsManagerButtons(); return; }
   try {
     const res = await apiFetch(`${BACKEND_URL}/api/v1/users/me/permissions`, {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -923,6 +939,7 @@ async function loadUserPermissions() {
   } catch(e) {
     window._userPermissions = { role: 'admin', canEdit: [], canView: [] };
   }
+  updateGroupsManagerButtons();
 }
 
 function canEditGroup(groupId) {
@@ -950,6 +967,185 @@ async function loadGroups() {
     renderGroupFilter();
   } catch(e) { window._groups = []; }
 }
+
+// ── Gestión de grupos self-service (3.C parte 1) ────────────
+function updateGroupsManagerButtons() {
+  const role = window._userPermissions?.role;
+  const canManage = role === 'admin' || role === 'coach' || role === 'super_admin';
+  document.querySelectorAll('.btn-manage-groups').forEach(b => b.style.display = canManage ? '' : 'none');
+}
+
+const GROUP_PALETTE = ['#1A1A2E','#1A6FD4','#06B6D4','#6366F1','#FF8A1F','#22C55E','#EF4444','#EAB308','#EC4899','#AAFF00'];
+
+let _gmView = 'list';
+let _gmEditingId = null;
+let _gmColor = null;
+
+function openGroupsManager() {
+  _gmView = 'list';
+  _gmEditingId = null;
+  _gmColor = null;
+  document.getElementById('groups-modal').classList.add('open');
+  renderGroupsManager();
+}
+function closeGroupsManager() {
+  document.getElementById('groups-modal').classList.remove('open');
+}
+
+function renderGroupsManager() {
+  const body = document.getElementById('groups-modal-body');
+  const title = document.getElementById('groups-modal-title');
+  if (!body) return;
+  if (_gmView === 'form') {
+    title.textContent = _gmEditingId ? 'Editar grupo' : 'Nuevo grupo';
+    body.innerHTML = renderGroupsManagerForm();
+  } else {
+    title.textContent = 'Gestión de grupos';
+    body.innerHTML = renderGroupsManagerList();
+  }
+}
+
+function renderGroupsManagerList() {
+  const groups = window._groups || [];
+  const rows = groups.map(g => {
+    const jugadores = data.players.filter(p => p.group_id === g.id).length;
+    const planes = (data.grupalPlanes || []).filter(p => planGrupoId(p) === g.id).length;
+    const blocked = jugadores > 0 || planes > 0;
+    const tooltip = jugadores > 0
+      ? `Tiene ${jugadores} jugador${jugadores!==1?'es':''}`
+      : (planes > 0 ? `Tiene ${planes} plan${planes!==1?'es':''} grupal${planes!==1?'es':''}` : '');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="width:16px;height:16px;border-radius:50%;background:${g.color || '#ccc'};flex-shrink:0;border:1px solid rgba(0,0,0,.1);"></div>
+      <div style="flex:1;min-width:0;font-size:13px;font-weight:500;">${escHtml(g.name)}</div>
+      <div style="font-size:11px;color:var(--g3);white-space:nowrap;">${jugadores} jug.</div>
+      <button class="btn btn-g btn-sm" onclick="groupsManagerEdit('${g.id}')">Editar</button>
+      <button class="btn btn-red btn-sm" ${blocked?`disabled title="${escHtml(tooltip)}"`:''} onclick="groupsManagerDelete('${g.id}')">Eliminar</button>
+    </div>`;
+  }).join('');
+  return `
+    <div>${rows || '<div class="empty">Sin grupos todavía.</div>'}</div>
+    <div class="btn-row">
+      <button class="btn btn-o" onclick="groupsManagerNew()">+ Nuevo grupo</button>
+      <button class="btn btn-g" onclick="closeGroupsManager()">Cerrar</button>
+    </div>
+    <div id="gm-err" style="font-size:12px;color:#e74c3c;min-height:18px;margin-top:8px;"></div>
+  `;
+}
+
+function renderGroupsManagerForm() {
+  const g = _gmEditingId ? (window._groups||[]).find(x=>x.id===_gmEditingId) : null;
+  const name = g ? g.name : '';
+  const orden = g && g.orden != null ? g.orden : '';
+  const swatches = GROUP_PALETTE.map(hex => `
+    <button type="button" onclick="groupsManagerSelectColor('${hex}')"
+      style="width:28px;height:28px;border-radius:50%;background:${hex};cursor:pointer;border:2px solid ${_gmColor===hex?'#333':'transparent'};"></button>
+  `).join('');
+  return `
+    <div class="form-grid">
+      <div class="fg fg-full"><label>Nombre</label><input type="text" id="gm-name" value="${escHtml(name)}" placeholder="Ej: Elite" /></div>
+      <div class="fg fg-full">
+        <label>Color</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+          ${swatches}
+          <button type="button" onclick="groupsManagerSelectColor(null)"
+            style="width:28px;height:28px;border-radius:50%;background:var(--g5);border:2px solid ${!_gmColor?'#333':'var(--border)'};font-size:10px;color:var(--g3);" title="Sin color (automático)">✕</button>
+        </div>
+      </div>
+      <div class="fg"><label>Orden (opcional)</label><input type="number" id="gm-orden" value="${orden}" placeholder="Ej: 1" /></div>
+    </div>
+    <div id="gm-err" style="font-size:12px;color:#e74c3c;min-height:18px;margin:8px 0;"></div>
+    <div class="btn-row">
+      <button class="btn btn-o" onclick="groupsManagerSave()">Guardar</button>
+      <button class="btn btn-g" onclick="groupsManagerCancel()">Cancelar</button>
+    </div>
+  `;
+}
+
+function groupsManagerNew() {
+  _gmEditingId = null;
+  _gmColor = null;
+  _gmView = 'form';
+  renderGroupsManager();
+}
+function groupsManagerEdit(id) {
+  _gmEditingId = id;
+  const g = (window._groups||[]).find(x=>x.id===id);
+  _gmColor = g ? (g.color || null) : null;
+  _gmView = 'form';
+  renderGroupsManager();
+}
+function groupsManagerCancel() {
+  _gmView = 'list';
+  renderGroupsManager();
+}
+function groupsManagerSelectColor(hex) {
+  _gmColor = hex;
+  renderGroupsManager();
+}
+
+async function groupsManagerSave() {
+  const nameInput = document.getElementById('gm-name');
+  const ordenInput = document.getElementById('gm-orden');
+  const errEl = document.getElementById('gm-err');
+  const name = (nameInput?.value || '').trim();
+  if (!name) { errEl.textContent = 'El nombre es obligatorio.'; return; }
+  const ordenRaw = ordenInput?.value;
+  const ordenParsed = (ordenRaw !== '' && ordenRaw != null) ? parseInt(ordenRaw, 10) : NaN;
+  const ordenNum = Number.isNaN(ordenParsed) ? null : ordenParsed;
+  const isEdit = !!_gmEditingId;
+  const body = { name };
+  if (isEdit) {
+    body.color = _gmColor || null;
+    body.orden = ordenNum;
+  } else {
+    if (_gmColor) body.color = _gmColor;
+    if (ordenNum !== null) body.orden = ordenNum;
+  }
+  const url = isEdit
+    ? `${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/groups/${_gmEditingId}`
+    : `${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/groups`;
+  try {
+    const res = await apiFetch(url, {
+      method: isEdit ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res || !res.ok) {
+      let d = {};
+      if (res) { try { d = await res.json(); } catch(e) {} }
+      errEl.textContent = d.error || 'Error al guardar el grupo.';
+      return;
+    }
+    await loadGroups();
+    _gmView = 'list';
+    renderGroupsManager();
+    renderAll();
+  } catch(e) {
+    errEl.textContent = 'Error de conexión.';
+  }
+}
+
+async function groupsManagerDelete(id) {
+  const g = (window._groups||[]).find(x=>x.id===id);
+  const name = g ? g.name : 'este grupo';
+  if (!confirm(`¿Eliminar el grupo "${name}"?`)) return;
+  const errEl = document.getElementById('gm-err');
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/groups/${id}`, { method: 'DELETE' });
+    if (!res || !res.ok) {
+      let d = {};
+      if (res) { try { d = await res.json(); } catch(e) {} }
+      if (errEl) errEl.textContent = d.error || 'No se pudo eliminar el grupo.';
+      return;
+    }
+    await loadGroups();
+    renderGroupsManager();
+    renderAll();
+  } catch(e) {
+    if (errEl) errEl.textContent = 'Error de conexión.';
+  }
+}
+
 async function loadCoachTeam() {
   const token = sessionStorage.getItem('ciq_token');
   if (!token) return;
