@@ -3227,6 +3227,10 @@ function renderModalForm(p){
     <div class="fg"><label>Género</label><select id="m-gender"><option value="M" ${!p||p.gender==='M'?'selected':''}>Masculino</option><option value="F" ${p&&p.gender==='F'?'selected':''}>Femenino</option></select></div>
     <div class="fg"><label>Mano dominante</label><select id="m-hand"><option value="Diestro" ${!p||p.hand==='Diestro'?'selected':''}>Diestro</option><option value="Zurdo" ${p&&p.hand==='Zurdo'?'selected':''}>Zurdo</option></select></div>
     <div class="fg fg-full"><label>Email del jugador <span style="font-weight:400;color:var(--g3);">(opcional — para acceso al portal)</span></label><input id="m-email" type="email" value="${p?p.email||'':''}" placeholder="jugador@email.com" /></div>
+    ${!p ? `<div class="fg fg-full"><label>Grupo</label><select id="m-group">
+      <option value="">Sin grupo</option>
+      ${(window._groups||[]).map(g=>`<option value="${g.id}">${escHtml(g.name)}</option>`).join('')}
+    </select></div>` : ''}
   `;
 }
 
@@ -3260,7 +3264,11 @@ async function savePlayerModal(){
     style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]
   };
   if(editingPlayerId!==null){data.players[editingPlayerId]={...data.players[editingPlayerId],...pd,id:editingPlayerId};}
-  else{const newId=data.players.length;data.players.push({...pd,id:newId});}
+  else{
+    const groupVal = document.getElementById('m-group')?.value || null;
+    const newId=data.players.length;
+    data.players.push({...pd,id:newId,group_id:groupVal});
+  }
   scheduleSync();closePlayerModal();renderAll();if(editingPlayerId!==null)pid=editingPlayerId;
 }
 
