@@ -6983,6 +6983,18 @@ function openLeerSesion(wKey, dia, ses) {
 function closeLeerSesion() {
   document.getElementById('leer-sesion-modal').classList.remove('open');
 }
+function openLeerFoco(wKey) {
+  const plan = (data.grupalPlanes || []).find(p =>
+    p.week === wKey && planGrupoId(p) === (grupalGrupo || null));
+  if (!plan) return;
+  const foco = (plan.focoSemanal || '').trim();
+  if (!foco) return;
+  document.getElementById('leer-sesion-dia').textContent = 'Foco semanal';
+  document.getElementById('leer-sesion-titulo').textContent = weekLabel(wKey);
+  document.getElementById('leer-sesion-body').innerHTML =
+    '<div style="font-size:14px;line-height:1.7;white-space:pre-line;">' + escHtml(foco) + '</div>';
+  document.getElementById('leer-sesion-modal').classList.add('open');
+}
 
 function renderGrupalSemanal() {
   const base = new Date(); base.setHours(0,0,0,0);
@@ -7097,7 +7109,15 @@ function renderGrupalSemanal() {
         <span style="font-size:11px;font-weight:600;color:${weekATR.dark};text-transform:uppercase;letter-spacing:.05em;">Tipo de semana</span>
         <div style="display:flex;gap:5px;flex-wrap:wrap;">${atrBtns}</div>
       </div>
-      <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Foco semanal</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;">Foco semanal</div>
+        ${(plan.focoSemanal||'').trim() ? `
+        <button onclick="openLeerFoco('${wKey}')"
+          style="display:flex;align-items:center;gap:4px;background:var(--g5);border:0.5px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--g3);cursor:pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          Leer
+        </button>` : ''}
+      </div>
       <textarea placeholder="Objetivo principal de la semana..."
         style="width:100%;min-height:55px;padding:8px 11px;border:1px solid ${weekATR.color};border-radius:var(--rsm);font-size:13px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
         oninput="setGrupalFoco('${wKey}',this.value)">${plan.focoSemanal||''}</textarea>
@@ -7204,7 +7224,15 @@ function renderGrupalMensual() {
             <div style="display:flex;gap:5px;flex-wrap:wrap;">${atrBtns}</div>
           </div>
           <div>
-            <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Foco semanal</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+              <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;">Foco semanal</div>
+              ${(plan.focoSemanal||'').trim() ? `
+              <button onclick="openLeerFoco('${wKey}')"
+                style="display:flex;align-items:center;gap:4px;background:var(--g5);border:0.5px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--g3);cursor:pointer;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                Leer
+              </button>` : ''}
+            </div>
             <textarea placeholder="Objetivo de la semana..."
               style="width:100%;min-height:55px;padding:8px 11px;border:1px solid ${weekATR.color};border-radius:var(--rsm);font-size:13px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
               oninput="setGrupalFoco('${wKey}',this.value)">${plan.focoSemanal||''}</textarea>
