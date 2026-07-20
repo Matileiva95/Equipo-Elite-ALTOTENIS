@@ -1347,10 +1347,16 @@ async function loadData(){
   loadUserPermissions();
   loadPortalEvals(); // non-blocking, re-renderiza el dashboard al llegar
   renderAll();setInterval(refreshData,30000);
+  window.addEventListener('beforeunload', (e) => {
+    if (grupalSaveTimer !== null || grupalSaveInFlight || grupalSaveStatus === 'error') {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 }
 async function refreshData(){
   // No sobreescribir si hay un guardado pendiente (evita race condition)
-  if(saveTimer) return;
+  if(saveTimer || grupalSaveTimer || grupalSaveInFlight) return;
   try{
     const token = sessionStorage.getItem('ciq_token');
     const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/sync`, {
@@ -1377,6 +1383,41 @@ async function saveData(){
 }
 function scheduleSync(){localStorage.setItem('at_data_elite',JSON.stringify(data));if(saveTimer)clearTimeout(saveTimer);setSS('syncing','Guardando...');saveTimer=setTimeout(saveData,1200);}
 function now(){return new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});}
+
+let grupalSaveTimer = null;
+let grupalSaveInFlight = false;
+let grupalSaveDirtyAgain = false;
+let grupalSaveStatus = 'saved'; // 'dirty' | 'saving' | 'saved' | 'error'
+
+function scheduleGrupalSave() {
+  if (grupalSaveInFlight) { grupalSaveDirtyAgain = true; setGrupalSaveStatus('dirty'); return; }
+  if (grupalSaveTimer) clearTimeout(grupalSaveTimer);
+  setGrupalSaveStatus('dirty');
+  grupalSaveTimer = setTimeout(async () => {
+    grupalSaveTimer = null;
+    grupalSaveInFlight = true;
+    setGrupalSaveStatus('saving');
+    try {
+      await saveData();
+      setGrupalSaveStatus('saved');
+    } catch(e) {
+      setGrupalSaveStatus('error');
+    } finally {
+      grupalSaveInFlight = false;
+      if (grupalSaveDirtyAgain) { grupalSaveDirtyAgain = false; scheduleGrupalSave(); }
+    }
+  }, 3000);
+}
+
+function setGrupalSaveStatus(s) {
+  grupalSaveStatus = s;
+  const el = document.getElementById('grupal-save-status');
+  if (!el) return;
+  if (s === 'dirty')  { el.textContent = 'Cambios sin guardar…'; el.style.color = 'var(--g3)'; }
+  if (s === 'saving') { el.textContent = 'Guardando…';           el.style.color = 'var(--g3)'; }
+  if (s === 'saved')  { el.textContent = 'Guardado ✓';           el.style.color = '#22C55E'; }
+  if (s === 'error')  { el.textContent = 'Sin conexión ⚠ — tus cambios están en el navegador'; el.style.color = '#EF4444'; }
+}
 
 // ── NAV ───────────────────────────────────────────────────
 function navTo(p,id){
@@ -6817,6 +6858,9 @@ function renderGrupalContent() {
   if (grupalTab === 'mensual')        el.innerHTML = renderGrupalMensual();
   else if (grupalTab === 'historial') el.innerHTML = renderGrupalHistorial();
   else                                el.innerHTML = renderGrupalSemanal();
+  if (grupalSaveStatus !== 'saving' && grupalSaveStatus !== 'error') {
+    setGrupalSaveStatus(grupalSaveTimer || grupalSaveInFlight ? 'dirty' : 'saved');
+  }
 }
 
 // ── helpers de estado grupal semanal ────────────────────────
@@ -6849,31 +6893,35 @@ function getGrupalPlan(wKey) {
   if (!plan.dias) plan.dias = {};
   return plan;
 }
-function setGrupalFoco(wKey, val)            { getGrupalPlan(wKey).focoSemanal = val; }
-function setGrupalWeekATR(wKey, atr)         { getGrupalPlan(wKey).atr = atr; renderGrupalContent(); }
+function setGrupalFoco(wKey, val)            { getGrupalPlan(wKey).focoSemanal = val; scheduleGrupalSave(); }
+function setGrupalWeekATR(wKey, atr)         { getGrupalPlan(wKey).atr = atr; renderGrupalContent(); scheduleGrupalSave(); }
 function toggleGrupalDia(wKey, dia)          {
   const plan = getGrupalPlan(wKey);
   if (plan.diasActivos.includes(dia)) plan.diasActivos = plan.diasActivos.filter(d => d !== dia);
   else plan.diasActivos.push(dia);
   renderGrupalContent();
+  scheduleGrupalSave();
 }
 function setGrupalDiaTipo(wKey, dia, tipo)   {
   const plan = getGrupalPlan(wKey);
   if (!plan.dias[dia]) plan.dias[dia] = {};
   plan.dias[dia].tipo = tipo;
   renderGrupalContent();
+  scheduleGrupalSave();
 }
 function setGrupalDiaATR(wKey, dia, atr)     {
   const plan = getGrupalPlan(wKey);
   if (!plan.dias[dia]) plan.dias[dia] = {};
   plan.dias[dia].atr = plan.dias[dia].atr === atr ? null : atr;
   renderGrupalContent();
+  scheduleGrupalSave();
 }
 function setGrupalSesion(wKey, dia, ses, field, val) {
   const plan = getGrupalPlan(wKey);
   if (!plan.dias[dia]) plan.dias[dia] = {};
   if (!plan.dias[dia][ses]) plan.dias[dia][ses] = { desc: '', ejercicios: '' };
   plan.dias[dia][ses][field] = val;
+  scheduleGrupalSave();
 }
 function saveGrupalSemanal(wKey) {
   // grupalGrupo se usa implícitamente en setGrupalSesion/setGrupalFoco — al ser sincrónico
@@ -7011,9 +7059,10 @@ function renderGrupalSemanal() {
     ${diasActivos.length === 0
       ? `<div class="empty">Seleccioná al menos un día de entrenamiento.</div>`
       : daySections}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;">
       <button id="gs-save-btn" class="btn btn-b" onclick="saveGrupalSemanal('${wKey}')">Guardar semana</button>
       <button class="btn btn-g" onclick="window.print()">Imprimir / PDF</button>
+      <span id="grupal-save-status" style="font-size:11px;margin-left:8px;color:var(--g3);"></span>
     </div>`;
 }
 
@@ -7126,9 +7175,10 @@ function renderGrupalMensual() {
       <button class="btn btn-g btn-sm" onclick="grupalMesOffset++;renderGrupalContent();">Siguiente →</button>
     </div>
     ${weekCards}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;">
       <button id="gm-save-btn" class="btn btn-b" onclick="saveGrupalMensual()">Guardar mes</button>
       <button class="btn btn-g" onclick="window.print()">Imprimir / PDF</button>
+      <span id="grupal-save-status" style="font-size:11px;margin-left:8px;color:var(--g3);"></span>
     </div>`;
 }
 
