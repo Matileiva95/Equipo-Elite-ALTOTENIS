@@ -578,6 +578,19 @@ body{background:#faf7f2;color:#1a1a1a;}
   </div>
 </div>
 
+<div class="modal-overlay" id="leer-sesion-modal">
+  <div class="modal" style="max-width: 640px; max-height: 85vh; display: flex; flex-direction: column;">
+    <div class="modal-header">
+      <div>
+        <div id="leer-sesion-dia" style="font-size:11px;color:var(--g3);margin-bottom:2px;"></div>
+        <div class="modal-title" id="leer-sesion-titulo"></div>
+      </div>
+      <button class="modal-close" onclick="closeLeerSesion()">×</button>
+    </div>
+    <div id="leer-sesion-body" style="overflow-y:auto;flex:1;padding:0 4px;"></div>
+  </div>
+</div>
+
 <div id="player-panel">
   <div class="pp-header">
     <div class="pp-header-brand">
@@ -6944,6 +6957,32 @@ function toggleGrupalEjercicios(btn) {
   ta.style.display = open ? 'none' : 'block';
   btn.textContent = open ? '+ Ejercicios' : '− Ejercicios';
 }
+function openLeerSesion(wKey, dia, ses) {
+  const plan = (data.grupalPlanes || []).find(p =>
+    p.week === wKey && planGrupoId(p) === (grupalGrupo || null));
+  if (!plan) return;
+  const sesion = plan.dias?.[dia]?.[ses];
+  if (!sesion) return;
+  const sesNum = ses === 's1' ? '1' : '2';
+  document.getElementById('leer-sesion-dia').textContent = dia;
+  document.getElementById('leer-sesion-titulo').textContent = 'Sesión ' + sesNum;
+  const desc = (sesion.desc || '').trim();
+  const ejer = (sesion.ejercicios || '').trim();
+  let html = '';
+  if (desc) {
+    html += '<div style="font-size:11px;font-weight:500;color:var(--g3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Descripción</div>';
+    html += '<div style="font-size:14px;line-height:1.7;white-space:pre-line;margin-bottom:18px;">' + escHtml(desc) + '</div>';
+  }
+  if (ejer) {
+    html += '<div style="font-size:11px;font-weight:500;color:var(--g3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Ejercicios</div>';
+    html += '<div style="font-size:14px;line-height:1.7;white-space:pre-line;">' + escHtml(ejer) + '</div>';
+  }
+  document.getElementById('leer-sesion-body').innerHTML = html;
+  document.getElementById('leer-sesion-modal').classList.add('open');
+}
+function closeLeerSesion() {
+  document.getElementById('leer-sesion-modal').classList.remove('open');
+}
 
 function renderGrupalSemanal() {
   const base = new Date(); base.setHours(0,0,0,0);
@@ -7012,9 +7051,19 @@ function renderGrupalSemanal() {
     const sesiones = [
       { key:'s1', label:'Sesión 1', data: s1 },
       { key:'s2', label:'Sesión 2', data: s2 },
-    ].map((ses, si) => `
+    ].map((ses, si) => {
+      const puedeLeer = !!((ses.data.desc||'').trim() || (ses.data.ejercicios||'').trim());
+      return `
       <div style="padding:12px 14px;${si===0?'border-right:1px solid var(--border);':''}">
-        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">${ses.label}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+          <div ${puedeLeer?`onclick="openLeerSesion('${wKey}','${dia}','${ses.key}')" style="cursor:pointer;font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;"`:`style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;"`}>${ses.label}</div>
+          ${puedeLeer ? `
+          <button onclick="openLeerSesion('${wKey}','${dia}','${ses.key}')"
+            style="display:flex;align-items:center;gap:4px;background:var(--g5);border:0.5px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--g3);cursor:pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            Leer
+          </button>` : ''}
+        </div>
         <textarea placeholder="Descripción de la sesión..."
           style="width:100%;min-height:65px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
           oninput="setGrupalSesion('${wKey}','${dia}','${ses.key}','desc',this.value)">${ses.data.desc||''}</textarea>
@@ -7023,7 +7072,8 @@ function renderGrupalSemanal() {
         <textarea placeholder="Lista de ejercicios y drills..."
           style="display:${ses.data.ejercicios?'block':'none'};margin-top:6px;width:100%;min-height:55px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
           oninput="setGrupalSesion('${wKey}','${dia}','${ses.key}','ejercicios',this.value)">${ses.data.ejercicios||''}</textarea>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     return `
       <div style="border:2px solid ${diaATR.color};border-radius:var(--r);overflow:hidden;margin-bottom:12px;">
