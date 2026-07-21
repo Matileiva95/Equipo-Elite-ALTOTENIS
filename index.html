@@ -1521,6 +1521,7 @@ function renderDashboard(){
     const weekMon=new Date(today);weekMon.setDate(today.getDate()-(dayOfWeek===0?6:dayOfWeek-1));
     const weekMonKey=weekMon.toISOString().slice(0,10);
     allPlayers.forEach((p,i)=>{
+      if(activeGroup&&p.group_id!==activeGroup)return;
       const matches=p.matches||[];
       const compThisWeek=Object.entries(p.events||{}).find(([key,ev])=>ev.type==='competition'&&key>=weekMonKey&&key<=todayKey);
       if(!compThisWeek)return;
@@ -1534,6 +1535,7 @@ function renderDashboard(){
   const d5k=new Date(today);d5k.setDate(today.getDate()-5);
   const d5key=d5k.toISOString().slice(0,10);
   allPlayers.forEach((p,i)=>{
+    if(activeGroup&&p.group_id!==activeGroup)return;
     const dias=rpeDiarioFusionado(p,d5key);
     if(dias.length>=3){
       const avg=dias.reduce((a,b)=>a+b,0)/dias.length;
@@ -1543,6 +1545,7 @@ function renderDashboard(){
 
   // AMBER: ausencias sin justificar hoy
   allPlayers.forEach((p,i)=>{
+    if(activeGroup&&p.group_id!==activeGroup)return;
     const dd=(p.asistencia||{})[todayKey]||{};
     if(['t1','t2'].some(t=>dd[t]==='s'))alertsAmber.push({name:p.name,pid:i,msg:'Ausencia sin justificar hoy'});
   });
@@ -1550,6 +1553,7 @@ function renderDashboard(){
   // AMBER: hora > 19:00 y hay grupos sin asistencia registrada
   if(now.getHours()>=19){
     groups.forEach(g=>{
+      if(activeGroup&&g.id!==activeGroup)return;
       const sinReg=allPlayers.filter(p=>p.group_id===g.id&&(()=>{const dd=(p.asistencia||{})[todayKey]||{};return!dd.t1&&!dd.t2;})());
       if(sinReg.length)alertsAmber.push({name:`Grupo ${g.name}`,pid:null,msg:'Asistencia no registrada hoy'});
     });
@@ -1561,21 +1565,38 @@ function renderDashboard(){
   // ── 3. PRÓXIMOS TORNEOS ──
   const in28=new Date(today);in28.setDate(today.getDate()+28);
   const upcoming=(giraEvents||[]).filter(ev=>{
-    const w=isoWeekToRange(ev.week);return w&&w.end>=today&&w.start<=in28;
+    const w=isoWeekToRange(ev.week);return w&&w.end>=today&&w.start<=in28&&(!activeGroup||ev.group_id===activeGroup);
   }).sort((a,b)=>{const wa=isoWeekToRange(a.week),wb=isoWeekToRange(b.week);return wa.start-wb.start;});
 
   // ── 4. CARGA SEMANAL POR GRUPO ──
   const d7k=new Date(today);d7k.setDate(today.getDate()-7);
   const d7key=d7k.toISOString().slice(0,10);
   const grpRpe={};
+  const cargaPlayers=[];
   allPlayers.forEach(p=>{
     if(!p.group_id)return;
+    if(activeGroup&&p.group_id!==activeGroup)return;
     const dias=rpeDiarioFusionado(p,d7key);
+    if(activeGroup){
+      const avg=dias.length?dias.reduce((a,b)=>a+b,0)/dias.length:null;
+      cargaPlayers.push({p,avg});
+      return;
+    }
     if(!dias.length)return;
     const avg=dias.reduce((a,b)=>a+b,0)/dias.length;
     if(!grpRpe[p.group_id])grpRpe[p.group_id]={sum:0,n:0};
     grpRpe[p.group_id].sum+=avg;grpRpe[p.group_id].n++;
   });
+  if(activeGroup){
+    cargaPlayers.sort((a,b)=>{
+      if(a.avg==null&&b.avg==null)return 0;
+      if(a.avg==null)return 1;
+      if(b.avg==null)return -1;
+      const aCrit=a.avg>=4.5,bCrit=b.avg>=4.5;
+      if(aCrit!==bCrit)return aCrit?-1:1;
+      return b.avg-a.avg;
+    });
+  }
 
   // ── 5. ENTRENADORES ──
   const wStart=getWeekMonday(0);
@@ -1622,6 +1643,12 @@ function renderDashboard(){
       <div style="font-size:12px;color:#999;margin-top:2px;">${today.getDate()} de ${MONTHS[today.getMonth()]} ${today.getFullYear()} · ${groups.length} grupos activos</div>
     </div>
     <button class="btn btn-g btn-sm" onclick="refreshData().then(()=>renderMain())">↺</button>
+  </div>
+
+  <!-- FILTRO DE GRUPO -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <button onclick="activeGroup=null;renderAll();" style="font-size:13px;padding:6px 12px;border-radius:20px;border:1px solid #FF6B00;cursor:pointer;background:${activeGroup===null?'#FF6B00':'#fff'};color:${activeGroup===null?'#fff':'#FF6B00'};font-weight:500;">Todos</button>
+    ${(window._groups||[]).filter(g=>canViewGroup(g.id)).map(g=>`<button onclick="activeGroup='${g.id}';renderAll();" style="font-size:13px;padding:6px 12px;border-radius:20px;border:1px solid #FF6B00;cursor:pointer;background:${activeGroup===g.id?'#FF6B00':'#fff'};color:${activeGroup===g.id?'#fff':'#FF6B00'};font-weight:500;">${g.name}</button>`).join('')}
   </div>
 
   <!-- 2. ALERTAS -->
@@ -1674,23 +1701,39 @@ function renderDashboard(){
 
   <!-- 4. CARGA SEMANAL POR GRUPO -->
   <div style="margin-bottom:20px;">
-    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Carga semanal por grupo <span style="font-weight:400;text-transform:none;letter-spacing:0;">(RPE últimos 7 días)</span></div>
+    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Carga semanal ${activeGroup?'— '+(groups.find(g=>g.id===activeGroup)?.name||''):'por grupo'} <span style="font-weight:400;text-transform:none;letter-spacing:0;">(RPE últimos 7 días)</span></div>
     <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px;">
-      ${!groups.length?`<div style="font-size:13px;color:#aaa;">Sin grupos</div>`:
-        groups.map(g=>{
-          const rd=grpRpe[g.id];
-          const avg=rd?rd.sum/rd.n:null;
-          const pct=avg!=null?((avg-1)/4)*100:0;
-          const col=GROUP_COLOR[g.id]||'#999';
-          return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;">
-            <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;"></div>
-            <div style="font-size:13px;font-weight:600;color:#333;min-width:56px;">${g.name}</div>
-            <div style="flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden;">
-              ${avg!=null?`<div style="width:${pct.toFixed(0)}%;height:100%;background:${col};border-radius:4px;"></div>`:`<div style="width:100%;height:100%;background:repeating-linear-gradient(90deg,#eee,#eee 4px,#f8f8f8 4px,#f8f8f8 8px);"></div>`}
-            </div>
-            <div style="font-size:12px;font-weight:700;color:${col};min-width:36px;text-align:right;">${avg!=null?avg.toFixed(1)+'/5':'—'}</div>
-          </div>`;
-        }).join('')}
+      ${activeGroup
+        ? (!cargaPlayers.length?`<div style="font-size:13px;color:#aaa;">Sin jugadores en este grupo</div>`:
+          cargaPlayers.map(({p,avg})=>{
+            const pidx=allPlayers.indexOf(p);
+            const isCrit=avg!=null&&avg>=4.5;
+            const col=isCrit?'#e74c3c':(GROUP_COLOR[p.group_id]||'#999');
+            const pct=avg!=null?((avg-1)/4)*100:0;
+            return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;cursor:pointer;" onclick="navTo('player',${pidx})">
+              ${isCrit?`<span style="font-size:12px;flex-shrink:0;">⚠️</span>`:`<div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;"></div>`}
+              <div style="font-size:13px;font-weight:${isCrit?'700':'600'};color:${isCrit?'#c0392b':'#333'};min-width:110px;">${p.name}</div>
+              <div style="flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden;">
+                ${avg!=null?`<div style="width:${pct.toFixed(0)}%;height:100%;background:${col};border-radius:4px;"></div>`:`<div style="width:100%;height:100%;background:repeating-linear-gradient(90deg,#eee,#eee 4px,#f8f8f8 4px,#f8f8f8 8px);"></div>`}
+              </div>
+              <div style="font-size:12px;font-weight:700;color:${avg!=null?col:'#ccc'};min-width:70px;text-align:right;">${avg!=null?avg.toFixed(1)+'/5':'Sin registros'}</div>
+            </div>`;
+          }).join(''))
+        : (!groups.length?`<div style="font-size:13px;color:#aaa;">Sin grupos</div>`:
+          groups.map(g=>{
+            const rd=grpRpe[g.id];
+            const avg=rd?rd.sum/rd.n:null;
+            const pct=avg!=null?((avg-1)/4)*100:0;
+            const col=GROUP_COLOR[g.id]||'#999';
+            return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;">
+              <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;"></div>
+              <div style="font-size:13px;font-weight:600;color:#333;min-width:56px;">${g.name}</div>
+              <div style="flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden;">
+                ${avg!=null?`<div style="width:${pct.toFixed(0)}%;height:100%;background:${col};border-radius:4px;"></div>`:`<div style="width:100%;height:100%;background:repeating-linear-gradient(90deg,#eee,#eee 4px,#f8f8f8 4px,#f8f8f8 8px);"></div>`}
+              </div>
+              <div style="font-size:12px;font-weight:700;color:${col};min-width:36px;text-align:right;">${avg!=null?avg.toFixed(1)+'/5':'—'}</div>
+            </div>`;
+          }).join(''))}
     </div>
   </div>
 
