@@ -957,17 +957,16 @@ async function loadUserPermissions() {
 
 function canEditGroup(groupId) {
   const p = window._userPermissions;
-  if (!p || p.role === 'admin' || p.role === 'super_admin') return true;
+  if (!p) return true;
   if (p.role === 'viewer') return false;
-  return p.canEdit.includes(groupId);
+  return true; // decisión 2026-07-21: coaches editan todos los grupos
 }
 
 function canViewGroup(groupId) {
   const p = window._userPermissions;
-  if (!p || p.role === 'admin' || p.role === 'super_admin') return true;
-  if (p.canView === null) return true; // fallback: permisos no confirmados, no bloquear la vista
-  if (p.role === 'viewer') return p.canView.includes(groupId);
-  return p.canEdit.includes(groupId) || p.canView.includes(groupId);
+  if (!p) return true;
+  if (p.role === 'viewer') return p.canView === null || (p.canView||[]).includes(groupId);
+  return true; // decisión 2026-07-21: coaches ven todos los grupos
 }
 
 async function loadGroups() {
