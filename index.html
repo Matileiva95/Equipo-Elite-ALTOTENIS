@@ -591,6 +591,16 @@ body{background:#faf7f2;color:#1a1a1a;}
   </div>
 </div>
 
+<div class="modal-overlay" id="carga-masiva-modal">
+  <div class="modal" style="max-width: 640px; max-height: 85vh; display: flex; flex-direction: column;">
+    <div class="modal-header">
+      <div class="modal-title">Registrar sesión grupal</div>
+      <button class="modal-close" onclick="closeCargaMasiva()">×</button>
+    </div>
+    <div id="carga-masiva-body" style="overflow-y:auto;flex:1;padding:0 4px;"></div>
+  </div>
+</div>
+
 <div id="player-panel">
   <div class="pp-header">
     <div class="pp-header-brand">
@@ -1538,7 +1548,7 @@ function renderDashboard(){
     const dias=rpeDiarioFusionado(p,d5key);
     if(dias.length>=3){
       const avg=dias.reduce((a,b)=>a+b,0)/dias.length;
-      if(avg>=4.5)alertsAmber.push({name:p.name,pid:i,msg:`Carga alta — RPE ${avg.toFixed(1)}/5`});
+      if(avg>=RPE_CRITICO)alertsAmber.push({name:p.name,pid:i,msg:`Carga alta — RPE ${avg.toFixed(1)}/5`});
     }
   });
 
@@ -1591,7 +1601,7 @@ function renderDashboard(){
       if(a.avg==null&&b.avg==null)return 0;
       if(a.avg==null)return 1;
       if(b.avg==null)return -1;
-      const aCrit=a.avg>=4.5,bCrit=b.avg>=4.5;
+      const aCrit=a.avg>=RPE_CRITICO,bCrit=b.avg>=RPE_CRITICO;
       if(aCrit!==bCrit)return aCrit?-1:1;
       return b.avg-a.avg;
     });
@@ -1700,13 +1710,16 @@ function renderDashboard(){
 
   <!-- 4. CARGA SEMANAL POR GRUPO -->
   <div style="margin-bottom:20px;">
-    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Carga semanal ${activeGroup?'— '+(groups.find(g=>g.id===activeGroup)?.name||''):'por grupo'} <span style="font-weight:400;text-transform:none;letter-spacing:0;">(RPE últimos 7 días)</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;">Carga semanal ${activeGroup?'— '+(groups.find(g=>g.id===activeGroup)?.name||''):'por grupo'} <span style="font-weight:400;text-transform:none;letter-spacing:0;">(RPE últimos 7 días)</span></div>
+      ${activeGroup?`<button class="btn btn-o btn-sm" onclick="openCargaMasiva()">+ Registrar sesión</button>`:''}
+    </div>
     <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px;">
       ${activeGroup
         ? (!cargaPlayers.length?`<div style="font-size:13px;color:#aaa;">Sin jugadores en este grupo</div>`:
           cargaPlayers.map(({p,avg})=>{
             const pidx=allPlayers.indexOf(p);
-            const isCrit=avg!=null&&avg>=4.5;
+            const isCrit=avg!=null&&avg>=RPE_CRITICO;
             const col=isCrit?'#e74c3c':(GROUP_COLOR[p.group_id]||'#999');
             const pct=avg!=null?((avg-1)/4)*100:0;
             return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;cursor:pointer;" onclick="navTo('player',${pidx})">
@@ -3176,24 +3189,31 @@ const RPE_COLORS = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
 const RPE_LABELS = ['','Muy tranquilo','Tranquilo','Normal','Exigente','Muy exigente'];
 const MOOD_ICONS = ['','😞','😐','😊'];
 const CARGA_TIPOS = ['Técnico','Táctico','Físico','Mental','Competencia'];
+const RPE_CRITICO = 4.5;
 let _cargaRpe = 0;
 let _cargaMood = 0;
+let _bulkSesionRpe = 3;
+let _bulkSesionExcluidos = new Set();
+let _bulkPlayerRpe = {};
+let _bulkFecha = null;
+let _bulkDur = 90;
+let _bulkNotas = '';
+let _bulkTipos = new Set();
 
 function buildCargaChart(loads) {
   const chartDays = [];
   for(let i=13; i>=0; i--) {
-    const d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
-    const key = d.toISOString().slice(0,10);
+    const key = sumarDias(hoyChile(), -i);
     const sessions = loads.filter(l => l.date === key);
     const avgRpe   = sessions.length ? sessions.reduce((a,b)=>a+b.rpe,0)/sessions.length : null;
     const notaSess = sessions.filter(s=>s.session_nota);
     const avgNota  = notaSess.length ? notaSess.reduce((a,b)=>a+b.session_nota,0)/notaSess.length : null;
-    chartDays.push({ key, avgRpe, avgNota, label: String(d.getDate()) });
+    chartDays.push({ key, avgRpe, avgNota, label: String(Number(key.slice(8,10))) });
   }
   const last5vals = chartDays.slice(-5).filter(d=>d.avgRpe!==null).map(d=>d.avgRpe);
   const avg5 = last5vals.length ? last5vals.reduce((a,b)=>a+b,0)/last5vals.length : 0;
-  const highLoad = avg5 >= 4;
-  const W=440, H=72, pX=18, pY=8, iW=440-2*18, iH=72-2*8;
+  const highLoad = avg5 >= RPE_CRITICO;
+  const W=440, H=130, pX=18, pY=14, iW=440-2*18, iH=130-2*14;
   const pts = chartDays.map((d,i)=>({
     x:     pX + i*(iW/13),
     y:     d.avgRpe  != null ? pY + iH - ((d.avgRpe-1)/4)*iH  : null,
@@ -3205,23 +3225,62 @@ function buildCargaChart(loads) {
   const circles     = pts.map(pt=>pt.y    !=null?`<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}"     r="4" fill="${RPE_COLORS[Math.round(pt.avgRpe)]}" stroke="#fff" stroke-width="1.5"/>`:'').join('');
   const circlesNota = pts.map(pt=>pt.yNota!=null?`<circle cx="${pt.x.toFixed(1)}" cy="${pt.yNota.toFixed(1)}" r="3" fill="#FF6B00" stroke="#fff" stroke-width="1.5" opacity="0.85"/>`:'').join('');
   const labels = pts.map(pt=>`<text x="${pt.x.toFixed(1)}" y="${H+10}" font-size="8" text-anchor="middle" fill="#bbb">${pt.label}</text>`).join('');
+  // Eje izquierdo: RPE 1-5 (gris, líneas completas)
   const yLines = [1,2,3,4,5].map(v=>{const y=(pY+iH-((v-1)/4)*iH).toFixed(1);return `<line x1="${pX}" y1="${y}" x2="${W-pX}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/><text x="${pX-4}" y="${parseFloat(y)+3}" font-size="7" text-anchor="end" fill="#ccc">${v}</text>`;}).join('');
-  const svg = `<svg viewBox="0 0 ${W} ${H+14}" width="100%" style="display:block;overflow:visible;">${yLines}${pathD?`<path d="${pathD}" fill="none" stroke="#1DA1D6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`:''}${circles}${circlesNota}${labels}</svg>`;
+  // Eje derecho: nota 1-7 (naranja suave, solo marca + label, sin duplicar grilla)
+  const yLinesNota = [1,4,7].map(v=>{const y=(pY+iH-((v-1)/6)*iH).toFixed(1);return `<line x1="${W-pX}" y1="${y}" x2="${W-pX+4}" y2="${y}" stroke="#FFCFA0" stroke-width="1"/><text x="${W-pX+7}" y="${parseFloat(y)+3}" font-size="7" text-anchor="start" fill="#FFB067">${v}</text>`;}).join('');
+  const svg = `<svg viewBox="0 0 ${W+16} ${H+14}" width="100%" style="display:block;overflow:visible;">${yLines}${yLinesNota}${pathD?`<path d="${pathD}" fill="none" stroke="#1DA1D6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`:''}${circles}${circlesNota}${labels}</svg>`;
   return { svg, highLoad, avg5 };
 }
 
-function renderCarga(p) {
-  const loads = p.trainingLoad || [];
+function renderCargaChartBlock(loads) {
   const { svg, highLoad, avg5 } = buildCargaChart(loads);
-  const recent = loads.slice(0,10);
   return `
     ${highLoad?`<div style="background:#fff5f5;border:1px solid #f5c6c6;border-radius:var(--rsm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#c0392b;">⚠️ <strong>Carga alta acumulada</strong> — RPE promedio últimos 5 días: ${avg5.toFixed(1)}</div>`:''}
     <div class="card" style="margin-bottom:14px;">
       <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">RPE — últimos 14 días</div>
       <div style="padding:0 4px;">${svg}</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
-        ${RPE_COLORS.slice(1).map((c,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--g3);"><div style="width:9px;height:9px;border-radius:50%;background:${c};"></div>${i+1}</div>`).join('')}
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;align-items:center;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          ${RPE_COLORS.slice(1).map((c,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--g3);"><div style="width:9px;height:9px;border-radius:50%;background:${c};"></div>${i+1}</div>`).join('')}
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#1DA1D6;font-weight:600;"><span style="display:inline-block;width:14px;height:2px;background:#1DA1D6;"></span>RPE (1-5)</div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#FF6B00;font-weight:600;">● Nota del jugador (1-7)</div>
       </div>
+    </div>`;
+}
+
+function renderCarga(p) {
+  const loads = p.trainingLoad || [];
+  const recent = loads.slice(0,10);
+  return `
+    <div id="carga-chart-container">${renderCargaChartBlock(loads)}</div>
+    <div class="card" style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Registrar sesión</div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">RPE</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${[1,2,3,4,5].map(n=>`<button id="rpe-btn-${n}" onclick="selRpe(${n})" title="${RPE_LABELS[n]}" style="width:38px;height:38px;border-radius:8px;border:2px solid ${RPE_COLORS[n]};background:transparent;color:${RPE_COLORS[n]};font-size:13px;font-weight:700;cursor:pointer;transition:all .13s;">${n}</button>`).join('')}
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Estado de ánimo (opcional)</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${[1,2,3].map(n=>`<button id="mood-btn-${n}" onclick="selMood(${n})" style="width:44px;height:38px;border-radius:8px;border:2px solid var(--border);background:transparent;font-size:19px;cursor:pointer;transition:all .13s;">${MOOD_ICONS[n]}</button>`).join('')}
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Tipo de trabajo</div>
+        <div id="tipo-btns" style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${CARGA_TIPOS.map(t=>`<button data-tipo="${t}" data-active="0" onclick="toggleTipo(this)" style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--g3);font-size:12px;cursor:pointer;">${t}</button>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div class="fg"><label>Fecha</label><input type="date" id="carga-fecha" value="${hoyChile()}" /></div>
+        <div class="fg"><label>Duración (min)</label><input type="number" id="carga-dur" value="90" style="width:90px;" /></div>
+      </div>
+      <div class="fg fg-full" style="margin-bottom:12px;"><label>Notas</label><input type="text" id="carga-notas" placeholder="Observaciones de la sesión..." /></div>
+      <button class="btn btn-o" onclick="registrarCarga()">Registrar</button>
     </div>
     <div class="card">
       <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:14px;">Historial</div>
@@ -3258,6 +3317,14 @@ async function loadCargaPlayerEvals() {
     });
     const progData = await res.json();
     const evals = progData.week_evaluations || [];
+    // Fusión con el gráfico (7.4): mismos portalEvals que usa renderCoachPortalView,
+    // reemplaza el bloque de chart (blob-only) por la versión fusionada.
+    const portalEvals = evals.filter(e => typeof e.nota === 'number');
+    const currentPlayer = data.players[pid];
+    const loads = currentPlayer?.trainingLoad || [];
+    const chartLoads = [...loads, ...portalEvals.map(e => ({ date: e.fecha, rpe: e.rpe, session_nota: e.nota }))];
+    const chartContainer = document.getElementById('carga-chart-container');
+    if (chartContainer) chartContainer.innerHTML = renderCargaChartBlock(chartLoads);
     if (evals.length === 0) {
       evalContainer.innerHTML = '<div style="font-size:13px;color:var(--g3);">Sin evaluaciones registradas</div>';
       return;
@@ -3308,17 +3375,17 @@ function toggleTipo(btn) {
 
 function registrarCarga() {
   if(!_cargaRpe){alert('Seleccioná un RPE');return;}
-  if(!_cargaMood){alert('Seleccioná el estado de ánimo');return;}
   const fecha=document.getElementById('carga-fecha')?.value||hoyChile();
   const dur=parseInt(document.getElementById('carga-dur')?.value||'90');
   const notas=document.getElementById('carga-notas')?.value?.trim()||'';
   const tipos=Array.from(document.querySelectorAll('#tipo-btns button')).filter(b=>b.dataset.active==='1').map(b=>b.dataset.tipo);
   const p=data.players[pid];
   if(!p.trainingLoad)p.trainingLoad=[];
-  p.trainingLoad.unshift({date:fecha,rpe:_cargaRpe,mood:_cargaMood,duration:dur,tipos,notas});
+  p.trainingLoad.unshift({date:fecha,rpe:_cargaRpe,mood:_cargaMood||null,duration:dur,tipos,notas});
   scheduleSync();
   _cargaRpe=0;_cargaMood=0;
   const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
+  loadCargaPlayerEvals();
 }
 
 function eliminarCarga(idx) {
@@ -3327,6 +3394,109 @@ function eliminarCarga(idx) {
   p.trainingLoad.splice(idx,1);
   scheduleSync();
   const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
+  loadCargaPlayerEvals();
+}
+
+// ── REGISTRO MASIVO POR SESIÓN (grupo activo) ─────────────
+function renderCargaMasivaBody() {
+  const roster = data.players
+    .map((p,idx)=>({p,idx}))
+    .filter(({p})=>p.group_id===activeGroup);
+  const rows = roster.map(({p,idx})=>{
+    const yaRegistrado = (p.trainingLoad||[]).some(l=>l.date===_bulkFecha);
+    const excluido = _bulkSesionExcluidos.has(idx);
+    const rpeSel = _bulkPlayerRpe[idx] ?? _bulkSesionRpe;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);opacity:${excluido?'0.4':'1'};">
+      <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;">
+        <span style="font-size:13px;font-weight:600;color:var(--gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span>
+        ${yaRegistrado?`<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--g5);color:var(--g3);">ya registrado</span>`:''}
+      </div>
+      <div style="display:flex;gap:3px;flex-shrink:0;">
+        ${[1,2,3,4,5].map(n=>`<button id="bulk-rpe-${idx}-${n}" onclick="bulkSetPlayerRpe(${idx},${n})" ${excluido?'disabled':''} style="width:26px;height:26px;border-radius:6px;border:2px solid ${RPE_COLORS[n]};background:${n===rpeSel?RPE_COLORS[n]:'transparent'};color:${n===rpeSel?'#fff':RPE_COLORS[n]};font-size:11px;font-weight:700;cursor:${excluido?'default':'pointer'};">${n}</button>`).join('')}
+      </div>
+      <button onclick="bulkToggleExcluir(${idx})" title="${excluido?'Incluir':'Excluir (ausente)'}" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:${excluido?'var(--g5)':'transparent'};color:var(--g3);font-size:12px;cursor:pointer;">${excluido?'↺':'✕'}</button>
+    </div>`;
+  }).join('');
+  return `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <div class="fg"><label>Fecha</label><input type="date" id="bulk-fecha" value="${_bulkFecha}" onchange="bulkSetFecha(this.value)" /></div>
+      <div class="fg"><label>Duración (min)</label><input type="number" id="bulk-dur" value="${_bulkDur}" oninput="_bulkDur=parseInt(this.value)||90" style="width:90px;" /></div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Tipo de trabajo</div>
+      <div id="bulk-tipo-btns" style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${CARGA_TIPOS.map(t=>`<button data-tipo="${t}" onclick="bulkToggleTipo('${t}')" style="padding:6px 12px;border-radius:20px;border:1px solid ${_bulkTipos.has(t)?'var(--orange)':'var(--border)'};background:${_bulkTipos.has(t)?'var(--orange)':'transparent'};color:${_bulkTipos.has(t)?'#fff':'var(--g3)'};font-size:12px;cursor:pointer;">${t}</button>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">RPE por defecto de la sesión</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${[1,2,3,4,5].map(n=>`<button onclick="bulkSetSesionRpe(${n})" style="width:32px;height:32px;border-radius:8px;border:2px solid ${RPE_COLORS[n]};background:${n===_bulkSesionRpe?RPE_COLORS[n]:'transparent'};color:${n===_bulkSesionRpe?'#fff':RPE_COLORS[n]};font-size:12px;font-weight:700;cursor:pointer;">${n}</button>`).join('')}
+      </div>
+    </div>
+    <div class="fg fg-full" style="margin-bottom:14px;"><label>Notas (opcional, aplica a todos)</label><input type="text" id="bulk-notas" value="${_bulkNotas}" oninput="_bulkNotas=this.value" placeholder="Observaciones de la sesión..." /></div>
+    <div style="max-height:280px;overflow-y:auto;margin-bottom:14px;">
+      ${roster.length===0?'<div class="empty">Sin jugadores en este grupo.</div>':rows}
+    </div>
+    <button class="btn btn-o" onclick="guardarCargaMasiva()">Registrar sesión</button>`;
+}
+function openCargaMasiva() {
+  if(!activeGroup)return;
+  _bulkFecha=hoyChile();_bulkDur=90;_bulkNotas='';_bulkTipos=new Set();
+  _bulkSesionRpe=3;_bulkPlayerRpe={};_bulkSesionExcluidos=new Set();
+  const body=document.getElementById('carga-masiva-body');if(body)body.innerHTML=renderCargaMasivaBody();
+  document.getElementById('carga-masiva-modal').classList.add('open');
+}
+function closeCargaMasiva() {
+  document.getElementById('carga-masiva-modal').classList.remove('open');
+}
+function bulkSetFecha(v) {
+  _bulkFecha=v;
+  const body=document.getElementById('carga-masiva-body');if(body)body.innerHTML=renderCargaMasivaBody();
+}
+function bulkSetSesionRpe(n) {
+  _bulkSesionRpe=n;_bulkPlayerRpe={};
+  const body=document.getElementById('carga-masiva-body');if(body)body.innerHTML=renderCargaMasivaBody();
+}
+function bulkSetPlayerRpe(idx,n) {
+  _bulkPlayerRpe[idx]=n;
+  [1,2,3,4,5].forEach(k=>{
+    const btn=document.getElementById(`bulk-rpe-${idx}-${k}`);if(!btn)return;
+    const c=RPE_COLORS[k];
+    btn.style.background=k===n?c:'transparent';
+    btn.style.color=k===n?'#fff':c;
+  });
+}
+function bulkToggleExcluir(idx) {
+  if(_bulkSesionExcluidos.has(idx))_bulkSesionExcluidos.delete(idx);else _bulkSesionExcluidos.add(idx);
+  const body=document.getElementById('carga-masiva-body');if(body)body.innerHTML=renderCargaMasivaBody();
+}
+function bulkToggleTipo(t) {
+  if(_bulkTipos.has(t))_bulkTipos.delete(t);else _bulkTipos.add(t);
+  const btn=document.querySelector(`#bulk-tipo-btns button[data-tipo="${t}"]`);
+  if(btn){
+    const active=_bulkTipos.has(t);
+    btn.style.background=active?'var(--orange)':'transparent';
+    btn.style.color=active?'#fff':'var(--g3)';
+    btn.style.borderColor=active?'var(--orange)':'var(--border)';
+  }
+}
+function guardarCargaMasiva() {
+  if(!activeGroup)return;
+  const fecha=_bulkFecha||hoyChile();
+  const dur=_bulkDur||90;
+  const notas=(_bulkNotas||'').trim();
+  const tipos=Array.from(_bulkTipos);
+  data.players.forEach((p,idx)=>{
+    if(p.group_id!==activeGroup)return;
+    if(_bulkSesionExcluidos.has(idx))return;
+    const rpe=_bulkPlayerRpe[idx]??_bulkSesionRpe;
+    if(!p.trainingLoad)p.trainingLoad=[];
+    p.trainingLoad.unshift({date:fecha,rpe,mood:null,duration:dur,tipos,notas});
+  });
+  scheduleSync();
+  closeCargaMasiva();
+  renderMain();
 }
 
 // ── AGREGAR/EDITAR JUGADOR ────────────────────────────────
@@ -6251,7 +6421,6 @@ function renderCoachPortalView(p) {
   // a la línea RPE como una sesión más del día (misma fusión que el dashboard).
   const portalEvals = (progress?.week_evaluations || []).filter(e => typeof e.nota === 'number');
   const chartLoads = [...loads, ...portalEvals.map(e => ({ date: e.fecha, rpe: e.rpe, session_nota: e.nota }))];
-  const { svg: chartSvg, highLoad, avg5 } = buildCargaChart(chartLoads);
   const rpeColors = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
   const moodIcons = ['','😞','😐','😊'];
   const tipoBadge = {
@@ -6261,14 +6430,7 @@ function renderCoachPortalView(p) {
   };
 
   return `
-    ${highLoad?`<div style="background:#fff5f5;border:1px solid #f5c6c6;border-radius:var(--rsm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#c0392b;">⚠️ <strong>Carga alta acumulada</strong> — RPE promedio últimos 5 días: ${avg5.toFixed(1)}</div>`:''}
-    <div class="card" style="margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">RPE — últimos 14 días</div>
-      <div style="padding:0 4px;">${chartSvg}</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
-        ${rpeColors.slice(1).map((c,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--g3);"><div style="width:9px;height:9px;border-radius:50%;background:${c};"></div>${i+1}</div>`).join('')}
-      </div>
-    </div>
+    ${renderCargaChartBlock(chartLoads)}
     <div class="card" style="margin-bottom:14px;">
       <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Última carga registrada</div>
       ${lastLoad ? `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
