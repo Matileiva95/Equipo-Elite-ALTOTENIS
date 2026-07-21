@@ -1511,16 +1511,6 @@ function renderDashboard(){
     '083dc0d5-3161-4e6e-82d9-819e8d04b8e4':'#22C55E',
   };
 
-  function parseGW(wStr){
-    const MES={Ene:0,Feb:1,Mar:2,Abr:3,May:4,Jun:5,Jul:6,Ago:7,Sep:8,Oct:9,Nov:10,Dic:11};
-    const parts=(wStr||'').split('–');
-    if(parts.length<2)return null;
-    const parse=str=>{const[d,m]=str.trim().split(' ');return new Date(today.getFullYear(),MES[m],parseInt(d));};
-    const r={start:parse(parts[0]),end:parse(parts[1])};
-    if(r.end<r.start)r.end.setFullYear(r.end.getFullYear()+1);
-    return r;
-  }
-
   // ── 2. ALERTAS ──
   const alertsRed=[],alertsAmber=[];
 
@@ -1571,8 +1561,8 @@ function renderDashboard(){
   // ── 3. PRÓXIMOS TORNEOS ──
   const in28=new Date(today);in28.setDate(today.getDate()+28);
   const upcoming=(giraEvents||[]).filter(ev=>{
-    const w=parseGW(ev.week);return w&&w.end>=today&&w.start<=in28;
-  }).sort((a,b)=>{const wa=parseGW(a.week),wb=parseGW(b.week);return wa.start-wb.start;});
+    const w=isoWeekToRange(ev.week);return w&&w.end>=today&&w.start<=in28;
+  }).sort((a,b)=>{const wa=isoWeekToRange(a.week),wb=isoWeekToRange(b.week);return wa.start-wb.start;});
 
   // ── 4. CARGA SEMANAL POR GRUPO ──
   const d7k=new Date(today);d7k.setDate(today.getDate()-7);
@@ -1588,20 +1578,35 @@ function renderDashboard(){
   });
 
   // ── 5. ENTRENADORES ──
-  const wStart=new Date(today);wStart.setDate(today.getDate()-today.getDay());
-  const wEnd=new Date(wStart);wEnd.setDate(wStart.getDate()+6);
-  const coachesInGira=[];
-  (giraEvents||[]).forEach(ev=>{
-    const w=parseGW(ev.week);
-    if(!w||w.end<wStart||w.start>wEnd)return;
-    (ev.coach_ids||[]).forEach(cid=>{
-      if(coachesInGira.find(x=>x.id===cid))return;
-      const c=(giraCoaches||[]).find(x=>x.id===cid);
-      coachesInGira.push({id:cid,name:c?.profiles?.full_name||'Coach',dest:`${ev.city}, ${ev.country}`});
-    });
+  const wStart=getWeekMonday(0);
+  const wEnd=new Date(wStart);wEnd.setUTCDate(wStart.getUTCDate()+6);
+  const eventsThisWeek=(giraEvents||[]).filter(ev=>{
+    const w=isoWeekToRange(ev.week);
+    return w&&w.end>=wStart&&w.start<=wEnd;
   });
-  const totalCoaches=(giraCoaches||[]).length;
-  const coachesInAcad=Math.max(0,totalCoaches-coachesInGira.length);
+  const availWk=weekKey(getWeekMonday(0));
+  const availCoachesList=getAvailabilityConfig().coaches;
+  const availWeekData=(data.coachAvailability||{})[availWk]||{};
+  const coachesGira=[];
+  const coachesOtros=[];
+  let coachesAcadCount=0;
+  availCoachesList.forEach(name=>{
+    const status=availWeekData[name]||'ACAD';
+    if(status==='GIRA'){
+      let dest=null;
+      for(const ev of eventsThisWeek){
+        const match=(ev.coach_ids||[]).some(cid=>{
+          const c=(giraCoaches||[]).find(x=>x.id===cid);
+          const cName=c?.profiles?.full_name||c?.full_name||'';
+          return cName.trim().toLowerCase()===name.trim().toLowerCase();
+        });
+        if(match){dest=`${ev.city}, ${ev.country}`;break;}
+      }
+      coachesGira.push({name,dest});
+    }
+    else if(status==='VACACIONES'||status==='LICENCIA')coachesOtros.push({name,status});
+    else coachesAcadCount++;
+  });
 
   // ── 6. RENDIMIENTO ──
   const ELITE_ID='af18ac1d-9ea2-441f-b83b-023afd315bfc';
@@ -1693,23 +1698,33 @@ function renderDashboard(){
   <div style="margin-bottom:20px;">
     <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Entrenadores esta semana</div>
     <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px;">
-      <div style="display:flex;gap:12px;margin-bottom:${coachesInGira.length?'14px':'0'};">
+      <div style="display:flex;gap:12px;margin-bottom:${(coachesGira.length+coachesOtros.length)?'14px':'0'};">
         <div style="flex:1;text-align:center;padding:10px 8px;background:#f9f9f7;border-radius:8px;">
-          <div style="font-size:24px;font-weight:700;color:#1a1a1a;">${coachesInAcad}</div>
+          <div style="font-size:24px;font-weight:700;color:#1a1a1a;">${coachesAcadCount}</div>
           <div style="font-size:11px;color:#999;margin-top:2px;">En academia</div>
         </div>
         <div style="flex:1;text-align:center;padding:10px 8px;background:#f0faff;border-radius:8px;">
-          <div style="font-size:24px;font-weight:700;color:#1DA1D6;">${coachesInGira.length}</div>
+          <div style="font-size:24px;font-weight:700;color:#1DA1D6;">${coachesGira.length}</div>
           <div style="font-size:11px;color:#999;margin-top:2px;">En gira</div>
         </div>
+        <div style="flex:1;text-align:center;padding:10px 8px;background:#fdf6ec;border-radius:8px;">
+          <div style="font-size:24px;font-weight:700;color:#c78a1e;">${coachesOtros.length}</div>
+          <div style="font-size:11px;color:#999;margin-top:2px;">Otros</div>
+        </div>
       </div>
-      ${coachesInGira.map(c=>`
+      ${coachesGira.map(c=>`
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #f5f5f5;">
           <div style="width:28px;height:28px;border-radius:50%;background:#1DA1D6;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini(c.name)}</div>
           <div style="font-size:13px;font-weight:500;color:#333;flex:1;">${c.name}</div>
-          <div style="font-size:11px;color:#aaa;">${c.dest}</div>
+          <div style="font-size:11px;color:#aaa;">${c.dest||'Gira'}</div>
         </div>`).join('')}
-      ${!giraCoaches.length?`<div style="font-size:12px;color:#ccc;padding-top:${coachesInGira.length?'0':'0'};border-top:${coachesInGira.length?'0':'0'};text-align:center;">Abre Torneo/Gira para cargar entrenadores</div>`:''}
+      ${coachesOtros.map(c=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #f5f5f5;">
+          <div style="width:28px;height:28px;border-radius:50%;background:#c78a1e;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini(c.name)}</div>
+          <div style="font-size:13px;font-weight:500;color:#333;flex:1;">${c.name}</div>
+          <div style="font-size:11px;color:#c78a1e;font-weight:600;">${c.status}</div>
+        </div>`).join('')}
+      ${!availCoachesList.length?`<div style="font-size:12px;color:#ccc;text-align:center;">Cargá entrenadores en Disponibilidad</div>`:''}
     </div>
   </div>
 
@@ -7694,18 +7709,23 @@ const GIRA_GROUPS = [
   { id: 'fdb992b2-e71b-4ced-bfc0-c3d67f685a84', name: 'F2', color: '#1A6FD4' },
   { id: 'e15be2e1-a5e3-4318-b55a-a24d293a799d', name: 'F1', color: '#06B6D4' }
 ];
-function weekToRangeGira(w) {
-  if (!w || !w.includes('-W')) return w || 'Fecha inválida';
+function isoWeekToRange(w) {
+  if (!w || !w.includes('-W')) return null;
   const [year, week] = w.split('-W').map(Number);
-  if (!year || !week) return w;
+  if (!year || !week) return null;
   const d = new Date(year, 0, 1 + (week-1)*7);
   const day = d.getDay();
   const mon = new Date(d);
   mon.setDate(d.getDate() - (day<=0?6:day-1));
   const sun = new Date(mon);
   sun.setDate(mon.getDate()+6);
+  return { start: mon, end: sun };
+}
+function weekToRangeGira(w) {
+  const r = isoWeekToRange(w);
+  if (!r) return w || 'Fecha inválida';
   const fmt = x => x.toLocaleDateString('es-CL',{day:'2-digit',month:'short'});
-  return `${fmt(mon)} – ${fmt(sun)}`;
+  return `${fmt(r.start)} – ${fmt(r.end)}`;
 }
 (function() {
   const now = new Date();
