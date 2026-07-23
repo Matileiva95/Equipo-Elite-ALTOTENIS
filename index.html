@@ -9004,29 +9004,113 @@ const TennisMathStats = {
     };
   },
 
+  // Reconstruye el marcador punto a punto (conteo de puntos crudos, equivalente
+  // matemático de 0-15-30-40/deuce/ventaja: gana quien llega a >=4 puntos con
+  // diferencia >=2) para detectar break points reales — no solo "el servidor
+  // perdió el game". Un game se EXCLUYE del conteo (sin adivinar) si:
+  //   - es tiebreak (scoreBefore === '6-6' — sin BPs, exclusión legítima,
+  //     no cuenta como "excluido con warning", se cuenta aparte en tiebreaksDetectados)
+  //   - no se identifica servidor/ganador del game
+  //   - la secuencia de puntos no cierra en un ganador coherente
+  //   - el ganador reconstruido no coincide con game.winner (dato parseado
+  //     no confiable para ese game)
+  _calcBreakPoints(parsed, p1, p2) {
+    let p1Opportunities = 0, p1Converted = 0, p2Opportunities = 0, p2Converted = 0;
+    let gamesExcluded = 0, tiebreaksDetectados = 0;
+
+    parsed.sets.forEach(set => {
+      set.games.forEach(game => {
+        const scoreNorm = (game.scoreBefore || '').replace(/\s+/g, '');
+        if (scoreNorm === '6-6') { tiebreaksDetectados++; return; }
+        if (!game.server || !game.winner || !game.points || !game.points.length) { gamesExcluded++; return; }
+
+        const serverIsP1 = game.server === p1;
+        const serverIsP2 = game.server === p2;
+        if (!serverIsP1 && !serverIsP2) { gamesExcluded++; return; }
+
+        let serverPts = 0, receiverPts = 0, reachedConclusion = false, concludedAt = -1;
+        const bpEvents = [];
+
+        for (let idx = 0; idx < game.points.length; idx++) {
+          const pt = game.points[idx];
+          if (pt.winner !== 1 && pt.winner !== 2) { reachedConclusion = false; break; }
+          const pointWonByServer = serverIsP1 ? pt.winner === 2 : pt.winner === 1;
+
+          const receiverWouldWinGame = (receiverPts + 1 >= 4) && ((receiverPts + 1) - serverPts >= 2);
+          if (receiverWouldWinGame) bpEvents.push({ wonByReceiver: !pointWonByServer });
+
+          if (pointWonByServer) serverPts++; else receiverPts++;
+
+          if ((serverPts >= 4 && serverPts - receiverPts >= 2) || (receiverPts >= 4 && receiverPts - serverPts >= 2)) {
+            reachedConclusion = true;
+            concludedAt = idx;
+            break;
+          }
+        }
+        if (!reachedConclusion) { gamesExcluded++; return; }
+        // Si quedan puntos sin procesar después de que el game concluyó
+        // matemáticamente, la secuencia es incoherente (super tiebreak no
+        // detectado, datos truncados/malformados) — no confiar, excluir.
+        if (concludedAt !== game.points.length - 1) { gamesExcluded++; return; }
+
+        // Coherencia: el ganador reconstruido (servidor o receptor) debe
+        // coincidir con game.winner ya parseado.
+        const gameWinnerIsP1 = game.winner === p1;
+        const gameWinnerIsP2 = game.winner === p2;
+        if (!gameWinnerIsP1 && !gameWinnerIsP2) { gamesExcluded++; return; }
+        const expectedWinnerIsServer = serverIsP1 ? gameWinnerIsP1 : gameWinnerIsP2;
+        const reconstructedWinnerIsServer = serverPts > receiverPts;
+        if (reconstructedWinnerIsServer !== expectedWinnerIsServer) { gamesExcluded++; return; }
+
+        const receiverIsP1 = !serverIsP1;
+        bpEvents.forEach(bp => {
+          if (receiverIsP1) {
+            p1Opportunities++;
+            if (bp.wonByReceiver) p1Converted++;
+          } else {
+            p2Opportunities++;
+            if (bp.wonByReceiver) p2Converted++;
+          }
+        });
+      });
+    });
+
+    return {
+      p1: { breakPointsConverted: p1Converted, breakPointsTotal: p1Opportunities },
+      p2: { breakPointsConverted: p2Converted, breakPointsTotal: p2Opportunities },
+      gamesExcluded,
+      tiebreaksDetectados,
+    };
+  },
+
   _calcConversion(pts, p1, p2, parsed) {
     const p1RecvPts = pts.filter(pt => pt.server === p2);
     const p2RecvPts = pts.filter(pt => pt.server === p1);
     const p1RecvWon = p1RecvPts.filter(pt => pt.winner === 2).length;
     const p2RecvWon = p2RecvPts.filter(pt => pt.winner === 1).length;
 
-    let p1BP = 0, p1BPC = 0, p2BP = 0, p2BPC = 0;
-    parsed.sets.forEach(set => {
-      set.games.forEach(game => {
-        if (!game.server || !game.winner) return;
-        if (game.server === p1 && game.winner === p2) { p1BPC++; p1BP++; }
-        if (game.server === p2 && game.winner === p1) { p2BPC++; p2BP++; }
-      });
-    });
+    const bp = this._calcBreakPoints(parsed, p1, p2);
 
+    // Ejecutor del golpe de red: en tipo w/ace el golpe es del que GANÓ el
+    // punto; en tipo ue/fe/df el golpe es del que ERRÓ (el rival de winner).
+    // En tipo 'point' genérico el ejecutor es ambiguo — no se atribuye (7.2
+    // / diagnóstico Fase 6, punto 0a).
     const netShots = ['volley', 'smash'];
-    const p1NetWon = pts.filter(pt => pt.winner === 2 && netShots.includes((pt.shot || '').toLowerCase())).length;
-    const p2NetWon = pts.filter(pt => pt.winner === 1 && netShots.includes((pt.shot || '').toLowerCase())).length;
-    const netAll = pts.filter(pt => netShots.includes((pt.shot || '').toLowerCase())).length;
+    const netExecutor = (pt) => {
+      if (!netShots.includes((pt.shot || '').toLowerCase())) return null;
+      if (pt.type === 'w' || pt.type === 'ace') return pt.winner;
+      if (pt.type === 'ue' || pt.type === 'fe' || pt.type === 'df') return pt.winner === 2 ? 1 : 2;
+      return null;
+    };
+    const p1NetTotal = pts.filter(pt => netExecutor(pt) === 2).length;
+    const p2NetTotal = pts.filter(pt => netExecutor(pt) === 1).length;
+    const p1NetWon = pts.filter(pt => netExecutor(pt) === 2 && pt.winner === 2).length;
+    const p2NetWon = pts.filter(pt => netExecutor(pt) === 1 && pt.winner === 1).length;
 
     return {
-      p1: { receivingPtsWonPct: p1RecvPts.length > 0 ? Math.round((p1RecvWon / p1RecvPts.length) * 100) : 0, breakPointsConverted: p2BPC, breakPointsTotal: p2BP, netWon: p1NetWon, netTotal: netAll },
-      p2: { receivingPtsWonPct: p2RecvPts.length > 0 ? Math.round((p2RecvWon / p2RecvPts.length) * 100) : 0, breakPointsConverted: p1BPC, breakPointsTotal: p1BP, netWon: p2NetWon, netTotal: netAll },
+      p1: { receivingPtsWonPct: p1RecvPts.length > 0 ? Math.round((p1RecvWon / p1RecvPts.length) * 100) : 0, breakPointsConverted: bp.p1.breakPointsConverted, breakPointsTotal: bp.p1.breakPointsTotal, netWon: p1NetWon, netTotal: p1NetTotal },
+      p2: { receivingPtsWonPct: p2RecvPts.length > 0 ? Math.round((p2RecvWon / p2RecvPts.length) * 100) : 0, breakPointsConverted: bp.p2.breakPointsConverted, breakPointsTotal: bp.p2.breakPointsTotal, netWon: p2NetWon, netTotal: p2NetTotal },
+      _meta: { gamesExcluded: bp.gamesExcluded, tiebreaksDetectados: bp.tiebreaksDetectados },
     };
   },
 
