@@ -8345,6 +8345,8 @@ const PuntoAPunto = {
     let parsingPlayer = null;
     let p1Id = null, p2Id = null;
     let p1Name = null, p2Name = null;
+    const warnings = [];
+    let discardedScoreLines = 0;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -8395,6 +8397,8 @@ const PuntoAPunto = {
           } else {
             currentGame.p2Scores.push(numVal);
           }
+        } else {
+          discardedScoreLines++;
         }
       }
     }
@@ -8428,7 +8432,11 @@ const PuntoAPunto = {
       p2Id,
       sets: [],
       totalPoints: { p1: 0, p2: 0 },
+      warnings,
     };
+
+    let slicedAwayGames = 0;
+    let walkStreamsTruncated = 0;
 
     sets.forEach(setData => {
       const setResult = {
@@ -8442,14 +8450,21 @@ const PuntoAPunto = {
         const p1Pts = game.p1Scores.length > 2 ? game.p1Scores.slice(0, -2) : [];
         const p2Pts = game.p2Scores.length > 2 ? game.p2Scores.slice(0, -2) : [];
 
+        if ((game.p1Scores.length > 0 && game.p1Scores.length <= 2) ||
+            (game.p2Scores.length > 0 && game.p2Scores.length <= 2)) {
+          slicedAwayGames++;
+        }
+
         const isTB = this._isTiebreak(p1Pts, p2Pts);
 
-        let points;
+        let walkResult;
         if (isTB) {
-          points = this._parseTiebreakPoints(p1Pts, p2Pts);
+          walkResult = this._parseTiebreakPoints(p1Pts, p2Pts);
         } else {
-          points = this._parseGamePoints(p1Pts, p2Pts);
+          walkResult = this._parseGamePoints(p1Pts, p2Pts);
         }
+        const points = walkResult.points;
+        if (walkResult.truncated) walkStreamsTruncated++;
 
         // Append punto ganador del game (no aparece en running scores)
         console.log('DEBUG winner:', game.winner, 'p1Id:', p1Id, 'p2Id:', p2Id);
@@ -8480,6 +8495,61 @@ const PuntoAPunto = {
     });
 
     console.log('DEBUG game1:', JSON.stringify(sets[0]?.games[0]));
+
+    // --- Warnings ---
+    if (!p1Id || !p2Id) {
+      warnings.push({
+        level: 'critical',
+        code: 'itf_players_not_identified',
+        message: 'No se pudieron identificar los códigos de ambos jugadores en el texto. Es probable que los puntos y games estén atribuidos al jugador equivocado.',
+      });
+    }
+    if (result.sets.length === 0) {
+      warnings.push({
+        level: 'critical',
+        code: 'itf_no_sets',
+        message: 'No se detectó ningún set en el texto pegado. Revisa que el formato sea el de ITF (líneas "SET N").',
+      });
+    } else {
+      result.sets.forEach(s => {
+        if (s.games.length === 0) {
+          warnings.push({
+            level: 'critical',
+            code: 'itf_set_empty',
+            message: `El Set ${s.setNum} quedó sin games. Revisa que el texto pegado incluya las líneas "X-Y won by ..." de ese set.`,
+          });
+        }
+      });
+    }
+    if (result.totalPoints.p1 + result.totalPoints.p2 === 0) {
+      warnings.push({
+        level: 'critical',
+        code: 'itf_empty_result',
+        message: 'No se pudo reconstruir ningún punto del partido. El resultado está vacío.',
+      });
+    }
+    if (discardedScoreLines > 0) {
+      warnings.push({
+        level: 'warning',
+        code: 'itf_discarded_score_lines',
+        message: `${discardedScoreLines} línea(s) de puntaje no se pudieron interpretar y fueron descartadas.`,
+      });
+    }
+    if (slicedAwayGames > 0) {
+      warnings.push({
+        level: 'warning',
+        code: 'itf_sliced_away_games',
+        message: `${slicedAwayGames} game(s) tenían muy pocos datos de puntaje y no aportaron detalle punto a punto (sí se contaron para el marcador general).`,
+      });
+    }
+    if (walkStreamsTruncated > 0) {
+      warnings.push({
+        level: 'warning',
+        code: 'itf_walk_streams_truncated',
+        message: `${walkStreamsTruncated} game(s) tenían una secuencia de puntaje inusualmente larga y se truncó la reconstrucción de puntos.`,
+      });
+    }
+
     return result;
   },
 
@@ -8522,6 +8592,8 @@ const PuntoAPunto = {
   // Camina ambas filas como streams independientes: avanza el puntero del jugador
   // que incrementó. Si ambas incrementaron en el mismo step (caso no-lockstep en
   // running scores de ITF), avanza al que está más atrás en el marcador del game.
+  // Devuelve { points, truncated } — truncated=true si se agotó el límite de
+  // seguridad antes de terminar de consumir ambas filas (secuencia anómala).
   _walkStreams(p1, p2, gt) {
     const points = [];
     let i = 0, j = 0, prev1 = 0, prev2 = 0;
@@ -8549,7 +8621,8 @@ const PuntoAPunto = {
         if (j < p2.length) { prev2 = c2; j++; }
       }
     }
-    return points;
+    const truncated = safety <= 0 && (i < p1.length || j < p2.length);
+    return { points, truncated };
   },
 
   _scoreVal(s) {
@@ -8563,15 +8636,19 @@ const PuntoAPunto = {
 
   parseTennisMath(text) {
     const lines = text.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const warnings = [];
     const result = {
       format: 'tennismath',
       sets: [],
       stats: { p1: {}, p2: {} },
+      warnings,
     };
 
     let currentSet = null;
     let currentGame = null;
     let p1Name = null, p2Name = null;
+    let discardedPointLines = 0;
+    let ambiguousPoints = 0;
 
     for (const line of lines) {
       const setMatch = line.match(/^Set\s+#(\d+)/i);
@@ -8607,7 +8684,14 @@ const PuntoAPunto = {
       if (pointMatch && currentGame) {
         const desc = pointMatch[2].trim();
         const point = this._parseTennisMathPoint(desc, p1Name, p2Name);
-        if (point) currentGame.points.push(point);
+        if (point) {
+          if (point.winner === null) ambiguousPoints++;
+          currentGame.points.push(point);
+        }
+        continue;
+      }
+      if (line.includes('•') && currentGame) {
+        discardedPointLines++;
         continue;
       }
 
@@ -8619,15 +8703,73 @@ const PuntoAPunto = {
 
     result.p1Name = p1Name;
     result.p2Name = p2Name;
+
+    // --- Warnings ---
+    if (!p1Name || !p2Name) {
+      warnings.push({
+        level: 'critical',
+        code: 'tm_players_not_identified',
+        message: 'No se pudieron identificar ambos jugadores (no se detectó quién saca en el texto). Los puntos podrían quedar sin atribuir.',
+      });
+    }
+
+    const gamesWithPoints = result.sets.reduce((n, s) => n + s.games.filter(g => g.points.length > 0).length, 0);
+    if (gamesWithPoints === 0) {
+      warnings.push({
+        level: 'critical',
+        code: 'tm_no_points',
+        message: 'No se pudo reconstruir ningún punto dentro de los games. Revisa el formato del texto pegado.',
+      });
+    }
+
+    const totalPoints = result.sets.reduce((n, s) => n + s.games.reduce((m, g) => m + g.points.length, 0), 0);
+    if (totalPoints === 0) {
+      warnings.push({
+        level: 'critical',
+        code: 'tm_empty_result',
+        message: 'No se pudo reconstruir ningún punto del partido. El resultado está vacío.',
+      });
+    }
+
+    const gamesWithoutWinner = result.sets.reduce((n, s) => n + s.games.filter(g => g.points.length > 0 && !g.winner).length, 0);
+    if (gamesWithoutWinner > 0) {
+      warnings.push({
+        level: 'warning',
+        code: 'tm_game_without_winner',
+        message: `${gamesWithoutWinner} game(s) no tienen ganador detectado (no se encontró la línea "... wins the game").`,
+      });
+    }
+
+    if (ambiguousPoints > 0) {
+      warnings.push({
+        level: 'warning',
+        code: 'tm_ambiguous_points',
+        message: `${ambiguousPoints} punto(s) no se pudieron atribuir a un jugador (no se identificó quién aparece en la descripción) y no se cuentan en las estadísticas.`,
+      });
+    }
+
+    if (discardedPointLines > 0) {
+      warnings.push({
+        level: 'warning',
+        code: 'tm_discarded_point_lines',
+        message: `${discardedPointLines} línea(s) de punto no se pudieron interpretar y fueron descartadas.`,
+      });
+    }
+
     return result;
   },
 
   _parseTennisMathPoint(desc, p1Name, p2Name) {
     const lower = desc.toLowerCase();
 
-    let loser = null;
-    if (p1Name && lower.includes(p1Name)) loser = p1Name;
-    else if (p2Name && lower.includes(p2Name)) loser = p2Name;
+    // namedIsP1: true/false si se identificó a quién nombra la descripción,
+    // null si no se pudo determinar (p1Name/p2Name vacíos o texto sin match).
+    // OJO: nunca comparar con === contra p1Name/p2Name para esto — si ambos
+    // son null, "null === null" da true y atribuye el punto al jugador
+    // equivocado sin haber identificado a nadie (bug histórico).
+    let namedIsP1 = null;
+    if (p1Name && lower.includes(p1Name)) namedIsP1 = true;
+    else if (p2Name && lower.includes(p2Name)) namedIsP1 = false;
 
     let type = 'point';
     if (lower.includes('double fault')) type = 'df';
@@ -8644,12 +8786,15 @@ const PuntoAPunto = {
     if (lower.includes('smash')) shot = 'smash';
     if (lower.includes('lob')) shot = 'lob';
 
-    let winner;
-    if (type === 'w' || type === 'ace') {
-      winner = loser === p1Name ? 2 : 1;
-    } else {
-      winner = loser === p1Name ? 1 : 2;
+    let winner = null;
+    if (namedIsP1 !== null) {
+      if (type === 'w' || type === 'ace') {
+        winner = namedIsP1 ? 2 : 1;
+      } else {
+        winner = namedIsP1 ? 1 : 2;
+      }
     }
+    // Si namedIsP1 es null, winner queda null: punto ambiguo, no se adivina.
 
     return { winner, type, shot };
   },
@@ -8715,7 +8860,9 @@ const PuntoAPunto = {
     const mom = [], bg = [], bd = [], rad = [], lbls = [], gameBounds = [];
 
     setPoints.forEach((p, i) => {
-      if (p.w === 2) c1++; else c2++;
+      // p.w puede ser null (punto ambiguo de TenisMath, no atribuido a nadie):
+      // no debe sumar momentum a ningún lado ni pintarse con el color de un jugador.
+      if (p.w === 2) c1++; else if (p.w === 1) c2++;
       mom.push(c1 - c2);
       lbls.push(i + 1);
       if (p.gameWon && i < setPoints.length - 1) gameBounds.push(i + 1);
@@ -8728,9 +8875,12 @@ const PuntoAPunto = {
       else if (p.w === 2) {
         b = isDark ? 'rgba(83,74,183,0.5)' : 'rgba(83,74,183,0.35)';
         d = isDark ? 'rgba(83,74,183,0.7)' : 'rgba(83,74,183,0.55)';
-      } else {
+      } else if (p.w === 1) {
         b = isDark ? 'rgba(15,110,86,0.45)' : 'rgba(15,110,86,0.3)';
         d = isDark ? 'rgba(15,110,86,0.65)' : 'rgba(15,110,86,0.5)';
+      } else {
+        b = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)';
+        d = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
       }
       bg.push(b); bd.push(d); rad.push(r);
     });
@@ -8776,6 +8926,7 @@ const PuntoAPunto = {
               },
               label: ctx => {
                 const p = setPoints[ctx.dataIndex];
+                if (p.w == null) return 'Punto no atribuido (dato ambiguo)';
                 const who = p.w === 2 ? p1Name : p2Name;
                 return `${who} gana el punto`;
               },
@@ -8899,6 +9050,10 @@ const TennisMathStats = {
     });
 
     pts.forEach(pt => {
+      // pt.winner puede ser null (punto ambiguo, no atribuido) — excluir de
+      // por-golpe en vez de usar ternarias que caerían en el jugador equivocado.
+      if (pt.winner !== 1 && pt.winner !== 2) return;
+
       const shotRaw = (pt.shot || '').toLowerCase();
       let shotCategory;
       if (shotRaw === 'volley') shotCategory = 'volley';
@@ -9097,6 +9252,8 @@ const TennisMathStats = {
     // / diagnóstico Fase 6, punto 0a).
     const netShots = ['volley', 'smash'];
     const netExecutor = (pt) => {
+      // pt.winner null (punto ambiguo) → no se puede saber quién ejecutó el golpe.
+      if (pt.winner !== 1 && pt.winner !== 2) return null;
       if (!netShots.includes((pt.shot || '').toLowerCase())) return null;
       if (pt.type === 'w' || pt.type === 'ace') return pt.winner;
       if (pt.type === 'ue' || pt.type === 'fe' || pt.type === 'df') return pt.winner === 2 ? 1 : 2;
@@ -9354,6 +9511,8 @@ window.setPapStatsTab = setPapStatsTab;
 
     <div id="papResults" style="display:none; padding:16px;">
 
+      <div id="papWarningsBanner"></div>
+
       <div id="papMatchHeader" style="
         background:#f8f8f8; border-radius:10px; padding:14px 16px; margin-bottom:14px;">
       </div>
@@ -9601,7 +9760,17 @@ function processPuntoAPunto() {
     // Calcular estadísticas TennisMath si aplica (no para ITF)
     papTmStats = null;
     if (format === 'tennismath' && typeof TennisMathStats !== 'undefined') {
-      try { papTmStats = TennisMathStats.calculate(papParsedData); } catch(e) { console.warn('[TennisMathStats] Error calculando:', e); }
+      try {
+        papTmStats = TennisMathStats.calculate(papParsedData);
+        const meta = papTmStats?.essential?.conversion?._meta;
+        if (meta && meta.gamesExcluded > 0 && papParsedData.warnings) {
+          papParsedData.warnings.push({
+            level: 'warning',
+            code: 'tm_break_points_games_excluded',
+            message: `${meta.gamesExcluded} game(s) no se usaron para calcular break points por datos incompletos.`,
+          });
+        }
+      } catch(e) { console.warn('[TennisMathStats] Error calculando:', e); }
     }
 
     const setsData = PuntoAPunto.buildMomentumData(papParsedData, papFirstServer === 'player');
@@ -9618,12 +9787,66 @@ function processPuntoAPunto() {
   }
 }
 
+function renderPapWarningsBanner(warnings) {
+  if (!warnings || warnings.length === 0) return '';
+  const criticals = warnings.filter(w => w.level === 'critical');
+  const normals = warnings.filter(w => w.level !== 'critical');
+
+  let critHtml = '';
+  if (criticals.length > 0) {
+    const critItems = criticals.map(w => `<li>${w.message}</li>`).join('');
+    critHtml = `
+      <div style="background:#FCEBEB;border:1px solid #F3B8B8;border-radius:8px;
+        padding:8px 10px;margin-bottom:${normals.length ? '8px' : '14px'};">
+        <div style="font-size:11px;font-weight:600;color:#A32D2D;margin-bottom:2px;">🚨 Problemas graves (${criticals.length})</div>
+        <ul style="margin:2px 0 0;padding-left:18px;font-size:11px;color:#A32D2D;">${critItems}</ul>
+      </div>`;
+  }
+
+  let warnHtml = '';
+  if (normals.length > 0) {
+    const visible = normals.slice(0, 3);
+    const hidden = normals.slice(3);
+    const visItems = visible.map(w => `<li>${w.message}</li>`).join('');
+    let hiddenBlock = '';
+    if (hidden.length > 0) {
+      const hidItems = hidden.map(w => `<li>${w.message}</li>`).join('');
+      hiddenBlock = `
+        <ul id="papWarnExtra" data-count="${hidden.length}" style="display:none;margin:2px 0 0;padding-left:18px;font-size:11px;color:#8A5000;">${hidItems}</ul>
+        <button onclick="togglePapWarnExtra()" id="papWarnToggleBtn" style="
+          background:none;border:none;color:#B85C00;font-size:11px;cursor:pointer;
+          padding:2px 0;text-decoration:underline;">Ver ${hidden.length} más</button>`;
+    }
+    warnHtml = `
+      <div style="background:#FFF4E5;border:1px solid #FFD9A8;border-radius:8px;
+        padding:8px 10px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:600;color:#B85C00;margin-bottom:2px;">⚠️ Avisos (${normals.length})</div>
+        <ul style="margin:2px 0 0;padding-left:18px;font-size:11px;color:#8A5000;">${visItems}</ul>
+        ${hiddenBlock}
+      </div>`;
+  }
+
+  return critHtml + warnHtml;
+}
+
+function togglePapWarnExtra() {
+  const el = document.getElementById('papWarnExtra');
+  const btn = document.getElementById('papWarnToggleBtn');
+  if (!el || !btn) return;
+  const show = el.style.display === 'none';
+  el.style.display = show ? 'block' : 'none';
+  btn.textContent = show ? 'Ver menos' : ('Ver ' + el.dataset.count + ' más');
+}
+
 function renderPapResults(setsData, p1Name, p2Name, format) {
   document.getElementById('papInput').style.display = 'none';
   document.getElementById('papResults').style.display = 'block';
 
   papCharts.forEach(c => c.destroy());
   papCharts = [];
+
+  const warnBanner = document.getElementById('papWarningsBanner');
+  if (warnBanner) warnBanner.innerHTML = renderPapWarningsBanner(papParsedData?.warnings || []);
 
   const headerDiv = document.getElementById('papMatchHeader');
   const totalP1 = setsData.reduce((s, set) => s + set.points.filter(p => p.w === 2).length, 0);
@@ -9724,6 +9947,14 @@ function savePuntoAPunto() {
   if (papMatchIndex == null || !player.matchStats?.[papMatchIndex]) {
     alert('No se identificó el partido. Cierra y vuelve a abrir desde el historial.');
     return;
+  }
+
+  const criticalWarnings = (papParsedData.warnings || []).filter(w => w.level === 'critical');
+  if (criticalWarnings.length > 0) {
+    const msg = 'El parseo tiene problemas graves:\n\n' +
+      criticalWarnings.map(w => '• ' + w.message).join('\n') +
+      '\n\n¿Guardar de todos modos?';
+    if (!confirm(msg)) return;
   }
 
   const p1 = document.getElementById('papPlayerName').value.trim() || player.name?.split(' ').at(-1) || 'Jugador';
