@@ -9101,8 +9101,10 @@ const TennisMathStats = {
 
   _calcServiceDetailed(pts, p1, p2, parsed) {
     const basic = this._calcService(pts, p1, p2, parsed);
-    const p1ServePts = pts.filter(pt => pt.server === p1);
-    const p2ServePts = pts.filter(pt => pt.server === p2);
+    // Denominador solo con puntos atribuidos: un punto con winner null infla
+    // el denominador sin poder aportar al numerador y baja el % artificialmente.
+    const p1ServePts = pts.filter(pt => pt.server === p1 && (pt.winner === 1 || pt.winner === 2));
+    const p2ServePts = pts.filter(pt => pt.server === p2 && (pt.winner === 1 || pt.winner === 2));
     const p1ServeWon = p1ServePts.filter(pt => pt.winner === 2).length;
     const p2ServeWon = p2ServePts.filter(pt => pt.winner === 1).length;
     return {
@@ -9239,8 +9241,9 @@ const TennisMathStats = {
   },
 
   _calcConversion(pts, p1, p2, parsed) {
-    const p1RecvPts = pts.filter(pt => pt.server === p2);
-    const p2RecvPts = pts.filter(pt => pt.server === p1);
+    // Denominador solo con puntos atribuidos: mismo criterio que _calcServiceDetailed.
+    const p1RecvPts = pts.filter(pt => pt.server === p2 && (pt.winner === 1 || pt.winner === 2));
+    const p2RecvPts = pts.filter(pt => pt.server === p1 && (pt.winner === 1 || pt.winner === 2));
     const p1RecvWon = p1RecvPts.filter(pt => pt.winner === 2).length;
     const p2RecvWon = p2RecvPts.filter(pt => pt.winner === 1).length;
 
