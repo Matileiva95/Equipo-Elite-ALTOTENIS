@@ -767,7 +767,7 @@ const DEFAULT_PLAYERS=[
 let data={players:JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),reflections:[]};
 let user="",page="dashboard",pid=null,dtab="perfil";
 let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
-let saveTimer=null,editingPlayerId=null,editingGroupPlanId=null;
+let saveTimer=null,editingPlayerId=null;
 let grupalTab='semanal',grupalGrupo=null /* UUID de grupo, o null="Todos" — 3.B2 parte 2 */,grupalSemanaOffset=0,grupalMesOffset=0,grupalMesExpanded={};
 let coachingTab='equipo',availWeekOffset=0,availAddingType=null;
 // Selección múltiple calendario
@@ -1347,7 +1347,7 @@ async function loadData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d = await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.availabilityConfig=data.availabilityConfig||{coaches:[],pfs:[]};}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.availabilityConfig=data.availabilityConfig||{coaches:[],pfs:[]};}
     setSS('synced','Sincronizado · '+now());
   }catch(e){
     const l=localStorage.getItem('at_data_elite');
@@ -1375,7 +1375,7 @@ async function refreshData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d=await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.groupPlans=data.groupPlans||[];data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.availabilityConfig=data.availabilityConfig||{coaches:[],pfs:[]};}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.availabilityConfig=data.availabilityConfig||{coaches:[],pfs:[]};}
     setSS('synced','Sincronizado · '+now());renderPlayerNav();renderDrawerList();
   }catch(e){setSS('error','Sin conexión');}
 }
@@ -6868,10 +6868,7 @@ function renderGrupal() {
         <div class="page-title">Planificación Grupal</div>
         <div class="page-sub">Planes semanales asignados a múltiples jugadores</div>
       </div>
-      <button class="btn btn-b btn-sm" onclick="showGroupPlanForm()">+ Nuevo plan grupal</button>
     </div>
-
-    <div id="grupal-form-container"></div>
 
     <div class="card">
       ${grupoSelector}
@@ -7403,192 +7400,6 @@ function renderGrupalHistorial() {
   }).join('');
 
   return sections + footer;
-}
-
-function renderGroupPlanForm(editId) {
-  const gp = editId ? (data.groupPlans || []).find(p => p.id === editId) : null;
-  const wKey = lunesDeSemana(hoyChile());
-  // Build week options: current + 4 ahead + 4 behind
-  const weeks = [];
-  for (let i = -4; i <= 4; i++) {
-    const k = sumarDias(wKey, i * 7);
-    weeks.push(k);
-  }
-  // Deduplicate while preserving order
-  const uniqueWeeks = [...new Set(weeks)];
-
-  const playerCheckboxes = data.players.map((p, i) => {
-    const checked = gp && gp.playerIds && gp.playerIds.includes(String(p.id));
-    return `<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--rsm);border:1px solid var(--border);cursor:pointer;background:var(--white);">
-      <input type="checkbox" value="${p.id}" id="gp-player-${p.id}" ${checked ? 'checked' : ''} style="accent-color:var(--blue);width:15px;height:15px;">
-      <div class="pav" style="background:${COLORS[i%COLORS.length]};width:28px;height:28px;font-size:10px;flex-shrink:0;">${ini(p.name)}</div>
-      <span style="font-size:13px;">${p.name}</span>
-    </label>`;
-  }).join('');
-
-  return `<div class="card" style="margin-bottom:16px;border-top:3px solid var(--blue);">
-    <div style="font-size:15px;font-weight:600;margin-bottom:16px;">${editId ? 'Editar plan grupal' : 'Nuevo plan grupal'}</div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-      <div class="fg" style="grid-column:1/-1;">
-        <label>Título del plan</label>
-        <input id="gp-title" value="${gp ? (gp.title||'') : ''}" placeholder="Ej: Semana de intensidad, Trabajo de defensa..." style="width:100%;" />
-      </div>
-      <div class="fg">
-        <label>Semana</label>
-        <select id="gp-week" style="width:100%;">
-          ${uniqueWeeks.map(k => `<option value="${k}" ${(gp ? gp.week : wKey) === k ? 'selected' : ''}>${weekLabel(k)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="fg">
-        <label>Día</label>
-        <select id="gp-dia" style="width:100%;">
-          ${['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'].map(d => `<option value="${d}" ${(gp&&gp.dia===d)?'selected':''}>${d}</option>`).join('')}
-        </select>
-      </div>
-      <div class="fg">
-        <label>Sesión</label>
-        <select id="gp-sesion" style="width:100%;">
-          <option value="Sesión 1" ${(!gp||gp.sesion==='Sesión 1')?'selected':''}>Sesión 1</option>
-          <option value="Sesión 2" ${(gp&&gp.sesion==='Sesión 2')?'selected':''}>Sesión 2</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="fg" style="margin-bottom:12px;">
-      <label>Descripción general</label>
-      <textarea id="gp-desc" placeholder="Objetivo de la semana, enfoque general..." style="width:100%;min-height:70px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;">${gp ? (gp.desc||'') : ''}</textarea>
-    </div>
-
-    <div class="fg" style="margin-bottom:12px;">
-      <label>Ejercicios y drills</label>
-      <textarea id="gp-exercises" placeholder="Lista de ejercicios, drills técnicos, tácticos..." style="width:100%;min-height:90px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;">${gp ? (gp.exercises||'') : ''}</textarea>
-    </div>
-
-    <div class="fg" style="margin-bottom:16px;">
-      <label>Observaciones</label>
-      <textarea id="gp-observations" placeholder="Notas del entrenador, puntos de atención..." style="width:100%;min-height:60px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;outline:none;background:var(--g5);resize:vertical;font-family:'DM Sans',sans-serif;">${gp ? (gp.observations||'') : ''}</textarea>
-    </div>
-
-    <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Asignar a jugadores</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:16px;">
-      ${playerCheckboxes}
-    </div>
-
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-b btn-sm" onclick="saveGroupPlan('${editId||''}')">
-        ${editId ? 'Guardar cambios' : 'Crear plan grupal'}
-      </button>
-      <button class="btn btn-g btn-sm" onclick="cancelGroupPlanForm()">Cancelar</button>
-    </div>
-  </div>`;
-}
-
-function showGroupPlanForm() {
-  editingGroupPlanId = null;
-  const container = document.getElementById('grupal-form-container');
-  if (container) {
-    container.innerHTML = renderGroupPlanForm(null);
-    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-}
-
-function editGroupPlan(id) {
-  editingGroupPlanId = id;
-  const container = document.getElementById('grupal-form-container');
-  if (container) {
-    container.innerHTML = renderGroupPlanForm(id);
-    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-}
-
-function cancelGroupPlanForm() {
-  editingGroupPlanId = null;
-  const container = document.getElementById('grupal-form-container');
-  if (container) container.innerHTML = '';
-}
-
-function saveGroupPlan(editId) {
-  const title = document.getElementById('gp-title')?.value?.trim() || '';
-  const week = document.getElementById('gp-week')?.value || lunesDeSemana(hoyChile());
-  const dia = document.getElementById('gp-dia')?.value || 'Lunes';
-  const sesion = document.getElementById('gp-sesion')?.value || 'Sesión 1';
-  const desc = document.getElementById('gp-desc')?.value?.trim() || '';
-  const exercises = document.getElementById('gp-exercises')?.value?.trim() || '';
-  const observations = document.getElementById('gp-observations')?.value?.trim() || '';
-
-  // Collect checked player IDs
-  const playerIds = data.players
-    .filter(p => document.getElementById(`gp-player-${p.id}`)?.checked)
-    .map(p => String(p.id));
-
-  if (!title) { alert('El título del plan es obligatorio'); return; }
-
-  if (!data.groupPlans) data.groupPlans = [];
-
-  const gpEntry = { desc, exercises, observations, dia, sesion, grupal: true };
-
-  if (editId) {
-    const idx = data.groupPlans.findIndex(p => p.id === editId);
-    if (idx === -1) return;
-    const old = data.groupPlans[idx];
-    const oldWeek = old.week;
-    const oldPlayerIds = old.playerIds || [];
-
-    // Remove grupal entry from players that were previously assigned but now aren't
-    const removed = oldPlayerIds.filter(id => !playerIds.includes(id));
-    removed.forEach(pid => {
-      const p = data.players.find(pl => String(pl.id) === pid);
-      if (p && p.weekPlans) {
-        p.weekPlans = p.weekPlans.filter(pl => !(pl.grupal && pl.week === oldWeek && pl._gpId === editId));
-      }
-    });
-
-    // Remove old grupal entries from players that are still assigned (will re-add below)
-    playerIds.forEach(pid => {
-      const p = data.players.find(pl => String(pl.id) === pid);
-      if (p && p.weekPlans) {
-        p.weekPlans = p.weekPlans.filter(pl => !(pl.grupal && pl.week === oldWeek && pl._gpId === editId));
-      }
-    });
-
-    data.groupPlans[idx] = { ...old, title, week, dia, sesion, desc, exercises, observations, playerIds, updatedAt: new Date().toISOString() };
-  } else {
-    const id = 'gp_' + Date.now();
-    data.groupPlans.push({ id, title, week, dia, sesion, desc, exercises, observations, playerIds, createdAt: new Date().toISOString() });
-    editId = id;
-  }
-
-  // Push/update grupal entry in each assigned player's weekPlans
-  playerIds.forEach(pid => {
-    const p = data.players.find(pl => String(pl.id) === pid);
-    if (!p) return;
-    if (!p.weekPlans) p.weekPlans = [];
-    // Remove any existing grupal entry for this plan+week
-    p.weekPlans = p.weekPlans.filter(pl => !(pl.grupal && pl._gpId === editId));
-    p.weekPlans.push({ week, grupal: true, _gpId: editId, ...gpEntry });
-  });
-
-  cancelGroupPlanForm();
-  scheduleSync();
-  renderMain();
-}
-
-function deleteGroupPlan(id) {
-  if (!confirm('¿Eliminar este plan grupal? Se quitará de todos los jugadores asignados.')) return;
-  const gp = (data.groupPlans || []).find(p => p.id === id);
-  if (gp) {
-    const week = gp.week;
-    // Remove from all players
-    data.players.forEach(p => {
-      if (p.weekPlans) {
-        p.weekPlans = p.weekPlans.filter(pl => !(pl.grupal && pl._gpId === id));
-      }
-    });
-  }
-  data.groupPlans = (data.groupPlans || []).filter(p => p.id !== id);
-  scheduleSync();
-  renderMain();
 }
 
 // ── SET PASSWORD MODAL ─────────────────────────────────────
