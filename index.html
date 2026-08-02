@@ -3345,7 +3345,7 @@ async function savePlayerModal(){
   else{
     const groupVal = document.getElementById('m-group')?.value || null;
     const newId=data.players.length;
-    data.players.push({...pd,id:newId,group_id:groupVal});
+    data.players.push({...pd,id:newId,group_id:groupVal,pkey:crypto.randomUUID()});
   }
   scheduleSync();closePlayerModal();renderAll();if(editingPlayerId!==null)pid=editingPlayerId;
 }
