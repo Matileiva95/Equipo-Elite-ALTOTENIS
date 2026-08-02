@@ -2866,25 +2866,8 @@ function renderPlan(p){
   const wKey=lunesDeSemana(hoyChile()),wLbl=weekLabel(wKey);
   const plans=p.weekPlans||[];
   const cur=plans.find(pl=>pl.week===wKey&&!pl.grupal)||{week:wKey,dias:{}};
-  const grupalEntry=plans.find(pl=>pl.week===wKey&&pl.grupal)||null;
   const hist=plans.filter(pl=>pl.week!==wKey&&!pl.grupal).slice(0,8);
-  const grupalSection=grupalEntry?`
-    <div class="card" style="margin-bottom:14px;border-left:3px solid var(--blue);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:15px;font-weight:600;">Plan grupal</span>
-          <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:500;">Grupal</span>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
-          <span class="week-badge" style="background:var(--bl);color:var(--bd);">${wLbl}</span>
-          ${grupalEntry.dia?`<span class="week-badge" style="background:var(--bl);color:var(--bd);">${grupalEntry.dia}</span>`:''}
-          ${grupalEntry.sesion?`<span class="week-badge" style="background:var(--bl);color:var(--bd);">${grupalEntry.sesion}</span>`:''}
-        </div>
-      </div>
-      ${grupalEntry.desc?`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Descripción</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.desc}</div></div>`:''}
-      ${grupalEntry.exercises?`<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Ejercicios y drills</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.exercises}</div></div>`:''}
-      ${grupalEntry.observations?`<div><div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Observaciones</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.observations}</div></div>`:''}
-    </div>`:'';
+  const grupalSection=renderGrupalTareasCard(p, wKey);
 
 
   // Inicializar días si no existen
@@ -2894,8 +2877,8 @@ function renderPlan(p){
     <div class="card" style="margin-bottom:14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <div style="font-size:15px;font-weight:600;">Plan ${grupalEntry?'individual':'semana actual'}</div>
-          ${grupalEntry?'<span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--ol);color:var(--od);font-weight:500;">Individual</span>':''}
+          <div style="font-size:15px;font-weight:600;">Plan ${grupalSection?'individual':'semana actual'}</div>
+          ${grupalSection?'<span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--ol);color:var(--od);font-weight:500;">Individual</span>':''}
         </div>
         <span class="week-badge">${wLbl}</span>
       </div>
@@ -6899,6 +6882,67 @@ function grupoIdDeNombre(name) {
 function planGrupoId(p) {
   // Tolerante a planes creados antes del backfill de 3.B2 parte 1 (sin campo grupo_id).
   return Object.prototype.hasOwnProperty.call(p, 'grupo_id') ? (p.grupo_id ?? null) : grupoIdDeNombre(p.grupo);
+}
+function normSesion(s) {
+  if (s === 's1' || s === 'Sesión 1') return 's1';
+  if (s === 's2' || s === 'Sesión 2') return 's2';
+  return null;
+}
+function tareaAplicaAJugador(tarea, playerKey) {
+  if (!tarea.playerIds || tarea.playerIds.length === 0) return true; // todo el grupo
+  if (!playerKey) return false; // guard: jugador sin pkey → asignadas no aplican
+  return tarea.playerIds.includes(playerKey);
+}
+function findGrupalPlanDeJugador(wKey, groupId) {
+  if (groupId == null) return null;
+  return (data.grupalPlanes || []).find(pl => pl.week === wKey && planGrupoId(pl) === groupId);
+}
+// NO usar getGrupalPlan acá: depende del global grupalGrupo y CREA planes
+// vacíos si no encuentra — un render de ficha no debe mutar datos.
+function renderGrupalTareasCard(p, wKey) {
+  const plan = findGrupalPlanDeJugador(wKey, p.group_id);
+  if (!plan || !plan.dias) return '';
+  const playerKey = p.pkey;
+  const sesLabel = s => ({s1:'Sesión 1', s2:'Sesión 2'})[normSesion(s)] || null;
+  const ordenSesion = s => ({s1:0, s2:1})[normSesion(s)] ?? 2;
+  const diasConTareas = DIAS.filter(dia => (plan.dias[dia]?.tareas || []).length > 0);
+  if (!diasConTareas.length) return '';
+
+  const diaBlocks = diasConTareas.map(dia => {
+    const tareas = [...plan.dias[dia].tareas].sort((a,b) => ordenSesion(a.sesion) - ordenSesion(b.sesion));
+    const items = tareas.map(t => {
+      const aplica = tareaAplicaAJugador(t, playerKey);
+      const otros = !aplica
+        ? (t.playerIds||[]).map(id => data.players.find(pl => pl.pkey === id)?.name).filter(Boolean)
+        : [];
+      const lbl = sesLabel(t.sesion);
+      return `<div style="${aplica?'':'opacity:.5;'}margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+          <span style="font-size:13px;font-weight:600;">${escHtml(t.title||'')}</span>
+          ${lbl?`<span class="week-badge" style="background:var(--bl);color:var(--bd);">${lbl}</span>`:''}
+          ${!aplica && otros.length?`<span style="font-size:11px;color:var(--g3);">→ ${otros.map(escHtml).join(', ')}</span>`:''}
+        </div>
+        ${t.desc?`<div style="font-size:13px;color:var(--g2);line-height:1.5;">${escHtml(t.desc)}</div>`:''}
+        ${t.exercises?`<div style="font-size:12px;color:var(--g3);margin-top:3px;">${escHtml(t.exercises)}</div>`:''}
+        ${t.observations?`<div style="font-size:12px;color:var(--g3);margin-top:3px;font-style:italic;">${escHtml(t.observations)}</div>`:''}
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${dia}</div>
+      ${items}
+    </div>`;
+  }).join('');
+
+  return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--blue);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:15px;font-weight:600;">Plan grupal</span>
+        <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:500;">Grupal</span>
+      </div>
+      <span class="week-badge" style="background:var(--bl);color:var(--bd);">${weekLabel(wKey)}</span>
+    </div>
+    ${diaBlocks}
+  </div>`;
 }
 function getGrupalPlan(wKey) {
   if (!data.grupalPlanes) data.grupalPlanes = [];
