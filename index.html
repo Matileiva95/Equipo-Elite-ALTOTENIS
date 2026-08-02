@@ -7501,7 +7501,11 @@ function renderGrupalMensual() {
             <span style="font-size:13px;font-weight:700;color:${weekATR.dark};">${weekLabel(wKey)}</span>
             <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:${weekATR.color};color:#fff;font-weight:700;">${weekATR.label} · ${weekATR.name}</span>
           </div>
-          <span id="mens-arrow-${wKey}" style="font-size:12px;color:${weekATR.dark};">${expanded?'▴':'▾'}</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button onclick="event.stopPropagation();abrirSemanaDesdeMes('${wKey}')"
+              style="font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid ${weekATR.color};background:transparent;color:${weekATR.dark};cursor:pointer;">Abrir semana →</button>
+            <span id="mens-arrow-${wKey}" style="font-size:12px;color:${weekATR.dark};">${expanded?'▴':'▾'}</span>
+          </div>
         </div>
         <div style="padding:10px 14px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
           ${miniGrid}
@@ -7546,6 +7550,13 @@ function renderGrupalMensual() {
       <button class="btn btn-g" onclick="window.print()">Imprimir / PDF</button>
       <span id="grupal-save-status" style="font-size:11px;margin-left:8px;color:var(--g3);"></span>
     </div>`;
+}
+
+function abrirSemanaDesdeMes(wKey) {
+  const todayMonday = lunesDeSemana(hoyChile());
+  grupalSemanaOffset = Math.round((new Date(wKey+'T12:00:00') - new Date(todayMonday+'T12:00:00')) / 604800000);
+  grupalTab = 'semanal';
+  renderMain();
 }
 
 function editGrupalSemanaHist(wKey) {
