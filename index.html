@@ -7088,20 +7088,23 @@ function toggleTareaModalDetalle(btn) {
   btn.textContent = open ? '+ Más detalles' : '− Más detalles';
 }
 function renderTareaModalBody(tarea) {
+  // Migración suave: si la tarea trae 'exercises' (formato viejo), se precarga
+  // concatenado al final de la descripción; al guardar queda unificado y exercises pasa a ''.
+  const descPrefill = tarea
+    ? [tarea.desc||'', (tarea.exercises||'').trim()].filter(Boolean).join('\n')
+    : '';
+  const tieneObs = !!(tarea && (tarea.observations||'').trim());
   return `
     <div class="fg fg-full"><label>Título</label><input type="text" id="tm-title" value="${tarea?escHtml(tarea.title||''):''}" placeholder="Ej: Trabajo de saque" /></div>
     <div class="fg fg-full"><label>Sesión</label>
       <div id="tm-sesion-toggle" style="display:flex;gap:6px;">${renderTareaSesionToggle()}</div>
     </div>
     <div class="fg fg-full"><label>Descripción</label>
-      <textarea id="tm-desc" style="width:100%;min-height:60px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;box-sizing:border-box;font-family:'DM Sans',sans-serif;" placeholder="Descripción de la tarea...">${tarea?escHtml(tarea.desc||''):''}</textarea>
+      <textarea id="tm-desc" style="width:100%;min-height:60px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;box-sizing:border-box;font-family:'DM Sans',sans-serif;" placeholder="Descripción de la tarea...">${escHtml(descPrefill)}</textarea>
     </div>
     <div class="fg fg-full">
-      <button type="button" onclick="toggleTareaModalDetalle(this)" style="font-size:11px;padding:3px 10px;border-radius:20px;border:1px dashed var(--border);background:transparent;color:var(--g3);cursor:pointer;">${(tarea&&((tarea.exercises||'').trim()||(tarea.observations||'').trim()))?'− Más detalles':'+ Más detalles'}</button>
-      <div style="display:${(tarea&&((tarea.exercises||'').trim()||(tarea.observations||'').trim()))?'block':'none'};margin-top:8px;">
-        <div class="fg fg-full"><label>Ejercicios</label>
-          <textarea id="tm-exercises" style="width:100%;min-height:50px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;box-sizing:border-box;font-family:'DM Sans',sans-serif;" placeholder="Ejercicios y drills...">${tarea?escHtml(tarea.exercises||''):''}</textarea>
-        </div>
+      <button type="button" onclick="toggleTareaModalDetalle(this)" style="font-size:11px;padding:3px 10px;border-radius:20px;border:1px dashed var(--border);background:transparent;color:var(--g3);cursor:pointer;">${tieneObs?'− Más detalles':'+ Más detalles'}</button>
+      <div style="display:${tieneObs?'block':'none'};margin-top:8px;">
         <div class="fg fg-full"><label>Observaciones</label>
           <textarea id="tm-observations" style="width:100%;min-height:50px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;box-sizing:border-box;font-family:'DM Sans',sans-serif;" placeholder="Observaciones...">${tarea?escHtml(tarea.observations||''):''}</textarea>
         </div>
@@ -7127,7 +7130,7 @@ function saveTareaModal() {
     title,
     desc: document.getElementById('tm-desc')?.value || '',
     sesion: tareaModalSesion,
-    exercises: document.getElementById('tm-exercises')?.value || '',
+    exercises: '', // fusionado en desc (D16) — se mantiene el campo por compatibilidad con renderPlan
     observations: document.getElementById('tm-observations')?.value || '',
     playerIds: tareaModalPlayerIds.length ? [...tareaModalPlayerIds] : null,
     createdAt: ctx.createdAt || now,
@@ -7159,12 +7162,6 @@ function saveGrupalSemanal(wKey) {
   scheduleSync();
   const btn = document.getElementById('gs-save-btn');
   if (btn) { btn.textContent = 'Guardado ✓'; btn.disabled = true; setTimeout(() => { btn.textContent = 'Guardar semana'; btn.disabled = false; }, 1800); }
-}
-function toggleGrupalEjercicios(btn) {
-  const ta = btn.nextElementSibling;
-  const open = ta.style.display !== 'none';
-  ta.style.display = open ? 'none' : 'block';
-  btn.textContent = open ? '+ Ejercicios' : '− Ejercicios';
 }
 function openLeerSesion(wKey, dia, ses) {
   const plan = (data.grupalPlanes || []).find(p =>
@@ -7341,11 +7338,11 @@ function renderGrupalSemanal() {
         <textarea placeholder="Descripción de la sesión..."
           style="width:100%;min-height:65px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
           oninput="setGrupalSesion('${wKey}','${dia}','${ses.key}','desc',this.value)">${ses.data.desc||''}</textarea>
-        <button onclick="toggleGrupalEjercicios(this)"
-          style="margin-top:6px;font-size:11px;padding:3px 10px;border-radius:20px;border:1px dashed var(--border);background:transparent;color:var(--g3);cursor:pointer;">+ Ejercicios</button>
-        <textarea placeholder="Lista de ejercicios y drills..."
-          style="display:${ses.data.ejercicios?'block':'none'};margin-top:6px;width:100%;min-height:55px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
-          oninput="setGrupalSesion('${wKey}','${dia}','${ses.key}','ejercicios',this.value)">${ses.data.ejercicios||''}</textarea>
+        ${(ses.data.ejercicios||'').trim() ? `
+        <div style="margin-top:6px;">
+          <div style="font-size:10px;color:var(--g4);margin-bottom:2px;">Ejercicios (formato anterior)</div>
+          <div style="font-size:12px;color:var(--g2);white-space:pre-line;">${escHtml(ses.data.ejercicios)}</div>
+        </div>` : ''}
         ${(() => {
           const tareasCol = tareasParaColumna(dData.tareas, ses.key);
           if (!tareasCol.length && grupalGrupo == null) return '';
