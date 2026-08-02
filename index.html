@@ -2880,6 +2880,7 @@ const TIPO_DIA_OPTS = ['Entrenamiento','Físico','Partido','Competencia'];
 function renderPlan(p){
   const wKey=lunesDeSemana(hoyChile()),wLbl=weekLabel(wKey);
   const plans=p.weekPlans||[];
+  // legacy guard: copias grupal:true eliminadas 2026-08
   const cur=plans.find(pl=>pl.week===wKey&&!pl.grupal)||{week:wKey,dias:{}};
   const hist=plans.filter(pl=>pl.week!==wKey&&!pl.grupal).slice(0,8);
   const grupalSection=renderGrupalTareasCard(p, wKey);
@@ -2981,6 +2982,7 @@ function renderPlan(p){
 
 function getTurnoData(wKey, dia, turno, p) {
   const plans = p.weekPlans || [];
+  // legacy guard: copias grupal:true eliminadas 2026-08
   let cur = plans.find(pl => pl.week === wKey && !pl.grupal);
   if (!cur) { cur = {week:wKey, dias:{}}; p.weekPlans = [...plans, cur]; }
   if (!cur.dias) cur.dias = {};
@@ -3019,6 +3021,7 @@ function setTurnoDesc(wKey, dia, turno, desc) {
 function toggleFoco(el,f){const cls=FOCO_CLS[f]||'fp-t';if(activeFocos.includes(f)){activeFocos=activeFocos.filter(x=>x!==f);el.className='fpill';}else{activeFocos.push(f);el.className='fpill '+cls;}}
 async function savePlan(wKey){
   const p=data.players[pid];p.weekPlans=p.weekPlans||[];
+  // legacy guard: copias grupal:true eliminadas 2026-08
   const existing=p.weekPlans.find(pl=>pl.week===wKey&&!pl.grupal)||{week:wKey,dias:{}};
   existing.updatedBy=user;existing.updatedAt=new Date().toLocaleString('es-CL');
   const idx=p.weekPlans.findIndex(pl=>pl.week===wKey&&!pl.grupal);
@@ -4890,7 +4893,7 @@ function toggleHistPlan(el) {
 }
 
 // ── PLAYER PORTAL ─────────────────────────────────────────
-let portalSection = 'plan';
+let portalSection = 'hoy';
 let portalPlayer = null;
 let portalObjectives = [];
 let portalAnalyses = [];
@@ -4936,7 +4939,6 @@ function switchPortalSection(s) {
 function renderPortalSection() {
   if (!portalPlayer) return `<div class="pp-empty">No se pudo cargar tu información.<br><button class="btn btn-o btn-sm" style="margin-top:12px;" onclick="loadPlayerPortal(sessionStorage.getItem('ciq_player_id'))">Reintentar</button></div>`;
   if (portalSection === 'hoy')       return renderPortalHoy();
-  if (portalSection === 'plan')      return renderPortalPlan();
   if (portalSection === 'semana')    return renderPortalSemana();
   if (portalSection === 'progreso')  return renderPortalProgreso();
   if (portalSection === 'scouting')    return renderPortalScouting();
@@ -5599,6 +5601,7 @@ function renderPortalSemana() {
   const today = new Date(); today.setHours(0,0,0,0);
   const wKey = weekKey(today);
   const plans = p.weekPlans || [];
+  // legacy guard: copias grupal:true eliminadas 2026-08
   const plan  = plans.find(pl => pl.week === wKey && !pl.grupal);
 
   const lunes = new Date(wKey + 'T12:00:00');
@@ -5694,6 +5697,7 @@ function renderPortalHoy() {
   const diaKey = diasSemana[now.getDay()];
   const wKey = lunesDeSemana(hoyChile());
   const plans = p.weekPlans || [];
+  // legacy guard: copias grupal:true eliminadas 2026-08
   const planSemana = plans.find(pl => pl.week === wKey && !pl.grupal);
   const diaData = planSemana?.dias?.[diaKey] || {};
   const turnos = Object.entries(diaData).filter(([, t]) => t && t.tipo !== 'descanso');
@@ -5808,74 +5812,6 @@ async function ppGuardarEval() {
     _ppNota = 0; _ppRpe = 0; _ppMood = 0;
     switchPortalSection('progreso');
   } catch { alert('Error al guardar. Intentá de nuevo.'); }
-}
-
-function renderPortalPlan() {
-  const p = portalPlayer;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const wKey = weekKey(today);
-  const plans = p.weekPlans || [];
-  const indCur  = plans.find(pl => pl.week === wKey && !pl.grupal);
-  const grupalEntry = plans.find(pl => pl.week === wKey && pl.grupal) || null;
-  const recentInd = indCur || plans.filter(pl => !pl.grupal).slice(-1)[0];
-  const dias   = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
-  const turnos = ['1er turno','2do turno'];
-
-  // ── Individual plan HTML ────────────────────────────────
-  let indHtml = '';
-  if (recentInd && recentInd.dias) {
-    dias.forEach(dia => {
-      const diaData = recentInd.dias[dia] || {};
-      let sessions = '';
-      turnos.forEach(turno => {
-        const t = diaData[turno];
-        if (!t) return;
-        const isDescanso = t.tipo === 'descanso';
-        const focos = (t.focos || []).join(', ') || '';
-        const desc = t.descripcion || '';
-        sessions += `<div class="pp-plan-session" style="${isDescanso ? 'color:var(--g3);font-style:italic;' : ''}">
-          <span style="font-weight:600;color:var(--g3);font-size:10px;">${turno}</span><br>
-          ${isDescanso ? 'Descanso' : `${focos}${desc ? ' — ' + desc : ''}`}
-        </div>`;
-      });
-      if (sessions) indHtml += `<div class="pp-plan-day"><div class="pp-plan-day-head">${dia}</div>${sessions}</div>`;
-    });
-  }
-
-  // ── Group plan HTML ─────────────────────────────────────
-  let grupalHtml = '';
-  if (grupalEntry) {
-    if (grupalEntry.desc)        grupalHtml += `<div style="margin-bottom:9px;"><div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Descripción</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.desc}</div></div>`;
-    if (grupalEntry.exercises)   grupalHtml += `<div style="margin-bottom:9px;"><div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Ejercicios</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.exercises}</div></div>`;
-    if (grupalEntry.observations)grupalHtml += `<div><div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Observaciones</div><div style="font-size:13px;color:var(--g2);line-height:1.5;">${grupalEntry.observations}</div></div>`;
-  }
-
-  const hasInd    = !!recentInd;
-  const hasGrupal = !!grupalEntry;
-
-  return `
-    <div class="pp-stat-row">
-      <div class="pp-stat"><div class="pp-stat-num">${p.ranking || '—'}</div><div class="pp-stat-lbl">Ranking</div></div>
-      <div class="pp-stat"><div class="pp-stat-num">${p.age || '—'}</div><div class="pp-stat-lbl">Años</div></div>
-      <div class="pp-stat"><div class="pp-stat-num">${(p.trainingLoad || []).length}</div><div class="pp-stat-lbl">Sesiones reg.</div></div>
-    </div>
-    ${hasGrupal ? `<div class="pp-card" style="border-left:3px solid var(--blue);">
-      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
-        <div class="pp-label" style="margin-bottom:0;">Plan grupal</div>
-        <span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:600;">Grupal</span>
-        ${grupalEntry.dia ? `<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:600;">${grupalEntry.dia}</span>` : ''}
-        ${grupalEntry.sesion ? `<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--bl);color:var(--bd);font-weight:600;">${grupalEntry.sesion}</span>` : ''}
-      </div>
-      ${grupalHtml || '<div class="pp-empty">Sin detalles</div>'}
-    </div>` : ''}
-    ${(hasInd || !hasGrupal) ? `<div class="pp-card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-        <div class="pp-label" style="margin-bottom:0;">Plan individual${!indCur && recentInd ? ' (más reciente)' : ''}</div>
-        ${hasGrupal ? '<span style="font-size:10px;padding:1px 7px;border-radius:20px;background:var(--ol);color:var(--od);font-weight:600;">Individual</span>' : ''}
-      </div>
-      ${indHtml || '<div class="pp-empty">Sin plan individual asignado esta semana</div>'}
-    </div>` : ''}
-    ${p.goal ? `<div class="pp-card"><div class="pp-label">Objetivo del coach</div><div style="font-size:13px;color:var(--g2);">${p.goal}</div></div>` : ''}`;
 }
 
 function renderPortalSession() {
