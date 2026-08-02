@@ -7205,6 +7205,59 @@ function openLeerFoco(wKey) {
   document.getElementById('leer-sesion-modal').classList.add('open');
 }
 
+function tareasParaColumna(tareas, sesKey) {
+  return (tareas || []).filter(t => {
+    const n = normSesion(t.sesion);
+    return sesKey === 's1' ? (n === 's1' || n === null) : n === 's2';
+  });
+}
+function renderTareaFila(t, wKey, dia) {
+  const aplicaTodos = !t.playerIds || t.playerIds.length === 0;
+  const asignados = aplicaTodos
+    ? `<span style="font-size:10px;color:var(--g3);flex-shrink:0;">Todo el grupo</span>`
+    : `<div style="display:flex;gap:2px;flex-shrink:0;">${t.playerIds.map(id => {
+        const pl = data.players.find(p => p.pkey === id);
+        return `<span title="${pl?escHtml(pl.name):'Jugador no encontrado'}" style="width:18px;height:18px;border-radius:50%;background:var(--bl);color:var(--bd);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${pl?ini(pl.name):'?'}</span>`;
+      }).join('')}</div>`;
+  const sinSesion = normSesion(t.sesion) === null;
+  const clickable = grupalGrupo != null;
+  const onclickAttr = clickable ? `onclick="openTareaModal('${wKey}','${dia}',null,'${t.id}')"` : '';
+  return `<div ${onclickAttr} style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;background:var(--g5);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:${clickable?'pointer':'default'};">
+    <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+      <span style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(t.title||'')}</span>
+      ${sinSesion?`<span class="week-badge" style="background:#fdecea;color:#e74c3c;font-size:10px;padding:1px 7px;flex-shrink:0;">sin sesión</span>`:''}
+    </div>
+    ${asignados}
+  </div>`;
+}
+function toggleCopiarDiaMenu(btn) {
+  const menu = btn.nextElementSibling;
+  const open = menu.style.display !== 'none';
+  menu.style.display = open ? 'none' : 'block';
+}
+function copiarDiaGrupal(wKey, diaOrigen, diaDestino) {
+  const plan = getGrupalPlan(wKey);
+  const origen = plan.dias[diaOrigen];
+  if (!origen) return;
+  const destino = plan.dias[diaDestino];
+  const destinoTieneContenido = !!(destino && (
+    (destino.s1?.desc || '').trim() || (destino.s1?.ejercicios || '').trim() ||
+    (destino.s2?.desc || '').trim() || (destino.s2?.ejercicios || '').trim() ||
+    (destino.tareas || []).length > 0
+  ));
+  if (destinoTieneContenido && !confirm(`${diaDestino} ya tiene contenido. ¿Sobrescribir con la copia de ${diaOrigen}?`)) return;
+  const nuevoDia = { tipo: origen.tipo, atr: origen.atr };
+  if (origen.s1) nuevoDia.s1 = { ...origen.s1 };
+  if (origen.s2) nuevoDia.s2 = { ...origen.s2 };
+  nuevoDia.tareas = (origen.tareas || []).map(t => ({
+    ...t,
+    id: 'gp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7)
+  }));
+  plan.dias[diaDestino] = nuevoDia;
+  scheduleGrupalSave();
+  renderGrupalContent();
+}
+
 function renderGrupalSemanal() {
   const base = new Date(); base.setHours(0,0,0,0);
   base.setDate(base.getDate() + grupalSemanaOffset * 7);
@@ -7293,8 +7346,31 @@ function renderGrupalSemanal() {
         <textarea placeholder="Lista de ejercicios y drills..."
           style="display:${ses.data.ejercicios?'block':'none'};margin-top:6px;width:100%;min-height:55px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:12px;outline:none;background:#fff;resize:vertical;font-family:'DM Sans',sans-serif;box-sizing:border-box;"
           oninput="setGrupalSesion('${wKey}','${dia}','${ses.key}','ejercicios',this.value)">${ses.data.ejercicios||''}</textarea>
+        ${(() => {
+          const tareasCol = tareasParaColumna(dData.tareas, ses.key);
+          if (!tareasCol.length && grupalGrupo == null) return '';
+          return `<div style="margin-top:8px;">
+            <div style="font-size:10px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Tareas</div>
+            ${tareasCol.map(t => renderTareaFila(t, wKey, dia)).join('')}
+            ${grupalGrupo != null ? `<button onclick="openTareaModal('${wKey}','${dia}','${ses.key}')" style="font-size:11px;padding:3px 10px;border-radius:20px;border:1px dashed var(--border);background:transparent;color:var(--g3);cursor:pointer;">+ Tarea</button>` : ''}
+          </div>`;
+        })()}
       </div>`;
     }).join('');
+
+    const diaTieneContenido = !isDescanso && !!(
+      (s1.desc||'').trim() || (s1.ejercicios||'').trim() ||
+      (s2.desc||'').trim() || (s2.ejercicios||'').trim() ||
+      (dData.tareas||[]).length > 0
+    );
+    const otrosDias = diasActivos.filter(d => d !== dia);
+    const copiarBtn = (diaTieneContenido && otrosDias.length > 0) ? `
+      <div style="position:relative;display:inline-block;">
+        <button onclick="toggleCopiarDiaMenu(this)" style="font-size:10px;padding:2px 8px;border-radius:20px;border:1px dashed ${diaATR.dark};background:transparent;color:${diaATR.dark};cursor:pointer;">Copiar a…</button>
+        <div style="display:none;position:absolute;top:100%;right:0;z-index:10;background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px;margin-top:4px;box-shadow:0 2px 8px rgba(0,0,0,.12);min-width:120px;">
+          ${otrosDias.map(destino => `<div onclick="copiarDiaGrupal('${wKey}','${dia}','${destino}')" style="padding:4px 8px;font-size:12px;cursor:pointer;border-radius:4px;white-space:nowrap;">${destino}</div>`).join('')}
+        </div>
+      </div>` : '';
 
     return `
       <div style="border:2px solid ${diaATR.color};border-radius:var(--r);overflow:hidden;margin-bottom:12px;">
@@ -7303,7 +7379,10 @@ function renderGrupalSemanal() {
             <span style="font-size:14px;font-weight:700;color:${diaATR.dark};">${dia}</span>
             <div style="display:flex;gap:4px;flex-wrap:wrap;">${tipoBtns}</div>
           </div>
-          <div style="display:flex;gap:3px;align-items:center;">${diaATRBtns}</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            ${copiarBtn}
+            <div style="display:flex;gap:3px;align-items:center;">${diaATRBtns}</div>
+          </div>
         </div>
         ${isDescanso
           ? `<div style="padding:14px;font-size:13px;color:var(--g3);font-style:italic;">Día de descanso</div>`
