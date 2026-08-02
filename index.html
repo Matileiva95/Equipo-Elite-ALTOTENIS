@@ -591,6 +591,21 @@ body{background:#faf7f2;color:#1a1a1a;}
   </div>
 </div>
 
+<div class="modal-overlay" id="tarea-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="tarea-modal-title">Nueva tarea</div>
+      <button class="modal-close" onclick="closeTareaModal()">×</button>
+    </div>
+    <div class="form-grid" id="tarea-modal-body"></div>
+    <div class="btn-row">
+      <button class="btn btn-o" id="tm-save-btn" onclick="saveTareaModal()">Guardar</button>
+      <button class="btn btn-g" onclick="closeTareaModal()">Cancelar</button>
+      <button class="btn btn-red btn-sm" id="tarea-modal-delete-btn" style="display:none;" onclick="deleteTareaModal()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <div id="player-panel">
   <div class="pp-header">
     <div class="pp-header-brand">
@@ -6992,6 +7007,143 @@ function setGrupalSesion(wKey, dia, ses, field, val) {
   if (!plan.dias[dia][ses]) plan.dias[dia][ses] = { desc: '', ejercicios: '' };
   plan.dias[dia][ses][field] = val;
   scheduleGrupalSave();
+}
+function saveTareaGrupal(wKey, dia, tareaObj) {
+  const plan = getGrupalPlan(wKey);
+  if (!plan.dias[dia]) plan.dias[dia] = {};
+  if (!plan.dias[dia].tareas) plan.dias[dia].tareas = [];
+  const idx = plan.dias[dia].tareas.findIndex(t => t.id === tareaObj.id);
+  if (idx >= 0) plan.dias[dia].tareas[idx] = tareaObj;
+  else plan.dias[dia].tareas.push(tareaObj);
+  scheduleGrupalSave();
+}
+function deleteTareaGrupal(wKey, dia, tareaId) {
+  const plan = getGrupalPlan(wKey);
+  if (!plan.dias[dia] || !plan.dias[dia].tareas) return;
+  plan.dias[dia].tareas = plan.dias[dia].tareas.filter(t => t.id !== tareaId);
+  scheduleGrupalSave();
+}
+
+// ── Modal de tareas del plan grupal ───────────────────────
+let tareaModalCtx = null; // {wKey, dia, editingId, createdAt}
+let tareaModalSesion = 's1';
+let tareaModalPlayerIds = [];
+
+function tareaModalGroupPlayers() {
+  return data.players.filter(pl => pl.group_id === grupalGrupo);
+}
+
+function openTareaModal(wKey, dia, sesionKey, tareaId) {
+  if (grupalGrupo == null) return; // D13: sin grupo activo no se crea/edita
+  const plan = getGrupalPlan(wKey);
+  if (!plan.dias[dia]) plan.dias[dia] = {};
+  const tarea = tareaId ? (plan.dias[dia].tareas || []).find(t => t.id === tareaId) : null;
+  tareaModalCtx = { wKey, dia, editingId: tarea ? tarea.id : null, createdAt: tarea ? tarea.createdAt : null };
+  tareaModalSesion = tarea ? (normSesion(tarea.sesion) || 's1') : (sesionKey || 's1');
+  tareaModalPlayerIds = tarea && tarea.playerIds ? [...tarea.playerIds] : [];
+  document.getElementById('tarea-modal-title').textContent = tarea ? 'Editar tarea' : 'Nueva tarea';
+  document.getElementById('tarea-modal-body').innerHTML = renderTareaModalBody(tarea);
+  document.getElementById('tarea-modal-delete-btn').style.display = tarea ? 'inline-flex' : 'none';
+  const saveBtn = document.getElementById('tm-save-btn');
+  if (saveBtn) saveBtn.disabled = false;
+  document.getElementById('tarea-modal').classList.add('open');
+}
+function closeTareaModal() {
+  document.getElementById('tarea-modal').classList.remove('open');
+  tareaModalCtx = null;
+}
+function renderTareaSesionToggle() {
+  return ['s1', 's2'].map(s => `<button type="button" onclick="setTareaModalSesion('${s}')"
+    style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;
+           border:2px solid ${tareaModalSesion===s?'var(--blue)':'var(--border)'};
+           background:${tareaModalSesion===s?'var(--bl)':'transparent'};
+           color:${tareaModalSesion===s?'var(--bd)':'var(--g3)'};">${s==='s1'?'Sesión 1':'Sesión 2'}</button>`).join('');
+}
+function setTareaModalSesion(s) {
+  tareaModalSesion = s;
+  const el = document.getElementById('tm-sesion-toggle');
+  if (el) el.innerHTML = renderTareaSesionToggle();
+}
+function renderTareaChips() {
+  const players = tareaModalGroupPlayers();
+  if (!players.length) return '<span style="font-size:12px;color:var(--g4);">Sin jugadores en este grupo</span>';
+  return players.map(pl => {
+    const sel = pl.pkey && tareaModalPlayerIds.includes(pl.pkey);
+    return `<button type="button" class="fpill${sel?' fp-t':''}" style="font-size:11px;padding:3px 10px;"
+      onclick="toggleTareaModalPlayer('${pl.pkey||''}')">${escHtml(pl.name)}</button>`;
+  }).join('');
+}
+function toggleTareaModalPlayer(pkey) {
+  if (!pkey) return;
+  tareaModalPlayerIds = tareaModalPlayerIds.includes(pkey)
+    ? tareaModalPlayerIds.filter(id => id !== pkey)
+    : [...tareaModalPlayerIds, pkey];
+  const el = document.getElementById('tm-chips');
+  if (el) el.innerHTML = renderTareaChips();
+}
+function toggleTareaModalDetalle(btn) {
+  const div = btn.nextElementSibling;
+  const open = div.style.display !== 'none';
+  div.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? '+ Más detalles' : '− Más detalles';
+}
+function renderTareaModalBody(tarea) {
+  return `
+    <div class="fg fg-full"><label>Título</label><input type="text" id="tm-title" value="${tarea?escHtml(tarea.title||''):''}" placeholder="Ej: Trabajo de saque" /></div>
+    <div class="fg fg-full"><label>Sesión</label>
+      <div id="tm-sesion-toggle" style="display:flex;gap:6px;">${renderTareaSesionToggle()}</div>
+    </div>
+    <div class="fg fg-full"><label>Descripción</label>
+      <textarea id="tm-desc" style="width:100%;min-height:60px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;box-sizing:border-box;font-family:'DM Sans',sans-serif;" placeholder="Descripción de la tarea...">${tarea?escHtml(tarea.desc||''):''}</textarea>
+    </div>
+    <div class="fg fg-full">
+      <button type="button" onclick="toggleTareaModalDetalle(this)" style="font-size:11px;padding:3px 10px;border-radius:20px;border:1px dashed var(--border);background:transparent;color:var(--g3);cursor:pointer;">${(tarea&&((tarea.exercises||'').trim()||(tarea.observations||'').trim()))?'− Más detalles':'+ Más detalles'}</button>
+      <div style="display:${(tarea&&((tarea.exercises||'').trim()||(tarea.observations||'').trim()))?'block':'none'};margin-top:8px;">
+        <div class="fg fg-full"><label>Ejercicios</label>
+          <textarea id="tm-exercises" style="width:100%;min-height:50px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;box-sizing:border-box;font-family:'DM Sans',sans-serif;" placeholder="Ejercicios y drills...">${tarea?escHtml(tarea.exercises||''):''}</textarea>
+        </div>
+        <div class="fg fg-full"><label>Observaciones</label>
+          <textarea id="tm-observations" style="width:100%;min-height:50px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;box-sizing:border-box;font-family:'DM Sans',sans-serif;" placeholder="Observaciones...">${tarea?escHtml(tarea.observations||''):''}</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="fg fg-full">
+      <label>Jugadores</label>
+      <div style="font-size:11px;color:var(--g3);margin-bottom:6px;">Sin selección = todo el grupo</div>
+      <div id="tm-chips" style="display:flex;flex-wrap:wrap;gap:6px;">${renderTareaChips()}</div>
+    </div>
+  `;
+}
+function saveTareaModal() {
+  const title = (document.getElementById('tm-title')?.value || '').trim();
+  if (!title) { alert('Ingresa el título de la tarea'); return; }
+  const ctx = tareaModalCtx;
+  if (!ctx) return;
+  const saveBtn = document.getElementById('tm-save-btn');
+  if (saveBtn) saveBtn.disabled = true;
+  const now = new Date().toISOString();
+  const tarea = {
+    id: ctx.editingId || ('gp_' + Date.now() + '_' + Math.random().toString(36).slice(2,7)),
+    title,
+    desc: document.getElementById('tm-desc')?.value || '',
+    sesion: tareaModalSesion,
+    exercises: document.getElementById('tm-exercises')?.value || '',
+    observations: document.getElementById('tm-observations')?.value || '',
+    playerIds: tareaModalPlayerIds.length ? [...tareaModalPlayerIds] : null,
+    createdAt: ctx.createdAt || now,
+    updatedAt: ctx.editingId ? now : null
+  };
+  saveTareaGrupal(ctx.wKey, ctx.dia, tarea);
+  closeTareaModal();
+  renderGrupalContent();
+}
+function deleteTareaModal() {
+  const ctx = tareaModalCtx;
+  if (!ctx || !ctx.editingId) return;
+  if (!confirm('¿Eliminar esta tarea?')) return;
+  deleteTareaGrupal(ctx.wKey, ctx.dia, ctx.editingId);
+  closeTareaModal();
+  renderGrupalContent();
 }
 function saveGrupalSemanal(wKey) {
   // grupalGrupo se usa implícitamente en setGrupalSesion/setGrupalFoco — al ser sincrónico
