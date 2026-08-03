@@ -4895,6 +4895,8 @@ function toggleHistPlan(el) {
 // ── PLAYER PORTAL ─────────────────────────────────────────
 let portalSection = 'hoy';
 let portalPlayer = null;
+let portalGrupalPlan = null;
+let portalWKey = null;
 let portalObjectives = [];
 let portalAnalyses = [];
 let portalCalendario = [];
@@ -4906,9 +4908,10 @@ async function loadPlayerPortal(playerId) {
   await loadFeatures();
   const token = sessionStorage.getItem('ciq_token');
   const h = {'Authorization': `Bearer ${token}`};
+  portalWKey = lunesDeSemana(hoyChile());
   try {
     const [playerRes, objRes, anlRes, calRes, progRes] = await Promise.all([
-      apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/my-data`, {headers: h}),
+      apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/my-data?week=${portalWKey}`, {headers: h}),
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/objectives`, {headers: h}),
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/match-analysis`, {headers: h}),
       apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/calendar`, {headers: h}),
@@ -4916,6 +4919,7 @@ async function loadPlayerPortal(playerId) {
     ]);
     const [playerData, objData, anlData, calData, progData] = await Promise.all([playerRes.json(), objRes.json(), anlRes.json(), calRes.json(), progRes.json()]);
     portalPlayer     = playerData.player || null;
+    portalGrupalPlan = playerData.grupalPlan || null;
     portalObjectives = objData.objectives || [];
     portalAnalyses   = anlData.analyses || [];
     portalCalendario = Array.isArray(calData) ? calData : [];
@@ -5596,10 +5600,36 @@ function renderPortalProgreso() {
     ${partidosHtml}`;
 }
 
+// Arma el HTML de las sesiones (s1/s2) de un día del plan grupal para el
+// portal: descripción de la sesión + SOLO las tareas que aplican al jugador
+// (tareaAplicaAJugador con su pkey). '' si el día no tiene nada que mostrar.
+function renderPortalDiaGrupal(gDia, pkey) {
+  if (!gDia) return '';
+  const sesiones = [
+    { key: 's1', label: 'Sesión 1', data: gDia.s1 },
+    { key: 's2', label: 'Sesión 2', data: gDia.s2 },
+  ];
+  return sesiones.map(ses => {
+    const desc = (ses.data?.desc || '').trim();
+    const tareas = tareasParaColumna(gDia.tareas, ses.key).filter(t => tareaAplicaAJugador(t, pkey));
+    if (!desc && !tareas.length) return '';
+    return `
+      <div style="border:1px solid #e8e8e8;border-radius:10px;padding:13px 14px;margin-bottom:9px;background:#fff;">
+        <div style="font-size:10px;font-weight:700;color:#FF6B00;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">${ses.label}</div>
+        ${desc ? `<div style="font-size:12px;color:#666;line-height:1.4;">${escHtml(desc)}</div>` : ''}
+        ${tareas.map(t => `
+          <div style="margin-top:6px;padding:8px 10px;background:#fafafa;border-radius:8px;">
+            <div style="font-size:12px;font-weight:600;color:#333;">${escHtml(t.title || '')}</div>
+            ${t.desc ? `<div style="font-size:11px;color:#888;margin-top:2px;">${escHtml(t.desc)}</div>` : ''}
+          </div>`).join('')}
+      </div>`;
+  }).join('');
+}
+
 function renderPortalSemana() {
   const p = portalPlayer;
   const today = new Date(); today.setHours(0,0,0,0);
-  const wKey = weekKey(today);
+  const wKey = portalWKey;
   const plans = p.weekPlans || [];
   // legacy guard: copias grupal:true eliminadas 2026-08
   const plan  = plans.find(pl => pl.week === wKey && !pl.grupal);
@@ -5621,7 +5651,11 @@ function renderPortalSemana() {
     const diaData = plan?.dias?.[dia] || {};
     const turnosActivos = turnos.map(t => diaData[t]).filter(Boolean);
     const esDescanso = turnosActivos.length > 0 && turnosActivos.every(t => t.tipo === 'descanso');
-    const libre = turnosActivos.length === 0;
+
+    const gDia = portalGrupalPlan?.dias?.[dia];
+    const grupalHtml = renderPortalDiaGrupal(gDia, p.pkey);
+    const tieneGrupal = !!grupalHtml;
+    const libre = !tieneGrupal && turnosActivos.length === 0;
 
     let badge = '';
     if (esHoy)
@@ -5634,7 +5668,9 @@ function renderPortalSemana() {
       badge = `<span style="background:#f0f0f0;color:#aaa;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;">LIBRE</span>`;
 
     let turnosHtml = '';
-    if (libre || esDescanso) {
+    if (tieneGrupal) {
+      turnosHtml = grupalHtml;
+    } else if (libre || esDescanso) {
       turnosHtml = `<div style="font-size:12px;color:#bbb;margin-top:6px;">${esDescanso ? 'Descanso' : 'Sin entrenamiento'}</div>`;
     } else {
       turnosActivos.forEach((t, ti) => {
@@ -5670,7 +5706,7 @@ function renderPortalSemana() {
       <div style="font-size:22px;font-weight:700;color:#222;">Mi semana</div>
     </div>
     ${html}
-    ${!plan ? `<div style="font-size:12px;color:#bbb;text-align:center;padding:8px 0;">No hay plan asignado para esta semana</div>` : ''}`;
+    ${(!plan && !portalGrupalPlan) ? `<div style="font-size:12px;color:#bbb;text-align:center;padding:8px 0;">No hay plan asignado para esta semana</div>` : ''}`;
 }
 
 function renderPortalHoy() {
@@ -5695,30 +5731,33 @@ function renderPortalHoy() {
   const msg = p.coachMessage || mensajes[Math.floor(Math.random() * mensajes.length)];
 
   const diaKey = diasSemana[now.getDay()];
-  const wKey = lunesDeSemana(hoyChile());
+  const wKey = portalWKey;
   const plans = p.weekPlans || [];
   // legacy guard: copias grupal:true eliminadas 2026-08
   const planSemana = plans.find(pl => pl.week === wKey && !pl.grupal);
   const diaData = planSemana?.dias?.[diaKey] || {};
   const turnos = Object.entries(diaData).filter(([, t]) => t && t.tipo !== 'descanso');
 
-  let entrenamientoHtml = '';
-  if (turnos.length === 0) {
-    entrenamientoHtml = `<div style="text-align:center;color:#999;padding:18px 0;font-size:13px;">Sin entrenamiento programado hoy</div>`;
-  } else {
-    turnos.forEach(([turnoNombre, t]) => {
-      const focos = (t.focos || []).join(' · ') || '';
-      const desc  = t.descripcion || '';
-      entrenamientoHtml += `
-        <div style="border:1px solid #e8e8e8;border-radius:10px;padding:13px 14px;margin-bottom:9px;background:#fff;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
-            <span style="font-size:10px;font-weight:700;color:#FF6B00;text-transform:uppercase;letter-spacing:.05em;">${turnoNombre}</span>
-            ${t.hora ? `<span style="font-size:11px;color:#999;">${t.hora}</span>` : ''}
-          </div>
-          ${focos ? `<div style="font-size:13px;font-weight:600;color:#222;margin-bottom:3px;">${focos}</div>` : ''}
-          ${desc  ? `<div style="font-size:12px;color:#666;line-height:1.4;">${desc}</div>` : ''}
-        </div>`;
-    });
+  const gDia = portalGrupalPlan?.dias?.[diaKey];
+  let entrenamientoHtml = renderPortalDiaGrupal(gDia, p.pkey);
+  if (!entrenamientoHtml) {
+    if (turnos.length === 0) {
+      entrenamientoHtml = `<div style="text-align:center;color:#999;padding:18px 0;font-size:13px;">Sin entrenamiento programado hoy</div>`;
+    } else {
+      turnos.forEach(([turnoNombre, t]) => {
+        const focos = (t.focos || []).join(' · ') || '';
+        const desc  = t.descripcion || '';
+        entrenamientoHtml += `
+          <div style="border:1px solid #e8e8e8;border-radius:10px;padding:13px 14px;margin-bottom:9px;background:#fff;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+              <span style="font-size:10px;font-weight:700;color:#FF6B00;text-transform:uppercase;letter-spacing:.05em;">${turnoNombre}</span>
+              ${t.hora ? `<span style="font-size:11px;color:#999;">${t.hora}</span>` : ''}
+            </div>
+            ${focos ? `<div style="font-size:13px;font-weight:600;color:#222;margin-bottom:3px;">${focos}</div>` : ''}
+            ${desc  ? `<div style="font-size:12px;color:#666;line-height:1.4;">${desc}</div>` : ''}
+          </div>`;
+      });
+    }
   }
 
   return `
