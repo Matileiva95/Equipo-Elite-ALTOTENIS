@@ -6893,35 +6893,45 @@ function renderGrupalTareasCard(p, wKey) {
   const plan = findGrupalPlanDeJugador(wKey, p.group_id);
   if (!plan || !plan.dias) return '';
   const playerKey = p.pkey;
-  const sesLabel = s => ({s1:'Sesión 1', s2:'Sesión 2'})[normSesion(s)] || null;
-  const ordenSesion = s => ({s1:0, s2:1})[normSesion(s)] ?? 2;
-  const diasConTareas = DIAS.filter(dia => (plan.dias[dia]?.tareas || []).length > 0);
-  if (!diasConTareas.length) return '';
+  const sesionesDef = [
+    { key: 's1', label: 'Sesión 1' },
+    { key: 's2', label: 'Sesión 2' },
+  ];
 
-  const diaBlocks = diasConTareas.map(dia => {
-    const tareas = [...plan.dias[dia].tareas].sort((a,b) => ordenSesion(a.sesion) - ordenSesion(b.sesion));
-    const items = tareas.map(t => {
-      const aplica = tareaAplicaAJugador(t, playerKey);
-      const otros = !aplica
-        ? (t.playerIds||[]).map(id => data.players.find(pl => pl.pkey === id)?.name).filter(Boolean)
-        : [];
-      const lbl = sesLabel(t.sesion);
-      return `<div style="${aplica?'':'opacity:.5;'}margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
-          <span style="font-size:13px;font-weight:600;">${escHtml(t.title||'')}</span>
-          ${lbl?`<span class="week-badge" style="background:var(--bl);color:var(--bd);">${lbl}</span>`:''}
-          ${!aplica && otros.length?`<span style="font-size:11px;color:var(--g3);">→ ${otros.map(escHtml).join(', ')}</span>`:''}
-        </div>
-        ${t.desc?`<div style="font-size:13px;color:var(--g2);line-height:1.5;">${escHtml(t.desc)}</div>`:''}
-        ${t.exercises?`<div style="font-size:12px;color:var(--g3);margin-top:3px;">${escHtml(t.exercises)}</div>`:''}
-        ${t.observations?`<div style="font-size:12px;color:var(--g3);margin-top:3px;font-style:italic;">${escHtml(t.observations)}</div>`:''}
+  const diaBlocks = DIAS_GP.map(dia => {
+    const dData = plan.dias[dia] || {};
+    const sesionesHtml = sesionesDef.map(ses => {
+      const desc = (dData[ses.key]?.desc || '').trim();
+      const tareas = tareasParaColumna(dData.tareas, ses.key).filter(t => tareaAplicaAJugador(t, playerKey));
+      if (!desc && !tareas.length) return null;
+      const items = tareas.map(t => {
+        const sinSesion = normSesion(t.sesion) === null;
+        return `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+            <span style="font-size:13px;font-weight:600;">${escHtml(t.title||'')}</span>
+            ${sinSesion?renderBadgeSinSesion():''}
+            ${renderPillDestinatario(t.playerIds)}
+          </div>
+          ${t.desc?`<div style="font-size:13px;color:var(--g2);line-height:1.5;">${escHtml(t.desc)}</div>`:''}
+          ${t.exercises?`<div style="font-size:12px;color:var(--g3);margin-top:3px;">${escHtml(t.exercises)}</div>`:''}
+          ${t.observations?`<div style="font-size:12px;color:var(--g3);margin-top:3px;font-style:italic;">${escHtml(t.observations)}</div>`:''}
+        </div>`;
+      }).join('');
+      return `<div style="margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">${ses.label}</div>
+        ${desc?`<div style="font-size:13px;color:var(--g2);line-height:1.5;margin-bottom:8px;">${escHtml(desc)}</div>`:''}
+        ${items}
       </div>`;
-    }).join('');
+    }).filter(Boolean).join('');
+
+    if (!sesionesHtml) return null;
     return `<div style="margin-bottom:10px;">
-      <div style="font-size:11px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${dia}</div>
-      ${items}
+      <div style="font-size:11px;font-weight:700;color:var(--g4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${dia}</div>
+      ${sesionesHtml}
     </div>`;
-  }).join('');
+  }).filter(Boolean);
+
+  if (!diaBlocks.length) return '';
 
   return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--blue);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
@@ -6931,7 +6941,7 @@ function renderGrupalTareasCard(p, wKey) {
       </div>
       <span class="week-badge" style="background:var(--bl);color:var(--bd);">${weekLabel(wKey)}</span>
     </div>
-    ${diaBlocks}
+    ${diaBlocks.join('')}
   </div>`;
 }
 function getGrupalPlan(wKey) {
@@ -7219,6 +7229,12 @@ function renderPillDestinatario(playerIds) {
   const iniciales = nombres.map(n => ini(n)).join(', ');
   return `<span style="font-size:10px;color:var(--od);font-weight:600;flex-shrink:0;">${escHtml(iniciales)}</span>`;
 }
+// Badge ÚNICO para tareas sin sesión asignada (normSesion(t.sesion) === null),
+// reusado tal cual por la ficha del jugador y la grilla semanal. No hay
+// variable CSS de rojo/error en el proyecto todavía — hex acá, en un solo lugar.
+function renderBadgeSinSesion() {
+  return `<span class="week-badge" style="background:#fdecea;color:#e74c3c;font-size:10px;padding:1px 7px;flex-shrink:0;">sin sesión</span>`;
+}
 function renderTareaFila(t, wKey, dia) {
   const asignados = renderPillDestinatario(t.playerIds);
   const sinSesion = normSesion(t.sesion) === null;
@@ -7227,7 +7243,7 @@ function renderTareaFila(t, wKey, dia) {
   return `<div ${onclickAttr} style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;background:var(--g5);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:${clickable?'pointer':'default'};">
     <div style="display:flex;align-items:center;gap:6px;min-width:0;">
       <span style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(t.title||'')}</span>
-      ${sinSesion?`<span class="week-badge" style="background:#fdecea;color:#e74c3c;font-size:10px;padding:1px 7px;flex-shrink:0;">sin sesión</span>`:''}
+      ${sinSesion?renderBadgeSinSesion():''}
     </div>
     ${asignados}
   </div>`;
