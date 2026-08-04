@@ -2853,10 +2853,6 @@ async function addRanking(){
   const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
 }
 
-// PLAN SEMANAL
-const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
-const TURNOS = ['1er turno','2do turno'];
-
 // GRUPAL SEMANAL
 const ATR_OPTS = [
   { id:'E',   label:'E',   name:'Estabilización', color:'#7C3AED', light:'#ede9fe', dark:'#5b21b6' },
@@ -2883,54 +2879,7 @@ function renderPlan(p){
   return grupalSection;
 }
 
-function getTurnoData(wKey, dia, turno, p) {
-  const plans = p.weekPlans || [];
-  // legacy guard: copias grupal:true eliminadas 2026-08
-  let cur = plans.find(pl => pl.week === wKey && !pl.grupal);
-  if (!cur) { cur = {week:wKey, dias:{}}; p.weekPlans = [...plans, cur]; }
-  if (!cur.dias) cur.dias = {};
-  if (!cur.dias[dia]) cur.dias[dia] = {};
-  if (!cur.dias[dia][turno]) cur.dias[dia][turno] = {tipo:'entrenamiento', focos:[], descripcion:''};
-  return cur.dias[dia][turno];
-}
-
-function setTurnoTipo(wKey, dia, turno, tipo) {
-  const p = data.players[pid];
-  const td = getTurnoData(wKey, dia, turno, p);
-  td.tipo = tipo;
-  scheduleSync();
-  const el = document.getElementById('dtab-content');
-  if(el) el.innerHTML = renderDtab();
-}
-
-function toggleTurnoFoco(wKey, dia, turno, foco) {
-  const p = data.players[pid];
-  const td = getTurnoData(wKey, dia, turno, p);
-  td.focos = td.focos || [];
-  if(td.focos.includes(foco)) td.focos = td.focos.filter(f=>f!==foco);
-  else td.focos.push(foco);
-  scheduleSync();
-  const el = document.getElementById('dtab-content');
-  if(el) el.innerHTML = renderDtab();
-}
-
-function setTurnoDesc(wKey, dia, turno, desc) {
-  const p = data.players[pid];
-  const td = getTurnoData(wKey, dia, turno, p);
-  td.descripcion = desc;
-  scheduleSync();
-}
-
 function toggleFoco(el,f){const cls=FOCO_CLS[f]||'fp-t';if(activeFocos.includes(f)){activeFocos=activeFocos.filter(x=>x!==f);el.className='fpill';}else{activeFocos.push(f);el.className='fpill '+cls;}}
-async function savePlan(wKey){
-  const p=data.players[pid];p.weekPlans=p.weekPlans||[];
-  // legacy guard: copias grupal:true eliminadas 2026-08
-  const existing=p.weekPlans.find(pl=>pl.week===wKey&&!pl.grupal)||{week:wKey,dias:{}};
-  existing.updatedBy=user;existing.updatedAt=new Date().toLocaleString('es-CL');
-  const idx=p.weekPlans.findIndex(pl=>pl.week===wKey&&!pl.grupal);
-  if(idx>=0)p.weekPlans[idx]=existing;else p.weekPlans.unshift(existing);
-  scheduleSync();const btn=event.target;btn.textContent='✓ Guardado';btn.style.background='#27ae60';setTimeout(()=>{btn.textContent='Guardar plan semanal';btn.style.background='';},1800);
-}
 // sugerirIA removido
 
 
@@ -4784,15 +4733,6 @@ function toggleStatDetail(card) {
   const isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
   if (arrow) arrow.textContent = isOpen ? 'Ver ▾' : 'Cerrar ▴';
-}
-
-function toggleHistPlan(el) {
-  const detail = el.querySelector('.hist-detail');
-  const arrow = el.querySelector('span:last-of-type');
-  if(!detail) return;
-  const isOpen = detail.style.display !== 'none';
-  detail.style.display = isOpen ? 'none' : 'block';
-  if(arrow) arrow.textContent = isOpen ? 'Ver más ▾' : 'Cerrar ▴';
 }
 
 // ── PLAYER PORTAL ─────────────────────────────────────────
