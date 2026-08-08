@@ -3184,18 +3184,18 @@ function closePlayerModal(){document.getElementById('player-modal').classList.re
 async function savePlayerModal(){
   const name=document.getElementById('m-name').value.trim();if(!name){alert('Ingresa el nombre del jugador');return;}
   const emailVal = (document.getElementById('m-email')?.value||'').trim();
-  const pd={
+  const managed={
     name,
     age:parseInt(document.getElementById('m-age').value)||0,
     ranking:document.getElementById('m-ranking')?.value||'',
     circuit:document.getElementById('m-circuit')?.value||'atp',
     gender:document.getElementById('m-gender').value,
     hand:document.getElementById('m-hand').value,
-    email:emailVal,
-    style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]
+    email:emailVal
   };
-  if(editingPlayerId!==null){data.players[editingPlayerId]={...data.players[editingPlayerId],...pd,id:editingPlayerId};}
+  if(editingPlayerId!==null){data.players[editingPlayerId]={...data.players[editingPlayerId],...managed,id:editingPlayerId};}
   else{
+    const pd={...managed,style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]};
     const groupVal = document.getElementById('m-group')?.value || null;
     const newId=data.players.length;
     data.players.push({...pd,id:newId,group_id:groupVal,pkey:crypto.randomUUID()});
