@@ -2819,11 +2819,14 @@ function renderPerfil(p){
 function setStar(n){activeStars=n;document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n));}
 async function saveProfile(){
   const p=data.players[pid];
+  const btn=event.target;
   p.style=document.getElementById('f-style')?.value||'';
   p.goal=document.getElementById('f-goal')?.value||'';
   p.stars=activeStars;
   p.updatedBy=user;
-  p.equipamiento={
+  scheduleSync();
+
+  const equipamiento={
     raqueta:document.getElementById('f-raqueta')?.value||'',
     grip:document.getElementById('f-grip')?.value||'',
     cuerdaPrincipal:document.getElementById('f-cuerda1')?.value||'',
@@ -2831,16 +2834,29 @@ async function saveProfile(){
     tension:document.getElementById('f-tension')?.value||'',
     balance:document.getElementById('f-balance')?.value||''
   };
-  p.equipoTrabajo={
+  const equipoTrabajo={
     fisico:document.getElementById('f-fisico')?.value||'',
     psicologo:document.getElementById('f-psicologo')?.value||'',
     nutricionista:document.getElementById('f-nutricionista')?.value||'',
     medico:document.getElementById('f-medico')?.value||''
   };
-  scheduleSync();
-  const btn=event.target;
-  btn.textContent='✓ Guardado';btn.style.background='#27ae60';
-  setTimeout(()=>{btn.textContent='Guardar perfil';btn.style.background='';},1800);
+  try{
+    const res=await apiFetch(`${BACKEND_URL}/api/v1/players/${p.id}/shared-profile`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({equipamiento,equipoTrabajo})
+    });
+    if(!res||!res.ok) throw new Error();
+    const d=await res.json();
+    p.equipamiento=d.equipamiento;
+    p.equipoTrabajo=d.equipoTrabajo;
+    p.sharedProfileMeta=d.sharedProfileMeta;
+    btn.textContent='✓ Guardado';btn.style.background='#27ae60';
+    setTimeout(()=>{btn.textContent='Guardar perfil';btn.style.background='';},1800);
+  }catch(e){
+    alert('Se guardó el resto del perfil, pero no se pudo guardar equipamiento / equipo de trabajo. Volvé a intentarlo.');
+    btn.textContent='Guardar perfil';btn.style.background='';
+  }
 }
 async function addRanking(){
   const month=document.getElementById('rank-month').value,val=parseInt(document.getElementById('rank-val').value);if(!val||val<1)return;
@@ -3184,10 +3200,10 @@ function closePlayerModal(){document.getElementById('player-modal').classList.re
 async function savePlayerModal(){
   const name=document.getElementById('m-name').value.trim();if(!name){alert('Ingresa el nombre del jugador');return;}
   const emailVal = (document.getElementById('m-email')?.value||'').trim();
+  const rankingVal = document.getElementById('m-ranking')?.value||'';
   const managed={
     name,
     age:parseInt(document.getElementById('m-age').value)||0,
-    ranking:document.getElementById('m-ranking')?.value||'',
     circuit:document.getElementById('m-circuit')?.value||'atp',
     gender:document.getElementById('m-gender').value,
     hand:document.getElementById('m-hand').value,
@@ -3195,12 +3211,32 @@ async function savePlayerModal(){
   };
   if(editingPlayerId!==null){data.players[editingPlayerId]={...data.players[editingPlayerId],...managed,id:editingPlayerId};}
   else{
-    const pd={...managed,style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]};
+    const pd={...managed,ranking:rankingVal,style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]};
     const groupVal = document.getElementById('m-group')?.value || null;
     const newId=data.players.length;
     data.players.push({...pd,id:newId,group_id:groupVal,pkey:crypto.randomUUID()});
   }
-  scheduleSync();closePlayerModal();renderAll();if(editingPlayerId!==null)pid=editingPlayerId;
+  scheduleSync();
+
+  if(editingPlayerId!==null){
+    const targetId=editingPlayerId;
+    try{
+      const res=await apiFetch(`${BACKEND_URL}/api/v1/players/${data.players[targetId].id}/shared-profile`,{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ranking:rankingVal})
+      });
+      if(!res||!res.ok) throw new Error();
+      const d=await res.json();
+      data.players[targetId].ranking=d.ranking;
+      data.players[targetId].sharedProfileMeta=d.sharedProfileMeta;
+    }catch(e){
+      alert('Los demás datos se guardaron, pero no se pudo actualizar el ranking. Volvé a intentarlo.');
+      return;
+    }
+  }
+
+  closePlayerModal();renderAll();if(editingPlayerId!==null)pid=editingPlayerId;
 }
 
 async function deletePlayer(){
