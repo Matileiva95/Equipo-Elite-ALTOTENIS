@@ -4957,6 +4957,17 @@ function renderPortalPerfil() {
   const mediano = objGuardados.mediano || '';
   const largo   = objGuardados.largo   || '';
 
+  const eq   = p.equipamiento  || {};
+  const team = p.equipoTrabajo || {};
+  const ranking = p.ranking || '';
+
+  const ppLabelCSS = `font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:block;`;
+  const ppInputCSS = `width:100%;border:1px solid #e0e0e0;border-radius:8px;padding:10px;font-size:13px;color:#333;font-family:inherit;box-sizing:border-box;background:#fff;`;
+  const ppEsc = (v) => String(v || '').replace(/"/g,'&quot;');
+  const ppOpt = (val, options) => options.map(([value,label]) =>
+    `<option value="${value}" ${val===value?'selected':''}>${label}</option>`
+  ).join('');
+
   return `
     <div style="margin-bottom:16px;">
       <div style="font-size:22px;font-weight:700;color:#222;">Mi perfil</div>
@@ -4995,7 +5006,105 @@ function renderPortalPerfil() {
         style="width:100%;padding:13px;background:#FF6B00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
         Guardar objetivos
       </button>
-    </div>`;
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">Mi ranking</div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:12px;">
+      <label style="${ppLabelCSS}">Ranking actual</label>
+      <input id="pp-ranking" type="text" value="${ppEsc(ranking)}" style="${ppInputCSS}" placeholder="Ej: 450 WTA">
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">Mi equipamiento</div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:12px;">
+      <label style="${ppLabelCSS}">Raqueta (marca y modelo)</label>
+      <input id="pp-eq-raqueta" type="text" value="${ppEsc(eq.raqueta)}" style="${ppInputCSS}margin-bottom:12px;" placeholder="Ej: Wilson Pro Staff 97 v13">
+
+      <label style="${ppLabelCSS}">Grip</label>
+      <select id="pp-eq-grip" style="${ppInputCSS}margin-bottom:12px;">
+        <option value="" ${!eq.grip?'selected':''}>Sin definir</option>
+        ${ppOpt(eq.grip||'', [['L1','L1'],['L2','L2'],['L3','L3'],['L4','L4'],['L5','L5']])}
+      </select>
+
+      <label style="${ppLabelCSS}">Encordado principal</label>
+      <input id="pp-eq-cuerda1" type="text" value="${ppEsc(eq.cuerdaPrincipal)}" style="${ppInputCSS}margin-bottom:12px;" placeholder="Ej: Poly Tour Pro 1.25mm">
+
+      <label style="${ppLabelCSS}">Encordado cruzado</label>
+      <input id="pp-eq-cuerda2" type="text" value="${ppEsc(eq.cuerdaCruzada)}" style="${ppInputCSS}margin-bottom:12px;" placeholder="Ej: Poly Tour Spin 1.25mm">
+
+      <label style="${ppLabelCSS}">Tensión habitual</label>
+      <input id="pp-eq-tension" type="text" value="${ppEsc(eq.tension)}" style="${ppInputCSS}margin-bottom:12px;" placeholder="Ej: 20 kg / 44 lbs">
+
+      <label style="${ppLabelCSS}">Balance de raqueta</label>
+      <select id="pp-eq-balance" style="${ppInputCSS}">
+        <option value="" ${!eq.balance?'selected':''}>Sin definir</option>
+        ${ppOpt(eq.balance||'', [['Cabeza pesada','Cabeza pesada'],['Equilibrada','Equilibrada'],['Mango pesado','Mango pesado']])}
+      </select>
+    </div>
+
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">Mi equipo de trabajo</div>
+    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:14px;">
+      <label style="${ppLabelCSS}">Preparador físico</label>
+      <input id="pp-team-fisico" type="text" value="${ppEsc(team.fisico)}" style="${ppInputCSS}margin-bottom:12px;" placeholder="Nombre y contacto">
+
+      <label style="${ppLabelCSS}">Psicólogo deportivo</label>
+      <input id="pp-team-psicologo" type="text" value="${ppEsc(team.psicologo)}" style="${ppInputCSS}margin-bottom:12px;" placeholder="Nombre y contacto">
+
+      <label style="${ppLabelCSS}">Nutricionista</label>
+      <input id="pp-team-nutricionista" type="text" value="${ppEsc(team.nutricionista)}" style="${ppInputCSS}margin-bottom:12px;" placeholder="Nombre y contacto">
+
+      <label style="${ppLabelCSS}">Médico / Kinesiólogo</label>
+      <input id="pp-team-medico" type="text" value="${ppEsc(team.medico)}" style="${ppInputCSS}" placeholder="Nombre y contacto">
+    </div>
+
+    <button id="pp-perfil-save-btn" onclick="ppGuardarPerfilCompartido()"
+      style="width:100%;padding:13px;background:#FF6B00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">
+      Guardar perfil
+    </button>
+    <div id="pp-perfil-feedback" style="font-size:12px;font-weight:600;margin-top:8px;min-height:16px;text-align:center;"></div>`;
+}
+
+async function ppGuardarPerfilCompartido() {
+  const equipamiento = {
+    raqueta:         document.getElementById('pp-eq-raqueta')?.value        || '',
+    grip:            document.getElementById('pp-eq-grip')?.value           || '',
+    cuerdaPrincipal: document.getElementById('pp-eq-cuerda1')?.value        || '',
+    cuerdaCruzada:   document.getElementById('pp-eq-cuerda2')?.value        || '',
+    tension:         document.getElementById('pp-eq-tension')?.value        || '',
+    balance:         document.getElementById('pp-eq-balance')?.value        || ''
+  };
+  const equipoTrabajo = {
+    fisico:          document.getElementById('pp-team-fisico')?.value       || '',
+    psicologo:       document.getElementById('pp-team-psicologo')?.value    || '',
+    nutricionista:   document.getElementById('pp-team-nutricionista')?.value|| '',
+    medico:          document.getElementById('pp-team-medico')?.value       || ''
+  };
+  const ranking = document.getElementById('pp-ranking')?.value || '';
+
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  const btn      = document.getElementById('pp-perfil-save-btn');
+  const feedback = document.getElementById('pp-perfil-feedback');
+
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/shared-profile`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ equipamiento, equipoTrabajo, ranking })
+    });
+    if (!res || !res.ok) throw new Error();
+    const d = await res.json();
+    portalPlayer.equipamiento = d.equipamiento;
+    portalPlayer.equipoTrabajo = d.equipoTrabajo;
+    portalPlayer.ranking = d.ranking;
+    portalPlayer.sharedProfileMeta = d.sharedProfileMeta;
+    if (feedback) { feedback.textContent = '✓ Perfil guardado'; feedback.style.color = '#27ae60'; }
+    if (btn) {
+      const original = 'Guardar perfil';
+      btn.textContent = '✓ Guardado'; btn.style.background = '#27ae60';
+      setTimeout(() => { btn.textContent = original; btn.style.background = '#FF6B00'; if (feedback) feedback.textContent = ''; }, 1800);
+    }
+  } catch (e) {
+    if (feedback) { feedback.textContent = 'No se pudo guardar tu perfil. Intentá de nuevo.'; feedback.style.color = '#e74c3c'; }
+  }
 }
 
 async function ppGuardarObjetivos() {
