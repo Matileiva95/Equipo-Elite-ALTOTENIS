@@ -4834,6 +4834,22 @@ let portalProgreso = null;
 let _ppRpe = 0, _ppMood = 0, _ppEditIdx = null;
 let _coachPortalCache = {};  // { [playerId]: { objectives, analyses, ts } }
 
+// ── PERFIL COMPARTIDO: aviso lado jugador ────────────────────
+function hasPendingPlayerAlert(p){
+  const m=p&&p.sharedProfileMeta;
+  return !!(m&&m.lastEditedBy==='coach'&&m.seenByPlayer===false);
+}
+async function markSharedProfileSeenIfPendingPlayer(){
+  if(!hasPendingPlayerAlert(portalPlayer))return;
+  const playerId=sessionStorage.getItem('ciq_player_id');
+  try{
+    const res=await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/shared-profile/seen`,{method:'POST'});
+    if(!res||!res.ok)return;
+    const d=await res.json();
+    if(d.sharedProfileMeta)portalPlayer.sharedProfileMeta=d.sharedProfileMeta;
+  }catch(e){}
+}
+
 async function loadPlayerPortal(playerId) {
   await loadFeatures();
   const token = sessionStorage.getItem('ciq_token');
@@ -4868,6 +4884,7 @@ function switchPortalSection(s) {
   const el = document.getElementById('pp-content');
   if (el) el.innerHTML = renderPortalSection();
   window.scrollTo(0,0);
+  if (s === 'perfil') markSharedProfileSeenIfPendingPlayer();
 }
 
 function renderPortalSection() {
@@ -5019,10 +5036,20 @@ function renderPortalPerfil() {
     `<option value="${value}" ${val===value?'selected':''}>${label}</option>`
   ).join('');
 
+  const pendingPlayerAlert = hasPendingPlayerAlert(p);
+  const ppChangedSet = new Set(pendingPlayerAlert?(p.sharedProfileMeta.changedFields||[]):[]);
+  const ppDot = `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#FF6B00;margin-left:5px;vertical-align:middle;"></span>`;
+
   return `
     <div style="margin-bottom:16px;">
       <div style="font-size:22px;font-weight:700;color:#222;">Mi perfil</div>
     </div>
+
+    ${pendingPlayerAlert?`
+    <div style="background:#FFF3EC;border:1px solid #FFD3AD;border-radius:12px;padding:13px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:16px;">🔔</span>
+      <div style="flex:1;font-size:13px;color:#7a3d00;">Tu entrenador actualizó: <strong>${sharedProfileChangedLabel(p.sharedProfileMeta.changedFields)}</strong></div>
+    </div>`:''}
 
     <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Próximas competencias</div>
     ${competenciasHtml}
@@ -5059,13 +5086,13 @@ function renderPortalPerfil() {
       </button>
     </div>
 
-    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">Mi ranking</div>
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">Mi ranking${ppChangedSet.has('ranking')?ppDot:''}</div>
     <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:12px;">
       <label style="${ppLabelCSS}">Ranking actual</label>
       <input id="pp-ranking" type="text" value="${ppEsc(ranking)}" style="${ppInputCSS}" placeholder="Ej: 450 WTA">
     </div>
 
-    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">Mi equipamiento</div>
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">Mi equipamiento${ppChangedSet.has('equipamiento')?ppDot:''}</div>
     <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:12px;">
       <label style="${ppLabelCSS}">Raqueta (marca y modelo)</label>
       <input id="pp-eq-raqueta" type="text" value="${ppEsc(eq.raqueta)}" style="${ppInputCSS}margin-bottom:12px;" placeholder="Ej: Wilson Pro Staff 97 v13">
@@ -5092,7 +5119,7 @@ function renderPortalPerfil() {
       </select>
     </div>
 
-    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">Mi equipo de trabajo</div>
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 10px;">Mi equipo de trabajo${ppChangedSet.has('equipoTrabajo')?ppDot:''}</div>
     <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px;margin-bottom:14px;">
       <label style="${ppLabelCSS}">Preparador físico</label>
       <input id="pp-team-fisico" type="text" value="${ppEsc(team.fisico)}" style="${ppInputCSS}margin-bottom:12px;" placeholder="Nombre y contacto">
