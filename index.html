@@ -1446,11 +1446,46 @@ function setGrupalSaveStatus(s) {
   if (s === 'error')  { el.textContent = 'Sin conexión ⚠ — tus cambios están en el navegador'; el.style.color = '#EF4444'; }
 }
 
+// ── PERFIL COMPARTIDO: aviso lado coach ──────────────────────
+function hasPendingCoachAlert(p){
+  const m=p&&p.sharedProfileMeta;
+  return !!(m&&m.lastEditedBy==='player'&&m.seenByCoach===false);
+}
+const SHARED_PROFILE_FIELD_LABELS={equipamiento:'equipamiento',equipoTrabajo:'equipo de trabajo',ranking:'ranking'};
+function sharedProfileChangedLabel(changedFields){
+  const labels=(changedFields||[]).map(f=>SHARED_PROFILE_FIELD_LABELS[f]).filter(Boolean);
+  if(!labels.length)return'';
+  if(labels.length===1)return labels[0];
+  return labels.slice(0,-1).join(', ')+' y '+labels[labels.length-1];
+}
+function timeAgoEs(iso){
+  if(!iso)return'';
+  const diffMs=Date.now()-new Date(iso).getTime();
+  const mins=Math.floor(diffMs/60000);
+  if(mins<1)return'recién';
+  if(mins<60)return`hace ${mins} min`;
+  const hrs=Math.floor(mins/60);
+  if(hrs<24)return`hace ${hrs}h`;
+  const days=Math.floor(hrs/24);
+  return`hace ${days}d`;
+}
+async function markSharedProfileSeenIfPending(idx){
+  const p=data.players[idx];
+  if(!hasPendingCoachAlert(p))return;
+  try{
+    const res=await apiFetch(`${BACKEND_URL}/api/v1/players/${p.id}/shared-profile/seen`,{method:'POST'});
+    if(!res||!res.ok)return;
+    const d=await res.json();
+    if(d.sharedProfileMeta)p.sharedProfileMeta=d.sharedProfileMeta;
+  }catch(e){}
+}
+
 // ── NAV ───────────────────────────────────────────────────
 function navTo(p,id){
   page=p;if(id!==undefined)pid=id;dtab='perfil';selMode=false;selectedDays=new Set();closeDrawer();renderAll();window.scrollTo(0,0);
   // Pushear estado para que el botón atrás funcione en móvil
   if(history.pushState) history.pushState({page:p,pid:id}, '', '');
+  if(p==='player'&&id!=null) markSharedProfileSeenIfPending(id);
 }
 let activeGroup = null;
 function renderGroupFilter() {
@@ -1572,6 +1607,14 @@ function renderDashboard(){
       if(sinReg.length)alertsAmber.push({name:`Grupo ${g.name}`,pid:null,msg:'Asistencia no registrada hoy'});
     });
   }
+
+  // AMBER: jugador actualizó su perfil compartido y el coach todavía no lo vio
+  allPlayers.forEach((p,i)=>{
+    if(activeGroup&&p.group_id!==activeGroup)return;
+    if(hasPendingCoachAlert(p)){
+      alertsAmber.push({name:p.name,pid:i,msg:`Actualizó su perfil · ${timeAgoEs(p.sharedProfileMeta.lastEditedAt)}`});
+    }
+  });
 
   const noAlerts=!alertsRed.length&&!alertsAmber.length;
   const alertsCollapsed=localStorage.getItem('dashboard_alerts_collapsed')==='1';
@@ -2737,7 +2780,15 @@ function renderPerfil(p){
   const maxRank=history.length?Math.max(...history.map(r=>r.rank)):1000;
   const eq=p.equipamiento||{};
   const team=p.equipoTrabajo||{};
+  const pendingAlert=hasPendingCoachAlert(p);
+  const changedSet=new Set(pendingAlert?(p.sharedProfileMeta.changedFields||[]):[]);
+  const dot=`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#FF6B00;margin-left:5px;vertical-align:middle;"></span>`;
   return `
+  ${pendingAlert?`
+  <div style="background:#FFF3EC;border:1px solid #FFD3AD;border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+    <span style="font-size:16px;">🔔</span>
+    <div style="flex:1;font-size:13px;color:#7a3d00;"><strong>${p.name}</strong> actualizó: ${sharedProfileChangedLabel(p.sharedProfileMeta.changedFields)} · ${timeAgoEs(p.sharedProfileMeta.lastEditedAt)}</div>
+  </div>`:''}
   <div class="card" style="margin-bottom:14px;">
     <div style="font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
       <span style="background:var(--orange);color:#fff;border-radius:6px;padding:3px 8px;font-size:11px;">Perfil</span>
@@ -2759,7 +2810,7 @@ function renderPerfil(p){
       </div>
     </div>
 
-    <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Equipamiento</div>
+    <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Equipamiento${changedSet.has('equipamiento')?dot:''}</div>
     <div class="form-grid" style="margin-bottom:14px;">
       <div class="fg"><label>Raqueta (marca y modelo)</label><input id="f-raqueta" value="${eq.raqueta||''}" placeholder="Ej: Wilson Pro Staff 97 v13" /></div>
       <div class="fg"><label>Grip</label>
@@ -2781,7 +2832,7 @@ function renderPerfil(p){
       </div>
     </div>
 
-    <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Equipo de trabajo</div>
+    <div style="font-size:12px;font-weight:600;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Equipo de trabajo${changedSet.has('equipoTrabajo')?dot:''}</div>
     <div class="form-grid" style="margin-bottom:16px;">
       <div class="fg"><label>Preparador físico</label><input id="f-fisico" value="${team.fisico||''}" placeholder="Nombre y contacto" /></div>
       <div class="fg"><label>Psicólogo deportivo</label><input id="f-psicologo" value="${team.psicologo||''}" placeholder="Nombre y contacto" /></div>
@@ -2794,7 +2845,7 @@ function renderPerfil(p){
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
       <div style="font-size:14px;font-weight:600;">Evolución de ranking</div>
-      <span class="badge b-${p.circuit}" style="font-size:12px;">${p.ranking} actual</span>
+      <span class="badge b-${p.circuit}" style="font-size:12px;">${p.ranking} actual</span>${changedSet.has('ranking')?dot:''}
     </div>
     ${history.length===0?'<div class="empty" style="padding:16px;">Sin historial. Agrega el primer dato abajo.</div>':''}
     <div>
