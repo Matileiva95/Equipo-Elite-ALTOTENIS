@@ -625,7 +625,7 @@ body{background:#faf7f2;color:#1a1a1a;}
     <button class="pp-nav-btn" id="ppnav-semana"   onclick="switchPortalSection('semana')">   <span class="pp-nav-icon">📅</span>Semana</button>
     <button class="pp-nav-btn" id="ppnav-progreso" onclick="switchPortalSection('progreso')"> <span class="pp-nav-icon">📈</span>Progreso</button>
     <button class="pp-nav-btn" id="ppnav-scouting"    onclick="switchPortalSection('scouting')">    <span class="pp-nav-icon">🔍</span>Scouting</button>
-    <button class="pp-nav-btn" id="ppnav-calendario" onclick="switchPortalSection('calendario')"> <span class="pp-nav-icon">🗓️</span>Gira</button>
+    <button class="pp-nav-btn" id="ppnav-calendario" onclick="switchPortalSection('calendario')"> <span class="pp-nav-icon">🗓️</span>Torneos/Giras</button>
     <button class="pp-nav-btn" id="ppnav-perfil"     onclick="switchPortalSection('perfil')">     <span class="pp-nav-icon">👤</span>Perfil</button>
   </nav>
 </div>
@@ -4908,6 +4908,7 @@ function renderPortalCalendario() {
   const eventos = portalCalendario;
 
   const SURFACE_ICON = { ARCILLA: '🟤', CEMENTO: '⬜', HIERBA: '🟢', INDOOR: '🔵' };
+  const cap = s => (s || '').toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
 
   function weekToRange(week) {
     const [year, wPart] = week.split('-W');
@@ -4919,9 +4920,10 @@ function renderPortalCalendario() {
     lunes.setDate(startOfWeek1.getDate() + (w - 1) * 7);
     const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
     const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-    const desde = `${lunes.getDate()} ${meses[lunes.getMonth()]}`;
-    const hasta = `${domingo.getDate()} ${meses[domingo.getMonth()]} ${domingo.getFullYear()}`;
-    return `${desde} – ${hasta}`;
+    if (lunes.getMonth() === domingo.getMonth()) {
+      return `${lunes.getDate()}–${domingo.getDate()} ${meses[domingo.getMonth()]} ${domingo.getFullYear()}`;
+    }
+    return `${lunes.getDate()} ${meses[lunes.getMonth()]} – ${domingo.getDate()} ${meses[domingo.getMonth()]} ${domingo.getFullYear()}`;
   }
 
   function isPast(week) {
@@ -4937,10 +4939,10 @@ function renderPortalCalendario() {
 
   if (!eventos.length) return `
     <div style="margin-bottom:16px;">
-      <div style="font-size:22px;font-weight:700;color:#222;">Mi calendario</div>
+      <div style="font-size:22px;font-weight:700;color:#222;">Torneos / Giras</div>
     </div>
     <div style="text-align:center;padding:48px 16px;color:#bbb;font-size:14px;">
-      No hay eventos de gira registrados aún.
+      No hay torneos registrados aún.
     </div>`;
 
   const proximos = eventos.filter(e => !isPast(e.week));
@@ -4948,29 +4950,22 @@ function renderPortalCalendario() {
 
   function renderCard(ev) {
     const past = isPast(ev.week);
-    const surfIcon = SURFACE_ICON[ev.surface] || '🎾';
-    const jugadores = (ev.players || []).map(p => p.full_name || '—').join(', ') || '—';
-    const coaches   = (ev.coaches  || []).map(c => c.full_name || '—').join(', ') || '—';
+    const lugar = [cap(ev.city), cap(ev.country)].filter(Boolean).join(', ');
+    const jugadores = (ev.players || []).map(p => p.full_name || '—').join(', ');
+    const coaches   = (ev.coaches  || []).map(c => c.full_name || '—').join(', ');
     return `
       <div style="background:#fff;border:1px solid ${past ? '#f0f0f0' : '#e8e8e8'};border-radius:14px;padding:14px 16px;margin-bottom:10px;opacity:${past ? '.6' : '1'};">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
-          <div>
-            <div style="font-size:15px;font-weight:700;color:#222;">${ev.city}, ${ev.country}</div>
-            <div style="font-size:12px;color:#999;margin-top:1px;">${weekToRange(ev.week)}</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;">
-            <div style="font-size:11px;font-weight:700;color:#FF6B00;background:#FFF3EC;border-radius:6px;padding:3px 8px;display:inline-block;">${ev.level}</div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#666;border-top:1px solid #f5f5f5;padding-top:8px;margin-top:2px;">
-          <span>${surfIcon} ${ev.surface.charAt(0) + ev.surface.slice(1).toLowerCase()}</span>
-          <span>👥 ${jugadores}</span>
-          ${coaches !== '—' ? `<span>🎓 ${coaches}</span>` : ''}
+        <div style="font-size:15px;font-weight:700;color:#222;">${ev.level || 'Torneo'}</div>
+        <div style="font-size:12px;color:#999;margin-top:1px;margin-bottom:8px;">${weekToRange(ev.week)}</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#666;border-top:1px solid #f5f5f5;padding-top:8px;">
+          ${lugar ? `<span>📍 ${lugar}${ev.surface ? ` · ${SURFACE_ICON[ev.surface] || '🎾'} ${cap(ev.surface)}` : ''}</span>` : ''}
+          ${jugadores ? `<span>👥 ${jugadores}</span>` : ''}
+          ${coaches ? `<span>🎓 Con: ${coaches}</span>` : ''}
         </div>
       </div>`;
   }
 
-  let html = `<div style="margin-bottom:16px;"><div style="font-size:22px;font-weight:700;color:#222;">Mi calendario</div></div>`;
+  let html = `<div style="margin-bottom:16px;"><div style="font-size:22px;font-weight:700;color:#222;">Torneos / Giras</div></div>`;
 
   if (proximos.length) {
     html += `<div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Próximos eventos</div>`;
