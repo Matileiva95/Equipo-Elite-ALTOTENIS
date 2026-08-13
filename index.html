@@ -7932,6 +7932,12 @@ const GIRA_LEVELS = [
   'COSAT G4','COSAT G3','COSAT G2','COSAT G1','NG3','NG2','N1','NACIONAL',
   'J500','J300','J200','J100','J60','J30','ENTRENAMIENTO','OTRO'
 ];
+const INSCRIPTION_STATUS = {
+  pendiente:     { label: 'Pendiente inscripción', color: '#9AA0A6' },
+  por_confirmar: { label: 'Por confirmar',          color: '#E8A317' },
+  inscrito:      { label: 'Inscrito',               color: '#2E9E5B' },
+  retirado:      { label: 'Retirado (No va)',       color: '#C2453D' },
+};
 let giraActiveGroup = 'all';
 let giraActiveTab = 'proximos';
 let giraDestinos = JSON.parse(localStorage.getItem('gira_destinos') || '{"ciudades":[],"paises":[]}');
@@ -8266,12 +8272,12 @@ function giraRenderCalendar() {
           <span class="gira-week-badge">${evs.length} evento${evs.length>1?'s':''}</span>
         </div>
         ${evs.map(ev => {
-          const players = (ev.player_ids||[]).map(id => { const p=(giraPlayers||[]).find(x=>x.id===id); return p?p.full_name:''; }).filter(Boolean);
+          const players = (ev.player_ids||[]).map(id => { const p=(giraPlayers||[]).find(x=>x.id===id); return p?{id, name:p.full_name}:null; }).filter(Boolean);
           const coaches = (ev.coach_ids||[]).map(id => { const c=(giraCoaches||[]).find(x=>x.id===id); return c?(c.profiles?.full_name||c.full_name||''):''; }).filter(Boolean);
           let statusBadge = '';
           if (past) {
-            const hasResults = players.some(pName => {
-              const playerObj = (giraPlayers||[]).find(x=>x.full_name===pName);
+            const hasResults = players.some(p => {
+              const playerObj = (giraPlayers||[]).find(x=>x.full_name===p.name);
               if (!playerObj || !playerObj.matches) return false;
               const [yr, wk] = week.split('-W').map(Number);
               const wkStart = new Date(yr,0,1+(wk-1)*7);
@@ -8284,6 +8290,19 @@ function giraRenderCalendar() {
               ? `<span class="gira-status-badge gira-status-ok">✓ Con resultados</span>`
               : `<span class="gira-status-badge gira-status-pending">○ Sin registrar</span>`;
           }
+          const playerRows = players.map(p => {
+            const info = ev.estados?.[p.id];
+            const estado = info?.estado || 'pendiente';
+            if (!info) console.warn(`gira_event_players: falta fila para evento ${ev.id}, jugador ${p.id} (${p.name}) — usando 'pendiente' por defecto`);
+            const meta = INSCRIPTION_STATUS[estado] || INSCRIPTION_STATUS.pendiente;
+            return `<div style="display:flex;align-items:center;gap:8px;padding:2px 0">
+              <span class="gira-status-dot" id="giradot-${ev.id}-${p.id}" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${meta.color}"></span>
+              <span style="flex:1;font-size:13px;">${escHtml(p.name)}</span>
+              <select data-event="${ev.id}" data-player="${p.id}" data-original="${estado}" onchange="giraOnStatusChange('${ev.id}','${p.id}')" style="font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid #ddd;background:#fff">
+                ${Object.entries(INSCRIPTION_STATUS).map(([key,v])=>`<option value="${key}" ${key===estado?'selected':''}>${v.label}</option>`).join('')}
+              </select>
+            </div>`;
+          }).join('');
           return `<div class="gira-event-card${past?' gira-event-past':''}">
             ${statusBadge}
             <div class="gira-event-row">
@@ -8293,8 +8312,11 @@ function giraRenderCalendar() {
                 ${ev.surface?`<span class="gira-surface-badge">${ev.surface}</span>`:''}
               </div>
             </div>
-            ${players.length?`<div class="gira-players">${players.map(p=>`<span class="gira-player-chip">${p}</span>`).join('')}</div>`:''}
+            ${players.length?`<div class="gira-players" style="display:flex;flex-direction:column;gap:4px;margin-top:6px">${playerRows}</div>`:''}
             ${coaches.length?`<div class="gira-coach-row">Coach: <strong>${coaches.join(', ')}</strong></div>`:''}
+            ${players.length?`<div id="girastatusact-${ev.id}" style="display:none;margin-top:8px">
+              <button onclick="giraSaveStatus('${ev.id}')" style="background:#FF6B00;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer">Guardar cambios de estado</button>
+            </div>`:''}
             <div style="display:flex;gap:6px;margin-top:8px">
               <button onclick="giraOpenEdit('${ev.id}')" style="background:#f0f4ff;color:#1A6FD4;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer">✏</button>
               <button onclick="giraDeleteEvent('${ev.id}')" style="background:#fff0f0;color:#e55;border:none;padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer">✕</button>
@@ -8303,6 +8325,55 @@ function giraRenderCalendar() {
         }).join('')}
       </div>`;
   }).join('');
+}
+
+function giraOnStatusChange(eventId, playerId) {
+  const sel = document.querySelector(`select[data-event="${eventId}"][data-player="${playerId}"]`);
+  if (sel) {
+    const dot = document.getElementById(`giradot-${eventId}-${playerId}`);
+    const meta = INSCRIPTION_STATUS[sel.value] || INSCRIPTION_STATUS.pendiente;
+    if (dot) dot.style.background = meta.color;
+  }
+  const selects = document.querySelectorAll(`select[data-event="${eventId}"]`);
+  const hasChanges = Array.from(selects).some(s => s.value !== s.dataset.original);
+  const actions = document.getElementById(`girastatusact-${eventId}`);
+  if (actions) actions.style.display = hasChanges ? 'block' : 'none';
+}
+
+async function giraSaveStatus(eventId) {
+  const changedSelects = Array.from(document.querySelectorAll(`select[data-event="${eventId}"]`))
+    .filter(s => s.value !== s.dataset.original);
+  if (!changedSelects.length) return;
+
+  const changes = changedSelects.map(s => ({ player_id: s.dataset.player, estado: s.value }));
+  const btn = document.querySelector(`#girastatusact-${eventId} button`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/gira/${eventId}/inscription-status`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ changes })
+    });
+    if (!res) {
+      alert('Se perdió la sesión. Volvé a iniciar sesión.');
+      await giraLoadData();
+      return;
+    }
+    if (!res.ok) {
+      if (res.status === 404) {
+        alert('Alguno de los jugadores no tiene una fila de inscripción registrada para este torneo. Recargando la vista...');
+      } else {
+        alert('No se pudo guardar el estado de inscripción. Intentá de nuevo.');
+      }
+      await giraLoadData();
+      return;
+    }
+    await giraLoadData();
+  } catch(e) {
+    alert('Error al guardar el estado de inscripción.');
+    await giraLoadData();
+  }
 }
 
 function giraOpenAdd() {
