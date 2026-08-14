@@ -4953,15 +4953,31 @@ function renderPortalCalendario() {
     const lugar = [cap(ev.city), cap(ev.country)].filter(Boolean).join(', ');
     const jugadores = (ev.players || []).map(p => p.full_name || '—').join(', ');
     const coaches   = (ev.coaches  || []).map(c => c.full_name || '—').join(', ');
+    const estado = ev.estado_inscripcion || 'pendiente';
+    const meta = INSCRIPTION_STATUS[estado] || INSCRIPTION_STATUS.pendiente;
     return `
       <div style="background:#fff;border:1px solid ${past ? '#f0f0f0' : '#e8e8e8'};border-radius:14px;padding:14px 16px;margin-bottom:10px;opacity:${past ? '.6' : '1'};">
         <div style="font-size:15px;font-weight:700;color:#222;">${ev.level || 'Torneo'}</div>
         <div style="font-size:12px;color:#999;margin-top:1px;margin-bottom:8px;">${weekToRange(ev.week)}</div>
+        <div style="margin-bottom:8px;">
+          <span id="portalstatusbadge-${ev.id}" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#fff;padding:5px 12px;border-radius:20px;margin-top:4px;background:${meta.color}">
+            <span style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.9)"></span><span data-badge-label>${meta.label}</span>
+          </span>
+        </div>
         <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#666;border-top:1px solid #f5f5f5;padding-top:8px;">
           ${lugar ? `<span>📍 ${lugar}${ev.surface ? ` · ${SURFACE_ICON[ev.surface] || '🎾'} ${cap(ev.surface)}` : ''}</span>` : ''}
           ${jugadores ? `<span>👥 ${jugadores}</span>` : ''}
           ${coaches ? `<span>🎓 Con: ${coaches}</span>` : ''}
         </div>
+        ${!past ? `
+        <select id="portalstatussel-${ev.id}" data-original="${estado}" onchange="portalOnStatusChange('${ev.id}')" style="font-size:14px;padding:9px 10px;border-radius:8px;border:1.5px solid #ddd;background:#fff;color:#333;margin-top:10px;width:100%;box-sizing:border-box">
+          ${Object.entries(INSCRIPTION_STATUS).map(([key,v])=>`<option value="${key}" ${key===estado?'selected':''}>${v.label}</option>`).join('')}
+        </select>
+        <div id="portalstatusact-${ev.id}" style="display:none;margin-top:8px">
+          <button onclick="portalSaveStatus('${ev.id}')" style="background:#FF6B00;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Guardar</button>
+        </div>
+        <div style="font-size:11px;color:#aaa;margin-top:6px;">Al guardar, tu coach recibe un aviso de que cambiaste tu estado.</div>
+        ` : ''}
       </div>`;
   }
 
@@ -4978,6 +4994,52 @@ function renderPortalCalendario() {
   }
 
   return html;
+}
+
+function portalOnStatusChange(eventId) {
+  const sel = document.getElementById(`portalstatussel-${eventId}`);
+  if (!sel) return;
+
+  const actions = document.getElementById(`portalstatusact-${eventId}`);
+  if (actions) actions.style.display = sel.value !== sel.dataset.original ? 'block' : 'none';
+
+  const badge = document.getElementById(`portalstatusbadge-${eventId}`);
+  if (badge) {
+    const meta = INSCRIPTION_STATUS[sel.value] || INSCRIPTION_STATUS.pendiente;
+    badge.style.background = meta.color;
+    const label = badge.querySelector('[data-badge-label]');
+    if (label) label.textContent = meta.label;
+  }
+}
+
+async function portalSaveStatus(eventId) {
+  const sel = document.getElementById(`portalstatussel-${eventId}`);
+  if (!sel) return;
+  const value = sel.value;
+  if (value === sel.dataset.original) return;
+
+  const btn = document.querySelector(`#portalstatusact-${eventId} button`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+  try {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/gira/${eventId}/inscription-status`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ changes: [{ estado: value }] })
+    });
+    if (!res) {
+      alert('Se perdió la sesión. Volvé a iniciar sesión.');
+    } else if (!res.ok) {
+      if (res.status === 403) alert('No puedes cambiar el estado de este torneo.');
+      else if (res.status === 400) alert('No se pudo procesar el cambio. Recargando...');
+      else alert('No se pudo guardar. Intentá de nuevo.');
+    }
+  } catch(e) {
+    alert('Error al guardar el estado de inscripción.');
+  }
+  const playerId = sessionStorage.getItem('ciq_player_id');
+  await loadPlayerPortal(playerId);
+  switchPortalSection('calendario');
 }
 
 function renderPortalPerfil() {
