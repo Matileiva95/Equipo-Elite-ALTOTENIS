@@ -1616,6 +1616,32 @@ function renderDashboard(){
     }
   });
 
+  // AMBER: jugador cambió su estado de inscripción en un torneo y el coach no lo vio.
+  // Fuente única: giraEvents[].estados (seen_by_coach) — no se duplica en el blob.
+  // Identidad: ev.estados usa UUID real de `players`; se resuelve a un índice de
+  // data.players vía giraPlayers[].legacy_id (mismo puente que usa el backend).
+  (giraEvents||[]).forEach(ev=>{
+    Object.entries(ev.estados||{}).forEach(([playerId, info])=>{
+      if(!info||info.seen_by_coach!==false)return;
+      const giraPlayer=(giraPlayers||[]).find(gp=>gp.id===playerId);
+      const legacyId=giraPlayer?giraPlayer.legacy_id:null;
+      const idx=legacyId!=null?allPlayers.findIndex(p=>String(p.id)===String(legacyId)):-1;
+      if(idx===-1){
+        console.warn(`Alerta de inscripción: no se pudo resolver playerId ${playerId} (evento ${ev.id}) a un jugador del blob`);
+        return;
+      }
+      const p=allPlayers[idx];
+      if(activeGroup&&p.group_id!==activeGroup)return;
+      const label=(INSCRIPTION_STATUS[info.estado]||INSCRIPTION_STATUS.pendiente).label;
+      alertsAmber.push({
+        name:p.name,
+        pid:idx,
+        msg:`Cambió su inscripción a «${label}» — ${ev.level||'Torneo'}`,
+        onclick:`giraOpenEdit('${ev.id}')`
+      });
+    });
+  });
+
   const noAlerts=!alertsRed.length&&!alertsAmber.length;
   const alertsCollapsed=localStorage.getItem('dashboard_alerts_collapsed')==='1';
 
@@ -1719,13 +1745,13 @@ function renderDashboard(){
         </div>
         <div id="alerts-content" style="display:${alertsCollapsed?'none':'block'}">
           ${alertsRed.map(a=>`
-            <div onclick="${a.pid!=null?`navTo('player',${a.pid})`:''}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #fdecea;${a.pid!=null?'cursor:pointer;':''}">
+            <div onclick="${a.onclick?a.onclick:(a.pid!=null?`navTo('player',${a.pid})`:'')}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #fdecea;${a.pid!=null?'cursor:pointer;':''}">
               <div style="width:8px;height:8px;border-radius:50%;background:#e74c3c;flex-shrink:0;"></div>
               <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1a1a1a;">${a.name}</div><div style="font-size:11px;color:#999;">${a.msg}</div></div>
               ${a.pid!=null?`<span style="color:#ccc;font-size:12px;flex-shrink:0;">→</span>`:''}
             </div>`).join('')}
           ${alertsAmber.map(a=>`
-            <div onclick="${a.pid!=null?`navTo('player',${a.pid})`:''}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #fef9e7;${a.pid!=null?'cursor:pointer;':''}">
+            <div onclick="${a.onclick?a.onclick:(a.pid!=null?`navTo('player',${a.pid})`:'')}" style="display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid #fef9e7;${a.pid!=null?'cursor:pointer;':''}">
               <div style="width:8px;height:8px;border-radius:50%;background:#f39c12;flex-shrink:0;"></div>
               <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1a1a1a;">${a.name||'Asistencia'}</div><div style="font-size:11px;color:#999;">${a.msg}</div></div>
               ${a.pid!=null?`<span style="color:#ccc;font-size:12px;flex-shrink:0;">→</span>`:''}
@@ -8468,6 +8494,10 @@ function giraOpenEdit(id) {
   giraRenderCoachSel(ev.coach_ids || []);
   giraUpdateDestinoDatalists();
   document.getElementById('gira-modal').style.display = 'flex';
+  // Marcar-visto automático (patrón idea A): fire-and-forget, no bloquea la
+  // apertura del modal. El aviso del dashboard se apaga en el próximo reload
+  // de giraLoadData(), no fuerza un re-render acá.
+  apiFetch(`${BACKEND_URL}/api/v1/gira/${id}/inscription-status/seen`, { method: 'POST' }).catch(()=>{});
 }
 
 function giraCloseModal() {
