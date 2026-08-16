@@ -5866,6 +5866,22 @@ function renderPortalSemana() {
     ${(!plan && !portalGrupalPlan) ? `<div style="font-size:12px;color:#bbb;text-align:center;padding:8px 0;">No hay plan asignado para esta semana</div>` : ''}`;
 }
 
+// Escala RPE 1-10 (Borg CR-10) del registro por sesión — Fase 8 / Idea C.
+// El jugador NUNCA ve el número, solo texto + color (gradiente verde→rojo).
+const RPE_ESCALA = [
+  { valor: 1,  texto: 'Muy muy suave', color: '#16A34A' },
+  { valor: 2,  texto: 'Muy suave',     color: '#22C55E' },
+  { valor: 3,  texto: 'Suave',         color: '#4ADE80' },
+  { valor: 4,  texto: 'Moderado',      color: '#84CC16' },
+  { valor: 5,  texto: 'Algo exigente', color: '#EAB308' },
+  { valor: 6,  texto: 'Exigente',      color: '#F59E0B' },
+  { valor: 7,  texto: 'Duro',          color: '#F97316' },
+  { valor: 8,  texto: 'Muy duro',      color: '#EF4444' },
+  { valor: 9,  texto: 'Casi máximo',   color: '#DC2626' },
+  { valor: 10, texto: 'Máximo',        color: '#B91C1C' },
+];
+let _sesionNum = 1, _sesionMinutos = 0, _sesionRpe = 0, _sesionNota = 0;
+
 function renderPortalHoy() {
   const p = portalPlayer;
   const now = new Date();
@@ -5931,81 +5947,115 @@ function renderPortalHoy() {
     <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Entrenamiento de hoy</div>
     ${entrenamientoHtml}
 
-    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 12px;">Evalúa tu entrenamiento</div>
+    <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 12px;">Registra tu sesión</div>
     <div class="pp-card" style="background:#fff;">
+      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Sesión</div>
+      <div style="display:flex;gap:6px;margin-bottom:16px;">
+        ${[1,2].map(n => `<button id="pp-sesionnum-${n}" onclick="ppSelSesionNum(${n})" style="flex:1;padding:9px 2px;border-radius:8px;border:2px solid ${_sesionNum===n?'#FF6B00':'#e0e0e0'};background:${_sesionNum===n?'#FF6B00':'#fff'};color:${_sesionNum===n?'#fff':'#555'};font-size:12px;font-weight:700;cursor:pointer;transition:all .13s;">Sesión ${n}</button>`).join('')}
+      </div>
+      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Minutos entrenados</div>
+      <div style="display:flex;gap:5px;margin-bottom:8px;">
+        ${[60,90,120,150,180].map(v => `<button id="pp-minutos-${v}" onclick="ppSelMinutos(${v})" style="flex:1;padding:9px 2px;border-radius:8px;border:2px solid ${_sesionMinutos===v?'#FF6B00':'#e0e0e0'};background:${_sesionMinutos===v?'#FF6B00':'#fff'};color:${_sesionMinutos===v?'#fff':'#555'};font-size:12px;font-weight:700;cursor:pointer;transition:all .13s;">${v}</button>`).join('')}
+      </div>
+      <input id="pp-minutos-input" type="number" min="1" value="${_sesionMinutos || ''}" placeholder="Otro (minutos exactos)" oninput="ppMinutosInput(this.value)" style="width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:10px;font-size:13px;color:#333;outline:none;box-sizing:border-box;font-family:inherit;margin-bottom:16px;">
+      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Esfuerzo percibido</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px;">
+        ${RPE_ESCALA.map(item => `<button id="pp-rpe-${item.valor}" onclick="ppSelRpeSesion(${item.valor})" style="display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:2px solid ${_sesionRpe===item.valor?item.color:'#e0e0e0'};background:${_sesionRpe===item.valor?item.color:'#fff'};color:${_sesionRpe===item.valor?'#fff':'#555'};font-size:12px;font-weight:600;cursor:pointer;transition:all .13s;text-align:left;"><span style="width:8px;height:8px;border-radius:50%;background:${_sesionRpe===item.valor?'#fff':item.color};flex-shrink:0;"></span>${item.texto}</button>`).join('')}
+      </div>
       <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Nota de sesión</div>
-      <div style="display:flex;gap:6px;justify-content:space-between;margin-bottom:16px;">
-        ${[1,2,3,4,5,6,7].map(n => `<button id="ppnota-${n}" onclick="ppSelNota(${n})" style="width:38px;height:38px;border-radius:50%;border:2px solid #e0e0e0;background:#fff;font-size:13px;font-weight:700;color:#555;cursor:pointer;transition:all .13s;flex-shrink:0;">${n}</button>`).join('')}
+      <div style="display:flex;gap:6px;justify-content:space-between;margin-bottom:4px;">
+        ${[1,2,3,4,5,6,7].map(n => `<button id="pp-notasesion-${n}" onclick="ppSelNotaSesion(${n})" style="width:38px;height:38px;border-radius:50%;border:2px solid ${_sesionNota===n?'#FF6B00':'#e0e0e0'};background:${_sesionNota===n?'#FF6B00':'#fff'};color:${_sesionNota===n?'#fff':'#555'};font-size:13px;font-weight:700;cursor:pointer;transition:all .13s;flex-shrink:0;">${n}</button>`).join('')}
       </div>
-      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Esfuerzo percibido (RPE)</div>
-      <div style="display:flex;gap:5px;margin-bottom:16px;">
-        ${[1,2,3,4,5].map(n => `<button id="pprpe-${n}" onclick="ppSelRpeHoy(${n})" style="flex:1;padding:9px 2px;border-radius:8px;border:2px solid #e0e0e0;background:#fff;font-size:12px;font-weight:700;color:#555;cursor:pointer;transition:all .13s;">${n}</button>`).join('')}
+      <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
+        <span style="font-size:10px;color:#bbb;">Muy malo</span>
+        <span style="font-size:10px;color:#bbb;">Excelente</span>
       </div>
-      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Estado de ánimo</div>
-      <div style="display:flex;gap:10px;margin-bottom:20px;">
-        ${[['😔',1],['😐',2],['😊',3]].map(([ico,v]) => `<button id="ppmood-${v}" onclick="ppSelMoodHoy(${v})" style="flex:1;padding:10px;border-radius:10px;border:2px solid #e0e0e0;background:#fff;font-size:22px;cursor:pointer;transition:all .13s;">${ico}</button>`).join('')}
-      </div>
-      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Reflexión del entrenamiento</div>
+      <div style="font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Reflexión (opcional)</div>
       <textarea id="pp-reflexion" placeholder="¿Qué quieres destacar de este entrenamiento?" style="width:100%;min-height:72px;padding:10px 12px;border:2px solid #e0e0e0;border-radius:10px;font-size:13px;color:#333;resize:vertical;outline:none;box-sizing:border-box;font-family:inherit;margin-bottom:16px;" oninput="this.style.borderColor='#FF6B00'" onblur="if(!this.value)this.style.borderColor='#e0e0e0'"></textarea>
-      <button onclick="ppGuardarEval()" style="width:100%;padding:13px;background:#FF6B00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.02em;">Guardar evaluación</button>
+      <button onclick="ppGuardarSesion()" style="width:100%;padding:13px;background:#FF6B00;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.02em;">Guardar sesión</button>
     </div>`;
 }
 
-let _ppNota = 0;
-function ppSelNota(n) {
-  _ppNota = n;
-  [1,2,3,4,5,6,7].forEach(i => {
-    const b = document.getElementById('ppnota-' + i);
+function ppSelSesionNum(n) {
+  _sesionNum = n;
+  [1,2].forEach(i => {
+    const b = document.getElementById('pp-sesionnum-' + i);
     if (!b) return;
     b.style.background  = i === n ? '#FF6B00' : '#fff';
     b.style.borderColor = i === n ? '#FF6B00' : '#e0e0e0';
     b.style.color       = i === n ? '#fff'    : '#555';
   });
 }
-function ppSelRpeHoy(n) {
-  _ppRpe = n;
-  const rpeColors = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
-  [1,2,3,4,5].forEach(i => {
-    const b = document.getElementById('pprpe-' + i);
-    if (!b) return;
-    b.style.background  = i === n ? rpeColors[i] : '#fff';
-    b.style.borderColor = i === n ? rpeColors[i] : '#e0e0e0';
-    b.style.color       = i === n ? '#fff'       : '#555';
+function ppSelMinutos(v) {
+  _sesionMinutos = v;
+  const input = document.getElementById('pp-minutos-input');
+  if (input) input.value = v;
+  [60,90,120,150,180].forEach(b => {
+    const btn = document.getElementById('pp-minutos-' + b);
+    if (!btn) return;
+    btn.style.background  = b === v ? '#FF6B00' : '#fff';
+    btn.style.borderColor = b === v ? '#FF6B00' : '#e0e0e0';
+    btn.style.color       = b === v ? '#fff'    : '#555';
   });
 }
-function ppSelMoodHoy(n) {
-  _ppMood = n;
-  [1,2,3].forEach(i => {
-    const b = document.getElementById('ppmood-' + i);
+function ppMinutosInput(val) {
+  const n = parseInt(val, 10);
+  _sesionMinutos = (Number.isFinite(n) && n > 0) ? n : 0;
+  [60,90,120,150,180].forEach(b => {
+    const btn = document.getElementById('pp-minutos-' + b);
+    if (!btn) return;
+    const active = b === _sesionMinutos;
+    btn.style.background  = active ? '#FF6B00' : '#fff';
+    btn.style.borderColor = active ? '#FF6B00' : '#e0e0e0';
+    btn.style.color       = active ? '#fff'    : '#555';
+  });
+}
+function ppSelRpeSesion(n) {
+  _sesionRpe = n;
+  RPE_ESCALA.forEach(item => {
+    const b = document.getElementById('pp-rpe-' + item.valor);
     if (!b) return;
+    const active = item.valor === n;
+    b.style.background  = active ? item.color : '#fff';
+    b.style.borderColor = active ? item.color : '#e0e0e0';
+    b.style.color       = active ? '#fff'      : '#555';
+    const dot = b.querySelector('span');
+    if (dot) dot.style.background = active ? '#fff' : item.color;
+  });
+}
+function ppSelNotaSesion(n) {
+  _sesionNota = n;
+  [1,2,3,4,5,6,7].forEach(i => {
+    const b = document.getElementById('pp-notasesion-' + i);
+    if (!b) return;
+    b.style.background  = i === n ? '#FF6B00' : '#fff';
     b.style.borderColor = i === n ? '#FF6B00' : '#e0e0e0';
-    b.style.background  = i === n ? '#fff5eb' : '#fff';
+    b.style.color       = i === n ? '#fff'    : '#555';
   });
 }
-async function ppGuardarEval() {
-  if (!_ppNota || !_ppRpe || !_ppMood) { alert('Completá todos los campos antes de guardar.'); return; }
-  const playerId   = sessionStorage.getItem('ciq_player_id');
-  const token      = sessionStorage.getItem('ciq_token');
-  const reflexion  = (document.getElementById('pp-reflexion')?.value || '').trim();
-  const payload    = { fecha: hoyChile(), rpe: parseInt(_ppRpe), mood: parseInt(_ppMood), nota: parseInt(_ppNota), reflexion };
+async function ppGuardarSesion() {
+  if (!_sesionMinutos || _sesionMinutos <= 0) { alert('Ingresá los minutos entrenados.'); return; }
+  if (!_sesionRpe) { alert('Seleccioná el esfuerzo percibido.'); return; }
+  if (!_sesionNota) { alert('Seleccioná la nota de la sesión.'); return; }
+  const playerId  = sessionStorage.getItem('ciq_player_id');
+  const token     = sessionStorage.getItem('ciq_token');
+  const reflexion = (document.getElementById('pp-reflexion')?.value || '').trim();
+  const payload = {
+    session_num: _sesionNum,
+    minutos: _sesionMinutos,
+    rpe: _sesionRpe,
+    nota: _sesionNota,
+    fecha: hoyChile(),
+    reflexion,
+  };
   try {
-    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/training-evaluation`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/session-log`, {
       method: 'POST', headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error();
-    if (portalPlayer) {
-      if (!portalPlayer.trainingLoad) portalPlayer.trainingLoad = [];
-      portalPlayer.trainingLoad.unshift(payload);
-    }
-    if (portalProgreso) {
-      if (!Array.isArray(portalProgreso.week_evaluations)) portalProgreso.week_evaluations = [];
-      const wIdx = portalProgreso.week_evaluations.findIndex(e => e.fecha === payload.fecha);
-      if (wIdx !== -1) portalProgreso.week_evaluations[wIdx] = payload;
-      else portalProgreso.week_evaluations.unshift(payload);
-    }
-    alert('¡Evaluación guardada!');
-    _ppNota = 0; _ppRpe = 0; _ppMood = 0;
+    if (!res || !res.ok) throw new Error();
+    alert('¡Sesión guardada!');
+    _sesionNum = 1; _sesionMinutos = 0; _sesionRpe = 0; _sesionNota = 0;
     switchPortalSection('progreso');
   } catch { alert('Error al guardar. Intentá de nuevo.'); }
 }
