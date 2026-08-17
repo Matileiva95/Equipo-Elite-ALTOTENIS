@@ -2790,7 +2790,7 @@ function switchDtab(t){
   dtab=t;selMode=false;selectedDays=new Set();
   document.querySelectorAll('.tab-btn').forEach(b=>{const m={perfil:'Perfil',plan:'Plan semanal',calendario:'Calendario',carga:'Carga',torneos:'Torneos',stats:'Estadísticas',rivales:'Rivales',portal:'Portal'};b.classList.toggle('active',b.textContent===m[t]);});
   const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
-  if(t==='carga')loadCargaPlayerEvals();
+  if(t==='carga')loadCargaCoach(data.players[pid]?.id, _cargaState.rango);
 }
 function renderDtab(){const p=data.players[pid];if(dtab==='perfil')return renderPerfil(p);if(dtab==='plan')return renderPlan(p);if(dtab==='calendario')return renderCal(p);if(dtab==='torneos')return renderTorneos(p);if(dtab==='stats')return renderStats(p);if(dtab==='rivales')return renderPlayerScouting(p);if(dtab==='carga')return renderCarga(p);if(dtab==='portal')return renderCoachPortalView(p);return '';}
 
@@ -3118,127 +3118,235 @@ async function addEvent(){
 }
 
 // ── CARGA DE ENTRENAMIENTO ────────────────────────────────
-const RPE_COLORS = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
-const MOOD_ICONS = ['','😞','😐','😊'];
-const RPE_CRITICO = 4.5;
-
-function buildCargaChart(loads) {
-  const chartDays = [];
-  for(let i=13; i>=0; i--) {
-    const key = sumarDias(hoyChile(), -i);
-    const sessions = loads.filter(l => l.date === key);
-    const avgRpe   = sessions.length ? sessions.reduce((a,b)=>a+b.rpe,0)/sessions.length : null;
-    chartDays.push({ key, avgRpe, label: String(Number(key.slice(8,10))) });
-  }
-  const last5vals = chartDays.slice(-5).filter(d=>d.avgRpe!==null).map(d=>d.avgRpe);
-  const avg5 = last5vals.length ? last5vals.reduce((a,b)=>a+b,0)/last5vals.length : 0;
-  const highLoad = avg5 >= RPE_CRITICO;
-  const W=440, H=130, pX=18, pY=14, iW=440-2*18, iH=130-2*14;
-  const pts = chartDays.map((d,i)=>({
-    x:     pX + i*(iW/13),
-    y:     d.avgRpe  != null ? pY + iH - ((d.avgRpe-1)/4)*iH  : null,
-    avgRpe: d.avgRpe, label: d.label
-  }));
-  const validPts = pts.filter(pt=>pt.y!=null);
-  const pathD = validPts.map((pt,i)=>`${i===0?'M':'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
-  const circles     = pts.map(pt=>pt.y    !=null?`<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}"     r="4" fill="${RPE_COLORS[Math.round(pt.avgRpe)]}" stroke="#fff" stroke-width="1.5"/>`:'').join('');
-  const labels = pts.map(pt=>`<text x="${pt.x.toFixed(1)}" y="${H+10}" font-size="8" text-anchor="middle" fill="#bbb">${pt.label}</text>`).join('');
-  const yLines = [1,2,3,4,5].map(v=>{const y=(pY+iH-((v-1)/4)*iH).toFixed(1);return `<line x1="${pX}" y1="${y}" x2="${W-pX}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/><text x="${pX-4}" y="${parseFloat(y)+3}" font-size="7" text-anchor="end" fill="#ccc">${v}</text>`;}).join('');
-  const svg = `<svg viewBox="0 0 ${W} ${H+14}" width="100%" style="display:block;overflow:visible;">${yLines}${pathD?`<path d="${pathD}" fill="none" stroke="#1DA1D6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`:''}${circles}${labels}</svg>`;
-  return { svg, highLoad, avg5 };
-}
-
-function renderCargaChartBlock(loads) {
-  const { svg, highLoad, avg5 } = buildCargaChart(loads);
-  return `
-    ${highLoad?`<div style="background:#fff5f5;border:1px solid #f5c6c6;border-radius:var(--rsm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#c0392b;">⚠️ <strong>Carga alta acumulada</strong> — RPE promedio últimos 5 días: ${avg5.toFixed(1)}</div>`:''}
-    <div class="card" style="margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">RPE — últimos 14 días</div>
-      <div style="padding:0 4px;">${svg}</div>
-      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;align-items:center;">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          ${RPE_COLORS.slice(1).map((c,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--g3);"><div style="width:9px;height:9px;border-radius:50%;background:${c};"></div>${i+1}</div>`).join('')}
-        </div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#1DA1D6;font-weight:600;"><span style="display:inline-block;width:14px;height:2px;background:#1DA1D6;"></span>RPE (1-5)</div>
-      </div>
-    </div>`;
-}
+// ── CARGA (coach) — Fase 8 / Idea C. Consume GET /players/:playerId/carga,
+// el backend calcula TODO (series, ACWR, temporada); acá solo se dibuja.
+const CARGA_VENTANA = { dia: 14, sem: 8 };
+const CARGA_ZONA_COLOR = { optima: '#2E9E5B', alta: '#C2453D', baja: '#9AA0A6', moderada: '#E8A317' };
+const CARGA_ZONA_LABEL = { optima: 'Zona óptima', alta: 'Carga aguda alta', baja: 'Carga baja', moderada: 'Carga moderada' };
+let _cargaState = { playerId: null, data: null, rango: '3m', gran: 'sem', metric: 'carga', offset: 0, loading: false, error: false };
 
 function renderCarga(p) {
-  const loads = p.trainingLoad || [];
-  const recent = loads.slice(0,10);
-  return `
-    <div id="carga-chart-container">${renderCargaChartBlock(loads)}</div>
-    <div class="card">
-      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:14px;">Historial</div>
-      ${recent.length===0?'<div class="empty">Sin sesiones registradas</div>':
-        recent.map((s,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:6px;flex-wrap:wrap;">
-          <div style="font-size:12px;color:var(--g3);min-width:80px;">${s.date}</div>
-          <span style="padding:2px 9px;border-radius:20px;background:${RPE_COLORS[s.rpe]};color:#fff;font-size:12px;font-weight:700;">RPE ${s.rpe}</span>
-          <span style="font-size:17px;">${MOOD_ICONS[s.mood]||''}</span>
-          <span style="font-size:12px;color:var(--g3);">${s.duration} min</span>
-          <span style="font-size:12px;color:var(--g2);flex:1;">${(s.tipos||[]).join(', ')||'—'}</span>
-          ${s.notas?`<div style="font-size:11px;color:var(--g3);width:100%;margin-top:2px;">📝 ${s.notas}</div>`:''}
-          <button onclick="eliminarCarga(${i})" style="padding:2px 8px;border:1px solid var(--border);border-radius:var(--rsm);background:transparent;color:var(--g3);font-size:11px;cursor:pointer;">✕</button>
-        </div>`).join('')
-      }
-    </div>
-    <div style="margin-top:1.5rem">
-      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">📊 Evaluaciones del jugador (14 días)</div>
-      <div id="carga-player-evals">
-        <div style="font-size:13px;color:var(--g3);">Cargando...</div>
-      </div>
-    </div>`;
+  return `<div id="carga-coach-container">${renderCargaCoachBlock()}</div>`;
 }
 
-async function loadCargaPlayerEvals() {
-  const evalContainer = document.getElementById('carga-player-evals');
-  if (!evalContainer) return;
-  const playerLegacyId = data.players[pid]?.id;
-  console.log('Cargando evaluaciones para playerLegacyId:', playerLegacyId);
+async function loadCargaCoach(playerId, rango) {
+  _cargaState.playerId = playerId;
+  _cargaState.rango = rango || _cargaState.rango || '3m';
+  _cargaState.offset = 0;
+  _cargaState.loading = true;
+  _cargaState.error = false;
+  cargaRerender();
   try {
     const token = sessionStorage.getItem('ciq_token');
-    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerLegacyId}/progress`, {
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/players/${playerId}/carga?rango=${_cargaState.rango}`, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
-    const progData = await res.json();
-    const evals = progData.week_evaluations || [];
-    // Fusión con el gráfico (7.4): mismos portalEvals que usa renderCoachPortalView,
-    // reemplaza el bloque de chart (blob-only) por la versión fusionada.
-    const portalEvals = evals.filter(e => typeof e.nota === 'number');
-    const currentPlayer = data.players[pid];
-    const loads = currentPlayer?.trainingLoad || [];
-    const chartLoads = [...loads, ...portalEvals.map(e => ({ date: e.fecha, rpe: e.rpe }))];
-    const chartContainer = document.getElementById('carga-chart-container');
-    if (chartContainer) chartContainer.innerHTML = renderCargaChartBlock(chartLoads);
-    if (evals.length === 0) {
-      evalContainer.innerHTML = '<div style="font-size:13px;color:var(--g3);">Sin evaluaciones registradas</div>';
-      return;
-    }
-    evalContainer.innerHTML = evals.map(e => {
-      const moodEmoji = e.mood === 1 ? '😔' : e.mood === 2 ? '😐' : '😊';
-      const notaColor = e.nota >= 6 ? '#22C55E' : e.nota >= 4 ? '#F59E0B' : '#EF4444';
-      return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #eee;">
-        <span style="font-size:12px;color:#666;min-width:80px;">${e.fecha}</span>
-        <span style="font-size:13px;font-weight:700;color:${notaColor};">${e.nota}/7</span>
-        <span style="font-size:12px;">RPE ${e.rpe}/5</span>
-        <span style="font-size:16px;">${moodEmoji}</span>
-        ${e.reflexion ? `<span style="font-size:12px;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.reflexion}</span>` : ''}
-      </div>`;
-    }).join('');
-  } catch(err) {
-    console.error('Error cargando evaluaciones jugador:', err);
-    if (evalContainer) evalContainer.innerHTML = `<div style="color:red;font-size:12px">Error: ${err.message}</div>`;
+    if (!res || !res.ok) throw new Error();
+    _cargaState.data = await res.json();
+  } catch (err) {
+    console.error('Error cargando /carga:', err);
+    _cargaState.data = null;
+    _cargaState.error = true;
   }
+  _cargaState.loading = false;
+  if (dtab === 'carga') cargaRerender();
 }
 
-function eliminarCarga(idx) {
-  const p=data.players[pid];
-  if(!p.trainingLoad)return;
-  p.trainingLoad.splice(idx,1);
-  scheduleSync();
-  const el=document.getElementById('dtab-content');if(el)el.innerHTML=renderDtab();
-  loadCargaPlayerEvals();
+function cargaRerender() {
+  const el = document.getElementById('carga-coach-container');
+  if (el) el.innerHTML = renderCargaCoachBlock();
+}
+
+function cargaSetGran(g) {
+  if (g === _cargaState.gran) return;
+  _cargaState.gran = g; _cargaState.offset = 0;
+  cargaRerender();
+}
+function cargaSetMetric(m) {
+  if (m === _cargaState.metric) return;
+  _cargaState.metric = m;
+  cargaRerender();
+}
+function cargaSetRango(r) {
+  if (r === _cargaState.rango) return;
+  loadCargaCoach(_cargaState.playerId, r);
+}
+function cargaMover(dir) {
+  const st = _cargaState;
+  if (!st.data) return;
+  const serie = st.gran === 'dia' ? st.data.series_dia : st.data.series_semana;
+  const N = CARGA_VENTANA[st.gran];
+  const maxOffset = Math.max(0, serie.length - N);
+  if (dir === 'atras') st.offset = Math.min(maxOffset, st.offset + N);
+  else st.offset = Math.max(0, st.offset - N);
+  cargaRerender();
+}
+function cargaBtnNavStyle(enabled) {
+  return `width:32px;flex-shrink:0;border-radius:8px;border:1px solid var(--border);background:${enabled?'#fff':'#f5f5f5'};color:${enabled?'#333':'#ccc'};font-size:16px;cursor:${enabled?'pointer':'default'};`;
+}
+
+function renderCargaCoachBlock() {
+  const st = _cargaState;
+  const rangoSelector = renderCargaRangoSelector(st.rango);
+
+  if (st.loading) {
+    return `<div class="card" style="margin-bottom:14px;">${rangoSelector}<div style="padding:24px 0;text-align:center;color:var(--g3);">Cargando carga...</div></div>${renderCargaSubcuadros()}`;
+  }
+  if (st.error || !st.data) {
+    return `<div class="card" style="margin-bottom:14px;">${rangoSelector}<div style="padding:24px 0;text-align:center;color:#c0392b;">Error al cargar los datos de carga.</div></div>${renderCargaSubcuadros()}`;
+  }
+
+  const data = st.data;
+
+  if (st.rango === 'temporada') {
+    return `<div class="card" style="margin-bottom:14px;">${rangoSelector}${renderCargaTemporada(data.temporada)}</div>${renderCargaSubcuadros()}`;
+  }
+
+  const serieFull = st.gran === 'dia' ? data.series_dia : data.series_semana;
+  const N = CARGA_VENTANA[st.gran];
+  const end = serieFull.length - st.offset;
+  const start = Math.max(0, end - N);
+  const ventana = serieFull.slice(start, end);
+  const enPresente = st.offset === 0;
+
+  // Banda ACWR: solo Semana + Carga (UA) + ACWR calculado + ventana en el
+  // presente. Sobre semanas viejas sería engañosa (el crónico es "de ahora").
+  const banda = (st.gran === 'sem' && st.metric === 'carga' && data.acwr_disponible && data.acwr?.valor != null && enPresente)
+    ? { min: data.acwr.cronico * 0.8, max: data.acwr.cronico * 1.3 }
+    : null;
+
+  const colorUltimaBarra = (st.gran === 'sem' && st.metric === 'carga' && enPresente && data.acwr_disponible && data.acwr?.zona)
+    ? CARGA_ZONA_COLOR[data.acwr.zona]
+    : null;
+
+  const puedeAtras = start > 0;
+  const puedeAdelante = st.offset > 0;
+
+  const chart = renderCargaBarChart(ventana, st.metric, banda, colorUltimaBarra);
+  // Semáforo: SIEMPRE visible en la vista de gráfico (cualquier gran/metric)
+  // cuando acwr_disponible — es el estado de riesgo del jugador, no la
+  // leyenda del gráfico. La banda (arriba) sí sigue acotada a sem+carga+presente.
+  const semaforo = renderCargaSemaforo(data.acwr_disponible, data.acwr);
+
+  return `
+    <div class="card" style="margin-bottom:14px;">
+      ${rangoSelector}
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0 10px;">
+        ${renderCargaGranToggle(st.gran)}
+        ${renderCargaMetricToggle(st.metric)}
+      </div>
+      <div style="display:flex;align-items:stretch;gap:6px;">
+        <button onclick="cargaMover('atras')" ${puedeAtras?'':'disabled'} style="${cargaBtnNavStyle(puedeAtras)}">‹</button>
+        <div style="flex:1;min-width:0;">${chart}</div>
+        <button onclick="cargaMover('adelante')" ${puedeAdelante?'':'disabled'} style="${cargaBtnNavStyle(puedeAdelante)}">›</button>
+      </div>
+      ${semaforo}
+    </div>
+    ${renderCargaSubcuadros()}`;
+}
+
+function renderCargaRangoSelector(activo) {
+  const opts = [['1m','1 mes'],['3m','3 meses'],['temporada','Temporada']];
+  return `<div style="display:flex;gap:6px;">
+    ${opts.map(([v,label]) => `<button onclick="cargaSetRango('${v}')" style="flex:1;padding:7px 4px;border-radius:8px;border:2px solid ${activo===v?'#1DA1D6':'var(--border)'};background:${activo===v?'#1DA1D6':'#fff'};color:${activo===v?'#fff':'var(--g3)'};font-size:12px;font-weight:700;cursor:pointer;transition:all .13s;">${label}</button>`).join('')}
+  </div>`;
+}
+function renderCargaGranToggle(activo) {
+  return `<div style="display:flex;gap:4px;">
+    ${[['dia','Día'],['sem','Semana']].map(([v,label]) => `<button onclick="cargaSetGran('${v}')" style="padding:6px 12px;border-radius:8px;border:2px solid ${activo===v?'#FF6B00':'var(--border)'};background:${activo===v?'#FF6B00':'#fff'};color:${activo===v?'#fff':'var(--g3)'};font-size:12px;font-weight:700;cursor:pointer;transition:all .13s;">${label}</button>`).join('')}
+  </div>`;
+}
+function renderCargaMetricToggle(activo) {
+  return `<div style="display:flex;gap:4px;">
+    ${[['horas','Horas'],['carga','Carga (UA)']].map(([v,label]) => `<button onclick="cargaSetMetric('${v}')" style="padding:6px 12px;border-radius:8px;border:2px solid ${activo===v?'#1DA1D6':'var(--border)'};background:${activo===v?'#1DA1D6':'#fff'};color:${activo===v?'#fff':'var(--g3)'};font-size:12px;font-weight:700;cursor:pointer;transition:all .13s;">${label}</button>`).join('')}
+  </div>`;
+}
+
+function renderCargaBarChart(ventana, metric, banda, colorUltima) {
+  if (ventana.length === 0) {
+    return `<div style="padding:24px 0;text-align:center;color:var(--g3);font-size:13px;">Sin datos en este período</div>`;
+  }
+  const valores = ventana.map(v => v[metric] || 0);
+  const max = Math.max(1, ...valores, banda ? banda.max : 0);
+  const W = 440, H = 140, pB = 22, barGap = 4;
+  const n = ventana.length;
+  const barW = (W - (n - 1) * barGap) / n;
+
+  const bandaSvg = banda
+    ? (() => {
+        const yTop = H - pB - (Math.min(banda.max, max) / max) * (H - pB);
+        const yBot = H - pB - (Math.max(0, banda.min) / max) * (H - pB);
+        return `<rect x="0" y="${yTop.toFixed(1)}" width="${W}" height="${Math.max(0, yBot - yTop).toFixed(1)}" fill="#2E9E5B" opacity="0.12"/>`;
+      })()
+    : '';
+
+  const bars = ventana.map((v, i) => {
+    const val = v[metric] || 0;
+    const h = (val / max) * (H - pB);
+    const x = i * (barW + barGap);
+    const y = H - pB - h;
+    const esUltima = i === n - 1;
+    const color = (esUltima && colorUltima) ? colorUltima : (metric === 'carga' ? '#FF6B00' : '#1DA1D6');
+    const label = v.fecha ? v.fecha.slice(8,10) : (v.semana_inicio ? v.semana_inicio.slice(5) : '');
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(h,1).toFixed(1)}" rx="2" fill="${color}"/>
+      <text x="${(x+barW/2).toFixed(1)}" y="${H-6}" font-size="8" text-anchor="middle" fill="#bbb">${escHtml(label)}</text>`;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;">${bandaSvg}${bars}</svg>`;
+}
+
+function renderCargaSemaforo(disponible, acwr) {
+  if (!disponible) {
+    return `<div style="margin-top:12px;padding:10px 12px;background:#f6f6f6;border-radius:10px;font-size:12px;color:var(--g3);line-height:1.5;">Este grupo entrena con baja frecuencia, no se muestra el indicador de riesgo (ACWR). Se muestra solo el volumen.</div>`;
+  }
+  if (acwr?.valor != null) {
+    const color = CARGA_ZONA_COLOR[acwr.zona] || '#999';
+    const label = CARGA_ZONA_LABEL[acwr.zona] || acwr.zona;
+    return `<div style="margin-top:12px;display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fafafa;border-radius:10px;">
+      <div style="font-size:24px;font-weight:800;color:${color};">${acwr.valor.toFixed(2)}</div>
+      <div style="font-size:13px;font-weight:700;color:${color};">${escHtml(label)}</div>
+    </div>`;
+  }
+  const motivoMsg = acwr?.motivo === 'datos_insuficientes'
+    ? 'Datos insuficientes — faltan ~4 semanas de registro'
+    : acwr?.motivo === 'carga_cronica_cero'
+    ? 'Sin carga crónica de referencia todavía'
+    : 'ACWR no disponible';
+  return `<div style="margin-top:12px;padding:10px 12px;background:#f6f6f6;border-radius:10px;font-size:12px;color:var(--g3);">${motivoMsg}</div>`;
+}
+
+function renderCargaTemporada(t) {
+  const tiles = [
+    ['Horas totales', t.horas_total != null ? t.horas_total.toFixed(1)+'h' : '—'],
+    ['Carga total (UA)', t.carga_total ?? '—'],
+    ['RPE promedio', t.rpe_promedio != null ? t.rpe_promedio.toFixed(1) : '—'],
+    ['Promedio semanal', t.promedio_semanal != null ? t.promedio_semanal.toFixed(1)+'h' : '—'],
+    ['Semanas activas', t.semanas_activas ?? 0],
+    ['Sesiones/semana', t.sesiones_por_semana != null ? t.sesiones_por_semana.toFixed(1) : '—'],
+  ];
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
+    ${tiles.map(([label,val]) => `<div style="background:#fafafa;border-radius:10px;padding:12px;">
+      <div style="font-size:10px;color:var(--g3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">${label}</div>
+      <div style="font-size:18px;font-weight:800;color:#222;">${val}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function renderCargaSubcuadros() {
+  return `<div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">
+    <div style="background:#fafafa;border-radius:10px;padding:12px 14px;">
+      <div style="font-size:11px;font-weight:700;color:#333;margin-bottom:3px;">¿Qué es la Carga (UA)?</div>
+      <div style="font-size:12px;color:var(--g3);line-height:1.5;">Minutos entrenados × esfuerzo percibido (RPE). Es una unidad arbitraria para comparar la carga de una sesión con otra del mismo jugador.</div>
+    </div>
+    <div style="background:#fafafa;border-radius:10px;padding:12px 14px;">
+      <div style="font-size:11px;font-weight:700;color:#333;margin-bottom:3px;">¿Qué es el RPE?</div>
+      <div style="font-size:12px;color:var(--g3);line-height:1.5;">Esfuerzo percibido por el jugador en una escala de 1 a 10, que reporta él mismo después de cada sesión.</div>
+    </div>
+    <div style="background:#fafafa;border-radius:10px;padding:12px 14px;">
+      <div style="font-size:11px;font-weight:700;color:#333;margin-bottom:3px;">¿Qué es el ACWR?</div>
+      <div style="font-size:12px;color:var(--g3);line-height:1.5;">Relación entre la carga aguda (última semana) y la carga crónica (promedio de las últimas 4 semanas). Compara al jugador solo contra su propio historial — nunca entre jugadores. Solo se calcula para grupos que entrenan con frecuencia suficiente.</div>
+    </div>
+  </div>`;
 }
 
 // ── AGREGAR/EDITAR JUGADOR ────────────────────────────────
@@ -6374,17 +6482,7 @@ function renderCoachPortalView(p) {
     loadCoachPortalData(p.id);
     return `<div class="card"><div style="padding:20px 0;color:var(--g3);text-align:center;">Cargando datos del portal...</div></div>`;
   }
-  const { objectives, analyses, progress } = cache;
-  const loads = p.trainingLoad || [];
-  const lastLoad = loads[0];
-  // Evaluaciones del portal (tabla players via /progress): su rpe entra a la
-  // línea RPE del gráfico como una sesión más del día (misma fusión que la
-  // pestaña Carga). El gráfico es de serie única RPE — la nota del jugador
-  // solo se muestra en la card de evaluaciones de más abajo.
-  const portalEvals = (progress?.week_evaluations || []).filter(e => typeof e.nota === 'number');
-  const chartLoads = [...loads, ...portalEvals.map(e => ({ date: e.fecha, rpe: e.rpe }))];
-  const rpeColors = ['','#27ae60','#82c341','#f1c40f','#f39c12','#e74c3c'];
-  const moodIcons = ['','😞','😐','😊'];
+  const { objectives, analyses } = cache;
   const tipoBadge = {
     corto: {bg:'#e8f8f0',color:'#27ae60',label:'Corto plazo'},
     mediano: {bg:'#fff5eb',color:'#f39c12',label:'Mediano plazo'},
@@ -6392,36 +6490,6 @@ function renderCoachPortalView(p) {
   };
 
   return `
-    ${renderCargaChartBlock(chartLoads)}
-    <div class="card" style="margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Última carga registrada</div>
-      ${lastLoad ? `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span style="font-size:12px;color:var(--g3);">${lastLoad.date}</span>
-        <span style="padding:2px 10px;border-radius:20px;background:${rpeColors[lastLoad.rpe]};color:#fff;font-size:13px;font-weight:700;">RPE ${lastLoad.rpe}</span>
-        <span style="font-size:18px;">${moodIcons[lastLoad.mood]||''}</span>
-        <span style="font-size:12px;color:var(--g3);">${lastLoad.duration} min</span>
-        <span style="font-size:12px;color:var(--g2);">${(lastLoad.tipos||[]).join(', ')||''}</span>
-        ${lastLoad.notas?`<div style="width:100%;font-size:11px;color:var(--g3);margin-top:2px;">📝 ${lastLoad.notas}</div>`:''}
-      </div>` : '<div style="color:var(--g3);font-size:13px;">Sin sesiones registradas aún</div>'}
-    </div>
-
-    <div class="card" style="margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">📊 Evaluaciones del jugador (14 días)</div>
-      ${portalEvals.length === 0 ? '<div style="color:var(--g3);font-size:13px;">Sin evaluaciones registradas</div>' :
-        portalEvals.map(e => {
-          const moodEmoji = e.mood === 1 ? '😔' : e.mood === 2 ? '😐' : '😊';
-          const notaColor = e.nota >= 6 ? '#22C55E' : e.nota >= 4 ? '#F59E0B' : '#EF4444';
-          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid #eee;">
-            <span style="font-size:12px;color:#666;min-width:80px;">${e.fecha}</span>
-            <span style="font-size:13px;font-weight:700;color:${notaColor};">${e.nota}/7</span>
-            <span style="font-size:12px;">RPE ${e.rpe}/5</span>
-            <span style="font-size:16px;">${moodEmoji}</span>
-            ${e.reflexion ? `<span style="font-size:12px;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.reflexion}</span>` : ''}
-          </div>`;
-        }).join('')
-      }
-    </div>
-
     <div class="card" style="margin-bottom:14px;">
       <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:12px;">Objetivos del jugador</div>
       ${objectives.length === 0 ? '<div style="color:var(--g3);font-size:13px;">Sin objetivos definidos</div>' :
