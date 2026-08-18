@@ -3288,7 +3288,18 @@ function renderCargaBarChart(ventana, metric, banda, colorUltima) {
     const esUltima = i === n - 1;
     const color = (esUltima && colorUltima) ? colorUltima : (metric === 'carga' ? '#FF6B00' : '#1DA1D6');
     const label = v.fecha ? v.fecha.slice(8,10) : (v.semana_inicio ? v.semana_inicio.slice(5) : '');
+    // Valor sobre la barra: respeta el toggle activo; se omite en barras en cero.
+    const valTxt = metric === 'horas'
+      ? (Number.isInteger(val) ? val : val.toFixed(1).replace('.', ',')) + ' h'
+      : String(Math.round(val));
+    const dentro = y < 14;                    // barra muy alta: el número no cabe arriba
+    const valY = dentro ? (y + 11) : (y - 3);
+    const valFill = dentro ? '#fff' : '#555';
+    const valSvg = val > 0
+      ? `<text x="${(x+barW/2).toFixed(1)}" y="${valY.toFixed(1)}" font-size="9" font-weight="600" text-anchor="middle" fill="${valFill}">${valTxt}</text>`
+      : '';
     return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(h,1).toFixed(1)}" rx="2" fill="${color}"/>
+      ${valSvg}
       <text x="${(x+barW/2).toFixed(1)}" y="${H-6}" font-size="8" text-anchor="middle" fill="#bbb">${escHtml(label)}</text>`;
   }).join('');
 
