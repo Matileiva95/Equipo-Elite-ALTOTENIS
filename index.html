@@ -3157,6 +3157,20 @@ function cargaRerender() {
   if (el) el.innerHTML = renderCargaCoachBlock();
 }
 
+function openCargaFullscreen() {
+  const body = document.getElementById('carga-fullscreen-body');
+  if (body) body.innerHTML = (_cargaState && _cargaState.lastChart)
+    ? _cargaState.lastChart
+    : '<div style="padding:24px 0;text-align:center;color:var(--g3);font-size:13px;">Sin datos para mostrar</div>';
+  const ov = document.getElementById('carga-fullscreen-modal');
+  if (ov) ov.classList.add('open');
+}
+
+function closeCargaFullscreen() {
+  const ov = document.getElementById('carga-fullscreen-modal');
+  if (ov) ov.classList.remove('open');
+}
+
 function cargaSetGran(g) {
   if (g === _cargaState.gran) return;
   _cargaState.gran = g; _cargaState.offset = 0;
@@ -3223,6 +3237,7 @@ function renderCargaCoachBlock() {
   const puedeAdelante = st.offset > 0;
 
   const chart = renderCargaBarChart(ventana, st.metric, banda, colorUltimaBarra);
+  _cargaState.lastChart = chart;
   // Semáforo: SIEMPRE visible en la vista de gráfico (cualquier gran/metric)
   // cuando acwr_disponible — es el estado de riesgo del jugador, no la
   // leyenda del gráfico. La banda (arriba) sí sigue acotada a sem+carga+presente.
@@ -3233,7 +3248,10 @@ function renderCargaCoachBlock() {
       ${rangoSelector}
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0 10px;">
         ${renderCargaGranToggle(st.gran)}
-        ${renderCargaMetricToggle(st.metric)}
+        <div style="display:flex;gap:8px;align-items:center;">
+          ${renderCargaMetricToggle(st.metric)}
+          <button onclick="openCargaFullscreen()" title="Agrandar" style="padding:6px 10px;border-radius:8px;border:2px solid var(--border);background:#fff;color:#1DA1D6;font-size:14px;line-height:1;cursor:pointer;transition:all .13s;">⛶</button>
+        </div>
       </div>
       <div style="display:flex;align-items:stretch;gap:6px;">
         <button onclick="cargaMover('atras')" ${puedeAtras?'':'disabled'} style="${cargaBtnNavStyle(puedeAtras)}">‹</button>
@@ -10457,6 +10475,16 @@ function savePuntoAPunto() {
     });
   }
 </script>
+
+  <div class="modal-overlay" id="carga-fullscreen-modal" onclick="if(event.target===this)closeCargaFullscreen()">
+    <div class="modal" style="max-width:1000px;width:95%;">
+      <div class="modal-header">
+        <div class="modal-title">Carga — vista ampliada</div>
+        <button class="modal-close" onclick="closeCargaFullscreen()">×</button>
+      </div>
+      <div id="carga-fullscreen-body"></div>
+    </div>
+  </div>
 
 </body>
 </html>
