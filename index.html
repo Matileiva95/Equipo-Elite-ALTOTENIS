@@ -1205,6 +1205,27 @@ async function loadPortalEvals() {
     if (page === 'dashboard') renderMain();
   } catch(e) { /* sin portal evals el dashboard sigue con el blob */ }
 }
+let cargaResumenByLegacy = null;  // null = aún no cargado
+async function loadCargaResumen() {
+  try {
+    const token = sessionStorage.getItem('ciq_token');
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/academies/${ACADEMY_ID}/carga-resumen`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res || !res.ok) throw new Error();
+    const json = await res.json();
+    const map = {};
+    (json.players || []).forEach(pl => {
+      if (pl.legacy_id === null || pl.legacy_id === undefined) return; // guard: ignora nulls
+      map[String(pl.legacy_id)] = pl;
+    });
+    cargaResumenByLegacy = map;
+  } catch (err) {
+    console.error('Error cargando carga-resumen:', err);
+    cargaResumenByLegacy = {}; // cargado pero vacío → degradación limpia
+  }
+  if (page === 'dashboard') renderMain();
+}
 // Escape HTML para texto controlado por el usuario (nombres de coaches, etc.).
 // Relevante de cara a multi-tenant: no controlamos quién escribe nombres en
 // otras academias.
@@ -1373,6 +1394,7 @@ async function loadData(){
   loadGroups();
   loadUserPermissions();
   loadPortalEvals(); // non-blocking, re-renderiza el dashboard al llegar
+  loadCargaResumen(); // non-blocking, re-renderiza el dashboard al llegar
   renderAll();setInterval(refreshData,30000);
   window.addEventListener('beforeunload', (e) => {
     if (grupalSaveTimer !== null || grupalSaveInFlight || grupalSaveStatus === 'error') {
@@ -1588,7 +1610,6 @@ function renderDashboard(){
     const dias=rpeDiarioFusionado(p,d5key);
     if(dias.length>=3){
       const avg=dias.reduce((a,b)=>a+b,0)/dias.length;
-      if(avg>=RPE_CRITICO)alertsAmber.push({name:p.name,pid:i,msg:`Carga alta — RPE ${avg.toFixed(1)}/5`});
     }
   });
 
@@ -1642,6 +1663,14 @@ function renderDashboard(){
     });
   });
 
+  if (cargaResumenByLegacy != null) {
+    Object.values(cargaResumenByLegacy).forEach(cr => {
+      if (!cr.alerta) return;
+      const idx = allPlayers.findIndex(pp => String(pp.id) === String(cr.legacy_id));
+      alertsAmber.push({ name: cr.full_name, pid: idx, msg: `Carga alta — ACWR ${cr.acwr_valor} (zona alta)` });
+    });
+  }
+
   const noAlerts=!alertsRed.length&&!alertsAmber.length;
   const alertsCollapsed=localStorage.getItem('dashboard_alerts_collapsed')==='1';
 
@@ -1651,34 +1680,66 @@ function renderDashboard(){
     const w=isoWeekToRange(ev.week);return w&&w.end>=today&&w.start<=in28&&(!activeGroup||ev.group_id===activeGroup);
   }).sort((a,b)=>{const wa=isoWeekToRange(a.week),wb=isoWeekToRange(b.week);return wa.start-wb.start;});
 
-  // ── 4. CARGA SEMANAL POR GRUPO ──
-  const d7k=new Date(today);d7k.setDate(today.getDate()-7);
-  const d7key=d7k.toISOString().slice(0,10);
-  const grpRpe={};
-  const cargaPlayers=[];
-  allPlayers.forEach(p=>{
-    if(!p.group_id)return;
-    if(activeGroup&&p.group_id!==activeGroup)return;
-    const dias=rpeDiarioFusionado(p,d7key);
-    if(activeGroup){
-      const avg=dias.length?dias.reduce((a,b)=>a+b,0)/dias.length:null;
-      cargaPlayers.push({p,avg});
-      return;
+  // ── 4. CARGA SEMANAL POR GRUPO (competitivos, desde /carga-resumen) ──
+  const cargaLoaded = cargaResumenByLegacy != null;
+  const blobIdxByLegacy = {};
+  allPlayers.forEach((pp, idx) => { if (pp.id != null) blobIdxByLegacy[String(pp.id)] = idx; });
+  let cargaEntries = cargaLoaded ? Object.values(cargaResumenByLegacy) : [];
+  if (activeGroup) cargaEntries = cargaEntries.filter(e => e.group_id === activeGroup);
+  cargaEntries.sort((a, b) => (b.alerta ? 1 : 0) - (a.alerta ? 1 : 0) || (b.carga_semana - a.carga_semana));
+  const maxCarga = Math.max(1, ...cargaEntries.map(e => e.carga_semana || 0));
+
+  function cargaRowHtml(cr) {
+    const idx = blobIdxByLegacy[String(cr.legacy_id)];
+    const clickable = idx != null;
+    const onclick = clickable ? `onclick="navTo('player',${idx})"` : '';
+    const cursor = clickable ? 'cursor:pointer;' : '';
+    const gcol = GROUP_COLOR[cr.group_id] || '#999';
+    const nombre = escHtml(cr.full_name || '');
+    if (cr.alerta) {
+      const pct = Math.round(((cr.carga_semana || 0) / maxCarga) * 100);
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;${cursor}" ${onclick}>
+        <span style="font-size:12px;flex-shrink:0;width:10px;text-align:center;">⚠️</span>
+        <div style="font-size:13px;font-weight:700;color:#c0392b;min-width:110px;">${nombre}</div>
+        <div style="flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:#e74c3c;border-radius:4px;"></div></div>
+        <div style="min-width:84px;text-align:right;">
+          <div style="font-size:12px;font-weight:700;color:#e74c3c;">${cr.carga_semana} UA</div>
+          <div style="font-size:10px;font-weight:600;color:#e74c3c;">ACWR ${cr.acwr_valor} · ${cr.acwr_zona}</div>
+        </div>
+      </div>`;
     }
-    if(!dias.length)return;
-    const avg=dias.reduce((a,b)=>a+b,0)/dias.length;
-    if(!grpRpe[p.group_id])grpRpe[p.group_id]={sum:0,n:0};
-    grpRpe[p.group_id].sum+=avg;grpRpe[p.group_id].n++;
-  });
-  if(activeGroup){
-    cargaPlayers.sort((a,b)=>{
-      if(a.avg==null&&b.avg==null)return 0;
-      if(a.avg==null)return 1;
-      if(b.avg==null)return -1;
-      const aCrit=a.avg>=RPE_CRITICO,bCrit=b.avg>=RPE_CRITICO;
-      if(aCrit!==bCrit)return aCrit?-1:1;
-      return b.avg-a.avg;
-    });
+    if ((cr.carga_semana || 0) > 0) {
+      const pct = Math.round((cr.carga_semana / maxCarga) * 100);
+      const pill = cr.acwr_disponible ? '' : `<span style="font-size:9px;font-weight:700;color:#999;background:#f2f2f2;border-radius:5px;padding:2px 6px;margin-left:6px;">reuniendo datos</span>`;
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;${cursor}" ${onclick}>
+        <div style="width:10px;height:10px;border-radius:50%;background:${gcol};flex-shrink:0;"></div>
+        <div style="font-size:13px;font-weight:600;color:#333;min-width:110px;">${nombre}${pill}</div>
+        <div style="flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:#1DA1D6;border-radius:4px;"></div></div>
+        <div style="font-size:12px;font-weight:700;color:#1DA1D6;min-width:84px;text-align:right;">${cr.carga_semana} UA</div>
+      </div>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;${cursor}" ${onclick}>
+      <div style="width:10px;height:10px;border-radius:50%;background:#e0e0e0;flex-shrink:0;"></div>
+      <div style="font-size:13px;font-weight:500;color:#aaa;min-width:110px;">${nombre}</div>
+      <div style="flex:1;height:7px;background:repeating-linear-gradient(90deg,#eee,#eee 4px,#f8f8f8 4px,#f8f8f8 8px);border-radius:4px;"></div>
+      <div style="font-size:12px;font-weight:600;color:#ccc;min-width:84px;text-align:right;">Sin registro</div>
+    </div>`;
+  }
+
+  let cargaBody;
+  if (!cargaLoaded) {
+    cargaBody = `<div style="font-size:13px;color:#aaa;padding:6px 0;">Cargando carga…</div>`;
+  } else if (activeGroup && cargaEntries.length === 0) {
+    cargaBody = `<div style="font-size:13px;color:#aaa;padding:6px 0;">La carga se registra solo en grupos competitivos (Elite y F2).</div>`;
+  } else if (cargaEntries.length === 0) {
+    cargaBody = `<div style="font-size:13px;color:#aaa;padding:6px 0;">Sin registros de carga esta semana.</div>`;
+  } else if (activeGroup) {
+    cargaBody = cargaEntries.map(cargaRowHtml).join('');
+  } else {
+    const shown = cargaEntries.filter(e => (e.carga_semana || 0) > 0 || e.alerta);
+    const hidden = cargaEntries.length - shown.length;
+    cargaBody = shown.map(cargaRowHtml).join('')
+      + (hidden > 0 ? `<div style="font-size:11px;color:#bbb;border-top:1px solid #f0f0f0;padding-top:10px;margin-top:2px;">+ ${hidden} competitivo${hidden === 1 ? '' : 's'} sin registro esta semana</div>` : '');
   }
 
   // ── 5. ENTRENADORES ──
@@ -1784,39 +1845,9 @@ function renderDashboard(){
 
   <!-- 4. CARGA SEMANAL POR GRUPO -->
   <div style="margin-bottom:20px;">
-    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Carga semanal ${activeGroup?'— '+(groups.find(g=>g.id===activeGroup)?.name||''):'por grupo'} <span style="font-weight:400;text-transform:none;letter-spacing:0;">(RPE últimos 7 días)</span></div>
+    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Carga semanal ${activeGroup?'— '+(groups.find(g=>g.id===activeGroup)?.name||''):'— competitivos'} <span style="font-weight:400;text-transform:none;letter-spacing:0;">(UA · semana actual)</span></div>
     <div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px;">
-      ${activeGroup
-        ? (!cargaPlayers.length?`<div style="font-size:13px;color:#aaa;">Sin jugadores en este grupo</div>`:
-          cargaPlayers.map(({p,avg})=>{
-            const pidx=allPlayers.indexOf(p);
-            const isCrit=avg!=null&&avg>=RPE_CRITICO;
-            const col=isCrit?'#e74c3c':(GROUP_COLOR[p.group_id]||'#999');
-            const pct=avg!=null?((avg-1)/4)*100:0;
-            return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;cursor:pointer;" onclick="navTo('player',${pidx})">
-              ${isCrit?`<span style="font-size:12px;flex-shrink:0;">⚠️</span>`:`<div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;"></div>`}
-              <div style="font-size:13px;font-weight:${isCrit?'700':'600'};color:${isCrit?'#c0392b':'#333'};min-width:110px;">${p.name}</div>
-              <div style="flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden;">
-                ${avg!=null?`<div style="width:${pct.toFixed(0)}%;height:100%;background:${col};border-radius:4px;"></div>`:`<div style="width:100%;height:100%;background:repeating-linear-gradient(90deg,#eee,#eee 4px,#f8f8f8 4px,#f8f8f8 8px);"></div>`}
-              </div>
-              <div style="font-size:12px;font-weight:700;color:${avg!=null?col:'#ccc'};min-width:70px;text-align:right;">${avg!=null?avg.toFixed(1)+'/5':'Sin registros'}</div>
-            </div>`;
-          }).join(''))
-        : (!groups.length?`<div style="font-size:13px;color:#aaa;">Sin grupos</div>`:
-          groups.map(g=>{
-            const rd=grpRpe[g.id];
-            const avg=rd?rd.sum/rd.n:null;
-            const pct=avg!=null?((avg-1)/4)*100:0;
-            const col=GROUP_COLOR[g.id]||'#999';
-            return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;">
-              <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;"></div>
-              <div style="font-size:13px;font-weight:600;color:#333;min-width:56px;">${g.name}</div>
-              <div style="flex:1;height:7px;background:#f0f0f0;border-radius:4px;overflow:hidden;">
-                ${avg!=null?`<div style="width:${pct.toFixed(0)}%;height:100%;background:${col};border-radius:4px;"></div>`:`<div style="width:100%;height:100%;background:repeating-linear-gradient(90deg,#eee,#eee 4px,#f8f8f8 4px,#f8f8f8 8px);"></div>`}
-              </div>
-              <div style="font-size:12px;font-weight:700;color:${col};min-width:36px;text-align:right;">${avg!=null?avg.toFixed(1)+'/5':'—'}</div>
-            </div>`;
-          }).join(''))}
+      ${cargaBody}
     </div>
   </div>
 
