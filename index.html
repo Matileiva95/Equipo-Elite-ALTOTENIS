@@ -1546,20 +1546,6 @@ function renderMain(){const m=document.getElementById('main');if(page==='dashboa
 function postRender(){document.querySelectorAll('canvas.court-ro').forEach(c=>{try{drawCourtReadOnly(c,JSON.parse(c.dataset.diagram||'[]'));}catch(e){}});if(document.getElementById('court-canvas'))initCourtEditor();if(page==='grupal')renderGrupalContent();}
 
 // ── DASHBOARD ─────────────────────────────────────────────
-// RPE diario fusionado: sesiones del blob (trainingLoad) + evaluaciones del
-// portal (portalEvalsCache), deduplicando por fecha — si un día tiene ambas
-// fuentes, todas sus mediciones se promedian en un solo punto del día.
-// Devuelve un array de promedios diarios (un valor por día con registro).
-function rpeDiarioFusionado(p, sinceKey) {
-  const porDia = {};
-  (p.trainingLoad || []).forEach(l => {
-    if (l.date >= sinceKey && l.rpe) (porDia[l.date] = porDia[l.date] || []).push(l.rpe);
-  });
-  ((portalEvalsCache || {})[Number(p.id)] || []).forEach(e => {
-    if (e.fecha >= sinceKey && e.rpe) (porDia[e.fecha] = porDia[e.fecha] || []).push(e.rpe);
-  });
-  return Object.values(porDia).map(arr => arr.reduce((a, b) => a + b, 0) / arr.length);
-}
 function renderDashboard(){
   const today=new Date();today.setHours(0,0,0,0);
   const todayKey=today.toISOString().slice(0,10);
@@ -1601,17 +1587,6 @@ function renderDashboard(){
         alertsRed.push({name:p.name,pid:i,msg:`Torneo sin registrar — ${compThisWeek[1].desc||compThisWeek[0]}`});
     });
   }
-
-  // AMBER: RPE promedio ≥ 4/5 últimos 5 días
-  const d5k=new Date(today);d5k.setDate(today.getDate()-5);
-  const d5key=d5k.toISOString().slice(0,10);
-  allPlayers.forEach((p,i)=>{
-    if(activeGroup&&p.group_id!==activeGroup)return;
-    const dias=rpeDiarioFusionado(p,d5key);
-    if(dias.length>=3){
-      const avg=dias.reduce((a,b)=>a+b,0)/dias.length;
-    }
-  });
 
   // AMBER: ausencias sin justificar hoy
   allPlayers.forEach((p,i)=>{
