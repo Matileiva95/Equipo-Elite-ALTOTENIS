@@ -476,6 +476,7 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button class="nav-btn" onclick="navTo('asistencia')">✓ &nbsp;Asistencia</button>
       <button class="nav-btn" onclick="navTo('grupal')">⊞ &nbsp;Grupal</button>
       <button class="nav-btn" onclick="navTo('gira')">✈ &nbsp;Torneo/Gira</button>
+      <button class="nav-btn" onclick="navTo('reforzamiento')">◐ &nbsp;Reforzamiento</button>
       <div class="nav-lbl" style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;">
         <span>Jugadores</span>
         <button class="btn-manage-groups" onclick="openGroupsManager()" title="Gestionar grupos" style="display:none;background:none;border:none;cursor:pointer;font-size:13px;color:var(--g3);padding:2px 4px;">⚙</button>
@@ -511,6 +512,7 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button onclick="closeMasMenu2();navTo('coaching')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">★</span>Coaching</button>
       <button onclick="closeMasMenu2();navTo('scouting')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">◎</span>Scouting</button>
       <button onclick="closeMasMenu2();navTo('grupal')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">⊞</span>Grupal</button>
+      <button onclick="closeMasMenu2();navTo('reforzamiento')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">◐</span>Reforzamiento</button>
       <button onclick="closeMasMenu2();openMasMenu()" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">⚙️</span>Ajustes</button>
       <button onclick="closeMasMenu2();openAddPlayer()" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">👤</span>Agregar jugador</button>
     </div>
@@ -776,6 +778,7 @@ let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
 let saveTimer=null,editingPlayerId=null;
 let grupalTab='semanal',grupalGrupo=null /* UUID de grupo, o null="Todos" — 3.B2 parte 2 */,grupalSemanaOffset=0,grupalMesOffset=0,grupalMesExpanded={};
 let coachingTab='equipo',availWeekOffset=0,availAddingType=null;
+let refuMes='';  // 'YYYY-MM' — mes visible del mural de Reforzamiento
 // Selección múltiple calendario
 let selMode=false,selectedDays=new Set();
 
@@ -1531,7 +1534,7 @@ function renderPlayerNav(){
   const nav=document.getElementById('player-nav');if(!nav)return;
   const filtered=data.players.map((p,i)=>({p,i})).filter(({p})=>(!activeGroup||p.group_id===activeGroup)&&canViewGroup(p.group_id));
   nav.innerHTML=filtered.map(({p,i})=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span></button>`).join('');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal','gira'][i]===page));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal','gira','reforzamiento'][i]===page));
 }
 function renderDrawerList(){
   const dl=document.getElementById('drawer-list');if(!dl)return;
@@ -1544,8 +1547,99 @@ function updateMobileNav(){
 }
 function toggleDrawer(){const dr=document.getElementById('player-drawer'),ov=document.getElementById('drawer-overlay');dr.classList.toggle('open');ov.classList.toggle('open');}
 function closeDrawer(){document.getElementById('player-drawer').classList.remove('open');document.getElementById('drawer-overlay').classList.remove('open');}
-function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='grupal')m.innerHTML=renderGrupal();else if(page==='gira')renderGira();else if(page==='player')m.innerHTML=renderPlayer();postRender();}
+function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='grupal')m.innerHTML=renderGrupal();else if(page==='gira')renderGira();else if(page==='reforzamiento')m.innerHTML=renderReforzamiento();else if(page==='player')m.innerHTML=renderPlayer();postRender();}
 function postRender(){document.querySelectorAll('canvas.court-ro').forEach(c=>{try{drawCourtReadOnly(c,JSON.parse(c.dataset.diagram||'[]'));}catch(e){}});if(document.getElementById('court-canvas'))initCourtEditor();if(page==='grupal')renderGrupalContent();}
+
+// ── REFORZAMIENTO ─────────────────────────────────────────
+// Mural mensual de clases particulares, agrupado por coach. Commit 1/3: solo
+// lectura — agregar/borrar (commit 2) y PDF (commit 3) llegan después.
+function refuMesLabel(mes){
+  const [y,m]=(mes||'').split('-').map(Number);
+  if(!y||!m)return '';
+  return `${MONTHS_FULL[m-1]} ${y}`;
+}
+function refuFormatFecha(f){
+  const [,mo,d]=(f||'').split('-');
+  if(!mo||!d)return f||'';
+  return `${d} ${MONTHS[Number(mo)-1]||''}`;
+}
+function refuMoverMes(delta){
+  let [y,m]=refuMes.split('-').map(Number);
+  m+=delta;
+  while(m<1){m+=12;y--;}
+  while(m>12){m-=12;y++;}
+  refuMes=y+'-'+String(m).padStart(2,'0');
+  renderMain();
+}
+function renderReforzamiento(){
+  if(!refuMes)refuMes=hoyChile().slice(0,7);
+  const items=(data.reforzamientos||[]).filter(r=>(r.fecha||'').slice(0,7)===refuMes);
+
+  // Agrupa por coachNombre (los coach sin coachId igual agrupan por nombre).
+  // Orden: cantidad de clases desc — el coach más cargado del mes queda arriba.
+  const porCoach={};
+  items.forEach(r=>{
+    const key=r.coachNombre||'Sin asignar';
+    (porCoach[key]=porCoach[key]||[]).push(r);
+  });
+  const coachesOrdenados=Object.keys(porCoach).sort((a,b)=>porCoach[b].length-porCoach[a].length);
+  const totalMes=items.length;
+
+  return `
+    <div style="padding:20px 4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onclick="refuMoverMes(-1)" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;color:#333;font-size:16px;cursor:pointer;">‹</button>
+          <div style="font-size:18px;font-weight:700;color:var(--gray);min-width:150px;text-align:center;">${refuMesLabel(refuMes)}</div>
+          <button onclick="refuMoverMes(1)" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;color:#333;font-size:16px;cursor:pointer;">›</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-o" disabled title="(próximo commit)" style="opacity:.45;cursor:not-allowed;">+ Agregar clase</button>
+          <button class="btn btn-g" disabled title="(próximo commit)" style="opacity:.45;cursor:not-allowed;">⬇ PDF</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;display:flex;align-items:center;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="font-size:22px;font-weight:800;color:#1DA1D6;">${totalMes}</div>
+          <div style="font-size:11px;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;">Clases este mes</div>
+        </div>
+        ${coachesOrdenados.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${coachesOrdenados.map(c=>`<span style="padding:4px 11px;border-radius:20px;background:#fff3e8;color:#FF6B00;font-size:12px;font-weight:700;">${escHtml(c)} · ${porCoach[c].length}</span>`).join('')}
+        </div>`:''}
+      </div>
+
+      ${totalMes===0?`<div class="empty" style="padding:40px 0;">Sin clases de reforzamiento registradas en ${refuMesLabel(refuMes).toLowerCase()}.</div>`:
+        coachesOrdenados.map(c=>{
+          const clases=porCoach[c].slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+          return `<div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div style="font-size:14px;font-weight:700;color:#FF6B00;">${escHtml(c)}</div>
+              <div style="font-size:12px;font-weight:600;color:var(--g3);">${clases.length} clase${clases.length===1?'':'s'}</div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead>
+                <tr style="text-align:left;color:var(--g3);font-size:11px;text-transform:uppercase;letter-spacing:.04em;">
+                  <th style="padding:6px 8px;font-weight:600;">Fecha</th>
+                  <th style="padding:6px 8px;font-weight:600;">Jugador</th>
+                  <th style="padding:6px 8px;font-weight:600;">Cancha</th>
+                  <th style="padding:6px 8px;width:28px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${clases.map(r=>`<tr style="border-top:1px solid var(--border);">
+                  <td style="padding:7px 8px;color:var(--g2);">${refuFormatFecha(r.fecha)}</td>
+                  <td style="padding:7px 8px;color:var(--gray);">${escHtml(r.jugadorNombre||'')}${r.externo?' <span style="font-size:10px;font-weight:700;color:#999;background:#f2f2f2;border-radius:5px;padding:1px 6px;margin-left:4px;">externo</span>':''}</td>
+                  <td style="padding:7px 8px;color:var(--g2);">${escHtml(r.cancha||'')}</td>
+                  <td style="padding:7px 8px;"></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
+        }).join('')
+      }
+    </div>`;
+}
 
 // ── DASHBOARD ─────────────────────────────────────────────
 function renderDashboard(){
