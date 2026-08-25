@@ -415,6 +415,13 @@ body{background:#faf7f2;color:#1a1a1a;}
 .tab-btn{padding:7px 18px!important;border-radius:20px!important;font-size:12px!important;font-weight:500!important;cursor:pointer!important;border:1px solid #e0dbd4!important;background:#f0ede8!important;color:#888888!important;white-space:nowrap!important;flex-shrink:0!important;transition:all .15s!important;box-shadow:none!important;}
 .tab-btn:hover:not(.active){background:#e8e4de!important;color:#555555!important;border-color:#d6d0c8!important;}
 .tab-btn.active{background:#FF6B00!important;color:#fff!important;border-color:#FF6B00!important;font-weight:600!important;box-shadow:0 2px 6px rgba(255,107,0,.22)!important;}
+
+/* ── Impresión: mural de Reforzamiento (#refu-print) ─────── */
+@media print {
+  body * { visibility: hidden; }
+  #refu-print, #refu-print * { visibility: visible; }
+  #refu-print { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
+}
 </style>
 <!-- Sync check: hide login instantly if a session token exists, before first paint -->
 <script>if(sessionStorage.getItem('ciq_token'))document.documentElement.classList.add('has-session');</script>
@@ -1596,7 +1603,7 @@ function renderReforzamiento(){
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-o" onclick="refuAbrirModal()">+ Agregar clase</button>
-          <button class="btn btn-g" disabled title="(próximo commit)" style="opacity:.45;cursor:not-allowed;">⬇ PDF</button>
+          <button class="btn btn-g" onclick="refuImprimirPDF()">⬇ PDF</button>
         </div>
       </div>
 
@@ -1726,6 +1733,58 @@ function refuBorrarClase(id){
   data.reforzamientos=(data.reforzamientos||[]).filter(x=>x.id!==id);
   scheduleSync();
   renderMain();
+}
+function refuImprimirPDF(){
+  const items=(data.reforzamientos||[]).filter(r=>(r.fecha||'').slice(0,7)===refuMes);
+  const porCoach={};
+  items.forEach(r=>{
+    const key=r.coachNombre||'Sin asignar';
+    (porCoach[key]=porCoach[key]||[]).push(r);
+  });
+  const coachesOrdenados=Object.keys(porCoach).sort((a,b)=>porCoach[b].length-porCoach[a].length);
+  const totalMes=items.length;
+  const academia='Altotenis';  // no hay variable de nombre de academia en este archivo — fallback fijo
+
+  const bloques=coachesOrdenados.map(c=>{
+    const clases=porCoach[c].slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    return `<div style="margin-bottom:22px;page-break-inside:avoid;">
+      <div style="font-size:14px;font-weight:700;color:#FF6B00;margin-bottom:6px;">${escHtml(c)} — ${clases.length} clase${clases.length===1?'':'s'}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:5px 8px;background:#f4f3f1;border-bottom:2px solid #ddd;">Fecha</th>
+            <th style="text-align:left;padding:5px 8px;background:#f4f3f1;border-bottom:2px solid #ddd;">Jugador</th>
+            <th style="text-align:left;padding:5px 8px;background:#f4f3f1;border-bottom:2px solid #ddd;">Cancha</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${clases.map(r=>`<tr>
+            <td style="padding:5px 8px;border-bottom:1px solid #eee;">${refuFormatFecha(r.fecha)}</td>
+            <td style="padding:5px 8px;border-bottom:1px solid #eee;">${escHtml(r.jugadorNombre||'')}${r.externo?' <span style="font-size:10px;color:#999;">(externo)</span>':''}</td>
+            <td style="padding:5px 8px;border-bottom:1px solid #eee;">${escHtml(r.cancha||'')}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  const resumen=coachesOrdenados.length
+    ? `<div style="margin-top:10px;padding-top:10px;border-top:2px solid #333;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Resumen por coach</div>
+        ${coachesOrdenados.map(c=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${escHtml(c)}</span><span>${porCoach[c].length}</span></div>`).join('')}
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:8px;padding-top:6px;border-top:1px solid #ccc;"><span>Total general</span><span>${totalMes}</span></div>
+      </div>`
+    : '';
+
+  const cont=document.getElementById('refu-print');
+  cont.innerHTML=`
+    <div style="font-family:sans-serif;color:#333;padding:24px;">
+      <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">${escHtml(academia)}</div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:18px;">Reforzamiento — ${refuMesLabel(refuMes)}</div>
+      ${totalMes===0?`<div style="font-size:13px;color:#888;">Sin clases de reforzamiento registradas en ${refuMesLabel(refuMes).toLowerCase()}.</div>`:bloques+resumen}
+    </div>`;
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────
@@ -10718,6 +10777,8 @@ function savePuntoAPunto() {
       </div>
     </div>
   </div>
+
+  <div id="refu-print" style="display:none;"></div>
 
 </body>
 </html>
