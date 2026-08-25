@@ -767,19 +767,10 @@ const DAYS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const FOCOS=['Técnico','Táctico','Físico','Mental','Saque','Derecha','Revés','Volea','Competitivo'];
 const FOCO_CLS={Técnico:'fp-t',Táctico:'fp-ta',Físico:'fp-f',Mental:'fp-m',Saque:'fp-t',Derecha:'fp-t','Revés':'fp-t',Volea:'fp-t',Competitivo:'fp-ta'};
 
-const DEFAULT_PLAYERS=[
-  {id:0,name:"Antonia Vergara",age:19,ranking:"414 WTA",circuit:"wta",gender:"F",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]},
-  {id:1,name:"Thomas Menzel",age:19,ranking:"2010 ATP",circuit:"atp",gender:"M",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]},
-  {id:2,name:"Nicolas Villalón",age:22,ranking:"931 ATP",circuit:"atp",gender:"M",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]},
-  {id:3,name:"Benjamin Torrealba",age:21,ranking:"731 ATP",circuit:"atp",gender:"M",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]},
-  {id:4,name:"Fernanda Rain",age:22,ranking:"1600 WTA",circuit:"wta",gender:"F",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]},
-  {id:5,name:"Diego Jarry",age:23,ranking:"1471 ATP",circuit:"atp",gender:"M",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]},
-  {id:6,name:"Diego Ortiz",age:22,ranking:"1600 ATP",circuit:"atp",gender:"M",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]},
-  {id:7,name:"León Achurra",age:17,ranking:"545 ITF",circuit:"itf",gender:"M",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]},
-  {id:8,name:"Max Becerra",age:15,ranking:"765 ITF",circuit:"itf",gender:"M",hand:"Diestro",style:"",goal:"",stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]}
-];
+const DEFAULT_PLAYERS = [];
 
 let data={players:JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),reflections:[]};
+let dataLoadOk = false;  // gate de guardado: false = modo solo-lectura
 let user="",page="dashboard",pid=null,dtab="perfil";
 let activeStars=0,activeFocos=[],activePlanTags=['Técnico'];
 let saveTimer=null,editingPlayerId=null;
@@ -948,6 +939,13 @@ function doLogout() {
 
 // ── SYNC ──────────────────────────────────────────────────
 function setSS(s,l){const d=document.getElementById('sync-dot'),lb=document.getElementById('sync-lbl');if(d)d.className='sync-dot '+s;if(lb)lb.textContent=l;}
+let _avisoSoloLecturaMostrado = false;
+function avisarSoloLectura(){
+  setSS('error','Sin conexión — SOLO LECTURA');
+  if (_avisoSoloLecturaMostrado) return;
+  _avisoSoloLecturaMostrado = true;
+  alert('Sin conexión con el servidor. La app está en SOLO LECTURA: tus cambios NO se guardarán. Recarga la página cuando vuelva la conexión.');
+}
 // ── Coach team management ─────────────────────────────────────
 let _coachTeamCache = null;
 async function loadUserPermissions() {
@@ -1383,12 +1381,15 @@ async function loadData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d = await res.json();
+    dataLoadOk = true;
     if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.availabilityConfig=data.availabilityConfig||{coaches:[],pfs:[]};}
     setSS('synced','Sincronizado · '+now());
   }catch(e){
     const l=localStorage.getItem('at_data_elite');
-    if(l)try{data=JSON.parse(l);}catch(e){}
-    setSS('error','Sin conexión — datos locales');
+    let localOk=false;
+    if(l){try{data=JSON.parse(l);localOk=true;}catch(e){}}
+    if(localOk){dataLoadOk=true;setSS('error','Sin conexión — datos locales');}
+    else{dataLoadOk=false;setSS('error','Sin conexión — SOLO LECTURA');}
   }
   loadCoachTeam(); // non-blocking, will trigger re-render when done
   loadGroups();
@@ -1412,11 +1413,12 @@ async function refreshData(){
       headers: {'Authorization': `Bearer ${token}`}
     });
     const d=await res.json();
-    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.availabilityConfig=data.availabilityConfig||{coaches:[],pfs:[]};}
+    if(d.record){data=d.record.value;data.players=data.players.map(p=>({rankingHistory:[],...p}));data.grupalPlanes=data.grupalPlanes||[];data.coachAvailability=data.coachAvailability||{};data.availabilityConfig=data.availabilityConfig||{coaches:[],pfs:[]};dataLoadOk=true;_avisoSoloLecturaMostrado=false;}
     setSS('synced','Sincronizado · '+now());renderPlayerNav();renderDrawerList();
   }catch(e){setSS('error','Sin conexión');}
 }
 async function saveData(){
+  if (!dataLoadOk) { avisarSoloLectura(); return; }
   localStorage.setItem('at_data_elite',JSON.stringify(data));
   setSS('syncing','Guardando...');
   try{
@@ -1430,7 +1432,7 @@ async function saveData(){
     setSS('synced','Guardado · '+now());
   }catch(e){setSS('error','Error al guardar');}
 }
-function scheduleSync(){localStorage.setItem('at_data_elite',JSON.stringify(data));if(saveTimer)clearTimeout(saveTimer);setSS('syncing','Guardando...');saveTimer=setTimeout(saveData,1200);}
+function scheduleSync(){if(!dataLoadOk){avisarSoloLectura();return;}localStorage.setItem('at_data_elite',JSON.stringify(data));if(saveTimer)clearTimeout(saveTimer);setSS('syncing','Guardando...');saveTimer=setTimeout(saveData,1200);}
 function now(){return new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});}
 
 let grupalSaveTimer = null;
