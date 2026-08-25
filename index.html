@@ -779,6 +779,7 @@ let saveTimer=null,editingPlayerId=null;
 let grupalTab='semanal',grupalGrupo=null /* UUID de grupo, o null="Todos" — 3.B2 parte 2 */,grupalSemanaOffset=0,grupalMesOffset=0,grupalMesExpanded={};
 let coachingTab='equipo',availWeekOffset=0,availAddingType=null;
 let refuMes='';  // 'YYYY-MM' — mes visible del mural de Reforzamiento
+let refuFormTipo='acad',refuFormJugadorId=null,refuFormJugadorNombre='',refuFormCancha=null;  // estado del form de agregar clase
 // Selección múltiple calendario
 let selMode=false,selectedDays=new Set();
 
@@ -1594,7 +1595,7 @@ function renderReforzamiento(){
           <button onclick="refuMoverMes(1)" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;color:#333;font-size:16px;cursor:pointer;">›</button>
         </div>
         <div style="display:flex;gap:8px;">
-          <button class="btn btn-o" disabled title="(próximo commit)" style="opacity:.45;cursor:not-allowed;">+ Agregar clase</button>
+          <button class="btn btn-o" onclick="refuAbrirModal()">+ Agregar clase</button>
           <button class="btn btn-g" disabled title="(próximo commit)" style="opacity:.45;cursor:not-allowed;">⬇ PDF</button>
         </div>
       </div>
@@ -1631,7 +1632,7 @@ function renderReforzamiento(){
                   <td style="padding:7px 8px;color:var(--g2);">${refuFormatFecha(r.fecha)}</td>
                   <td style="padding:7px 8px;color:var(--gray);">${escHtml(r.jugadorNombre||'')}${r.externo?' <span style="font-size:10px;font-weight:700;color:#999;background:#f2f2f2;border-radius:5px;padding:1px 6px;margin-left:4px;">externo</span>':''}</td>
                   <td style="padding:7px 8px;color:var(--g2);">${escHtml(r.cancha||'')}</td>
-                  <td style="padding:7px 8px;"></td>
+                  <td style="padding:7px 8px;"><button onclick="refuBorrarClase('${r.id}')" style="padding:2px 7px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--g3);font-size:11px;cursor:pointer;" title="Eliminar">✕</button></td>
                 </tr>`).join('')}
               </tbody>
             </table>
@@ -1639,6 +1640,92 @@ function renderReforzamiento(){
         }).join('')
       }
     </div>`;
+}
+
+// ── REFORZAMIENTO: modal agregar/borrar (commit 2/3) ──────
+function refuTipoBtnStyle(active){
+  return `flex:1;padding:9px;border-radius:8px;border:2px solid ${active?'#FF6B00':'var(--border)'};background:${active?'#FF6B00':'#fff'};color:${active?'#fff':'var(--g3)'};font-size:13px;font-weight:700;cursor:pointer;`;
+}
+function refuSetTipo(t){
+  refuFormTipo=t;
+  const bAcad=document.getElementById('refu-tipo-acad'),bExt=document.getElementById('refu-tipo-ext');
+  if(bAcad)bAcad.setAttribute('style',refuTipoBtnStyle(t==='acad'));
+  if(bExt)bExt.setAttribute('style',refuTipoBtnStyle(t==='ext'));
+  const blocAcad=document.getElementById('refu-bloque-acad'),blocExt=document.getElementById('refu-bloque-ext');
+  if(blocAcad)blocAcad.style.display=t==='acad'?'block':'none';
+  if(blocExt)blocExt.style.display=t==='ext'?'block':'none';
+}
+function refuRenderJugadorList(query){
+  const q=(query||'').toLowerCase().trim();
+  const players=(data.players||[]).filter(p=>!q||p.name.toLowerCase().includes(q));
+  if(!players.length)return '<div style="font-size:13px;color:#aaa;padding:8px 0;">Sin resultados</div>';
+  return players.map(p=>{
+    const sel=refuFormJugadorId===p.id;
+    return `<div onclick="refuSeleccionarJugador(${p.id})" style="padding:8px 10px;border:1px solid ${sel?'#FF6B00':'var(--border)'};background:${sel?'#fff3e8':'#fff'};border-radius:8px;margin-bottom:5px;cursor:pointer;font-size:13px;color:${sel?'#FF6B00':'var(--gray)'};font-weight:${sel?'700':'400'};">${escHtml(p.name)}</div>`;
+  }).join('');
+}
+function refuFiltrarJugadores(q){
+  const el=document.getElementById('refu-jugador-list');
+  if(el)el.innerHTML=refuRenderJugadorList(q);
+}
+function refuSeleccionarJugador(id){
+  const p=(data.players||[]).find(pp=>pp.id===id);
+  if(!p)return;
+  refuFormJugadorId=p.id;
+  refuFormJugadorNombre=p.name;
+  const search=document.getElementById('refu-jugador-search');
+  refuFiltrarJugadores(search?search.value:'');
+}
+function refuCanchaBtnStyle(active){
+  return `padding:8px 0;border-radius:8px;border:2px solid ${active?'#1DA1D6':'var(--border)'};background:${active?'#1DA1D6':'#fff'};color:${active?'#fff':'var(--g3)'};font-size:13px;font-weight:700;cursor:pointer;`;
+}
+function refuSetCancha(c){
+  refuFormCancha=c;
+  ['1','2','3','4','5','6','7','8','CC'].forEach(v=>{
+    const b=document.getElementById('refu-cancha-'+v);
+    if(b)b.setAttribute('style',refuCanchaBtnStyle(v===c));
+  });
+}
+function refuAbrirModal(){
+  refuFormTipo='acad';refuFormJugadorId=null;refuFormJugadorNombre='';refuFormCancha=null;
+  const fecha=document.getElementById('refu-fecha');if(fecha)fecha.value=hoyChile();
+  const search=document.getElementById('refu-jugador-search');if(search)search.value='';
+  const ext=document.getElementById('refu-jugador-externo');if(ext)ext.value='';
+  refuFiltrarJugadores('');
+  refuSetTipo('acad');
+  refuSetCancha(null);
+  const m=document.getElementById('refu-modal');if(m)m.classList.add('open');
+}
+function refuCerrarModal(){
+  const m=document.getElementById('refu-modal');if(m)m.classList.remove('open');
+}
+function refuGuardarClase(){
+  const externo=refuFormTipo==='ext';
+  const jugadorNombre=externo?(document.getElementById('refu-jugador-externo')?.value||'').trim():refuFormJugadorNombre;
+  const jugadorId=externo?null:refuFormJugadorId;
+  if(!jugadorNombre){alert(externo?'Ingresá el nombre del jugador externo.':'Elegí un jugador de la academia.');return;}
+  const fecha=document.getElementById('refu-fecha')?.value||'';
+  if(!fecha){alert('Elegí la fecha de la clase.');return;}
+  if(!refuFormCancha){alert('Elegí la cancha.');return;}
+  const cMatch=(_coachTeamCache||[]).find(c=>c?.profiles?.full_name===user);
+  const registro={
+    id: (crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()),
+    coachNombre: user,
+    coachId: cMatch?cMatch.id:null,
+    jugadorNombre, jugadorId, externo,
+    fecha, cancha: refuFormCancha
+  };
+  data.reforzamientos=data.reforzamientos||[];
+  data.reforzamientos.push(registro);
+  scheduleSync();
+  refuCerrarModal();
+  renderMain();
+}
+function refuBorrarClase(id){
+  if(!confirm('¿Eliminar esta clase de reforzamiento?'))return;
+  data.reforzamientos=(data.reforzamientos||[]).filter(x=>x.id!==id);
+  scheduleSync();
+  renderMain();
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────
@@ -10585,6 +10672,50 @@ function savePuntoAPunto() {
         <button class="modal-close" onclick="closeCargaFullscreen()">×</button>
       </div>
       <div id="carga-fullscreen-body"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="refu-modal">
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header">
+        <div class="modal-title">Nueva clase de reforzamiento</div>
+        <button class="modal-close" onclick="refuCerrarModal()">×</button>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;color:var(--g3);margin-bottom:6px;">Jugador</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button id="refu-tipo-acad" onclick="refuSetTipo('acad')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #FF6B00;background:#FF6B00;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">De la academia</button>
+        <button id="refu-tipo-ext" onclick="refuSetTipo('ext')" style="flex:1;padding:9px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--g3);font-size:13px;font-weight:700;cursor:pointer;">Externo</button>
+      </div>
+
+      <div id="refu-bloque-acad">
+        <input id="refu-jugador-search" type="text" placeholder="Buscar jugador..." oninput="refuFiltrarJugadores(this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;outline:none;"/>
+        <div id="refu-jugador-list" style="max-height:180px;overflow-y:auto;margin-bottom:14px;"></div>
+      </div>
+      <div id="refu-bloque-ext" style="display:none;margin-bottom:14px;">
+        <input id="refu-jugador-externo" type="text" placeholder="Nombre del jugador externo" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;outline:none;"/>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;color:var(--g3);margin-bottom:6px;">Fecha</div>
+      <input id="refu-fecha" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:14px;box-sizing:border-box;outline:none;"/>
+
+      <div style="font-size:12px;font-weight:600;color:var(--g3);margin-bottom:6px;">Cancha</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:16px;">
+        <button id="refu-cancha-1" onclick="refuSetCancha('1')" style="padding:8px 0;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--g3);font-size:13px;font-weight:700;cursor:pointer;">1</button>
+        <button id="refu-cancha-2" onclick="refuSetCancha('2')" style="padding:8px 0;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--g3);font-size:13px;font-weight:700;cursor:pointer;">2</button>
+        <button id="refu-cancha-3" onclick="refuSetCancha('3')" style="padding:8px 0;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--g3);font-size:13px;font-weight:700;cursor:pointer;">3</button>
+        <button id="refu-cancha-4" onclick="refuSetCancha('4')" style="padding:8px 0;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--g3);font-size:13px;font-weight:700;cursor:pointer;">4</button>
+        <button id="refu-cancha-5" onclick="refuSetCancha('5')" style="padding:8px 0;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--g3);font-size:13px;font-weight:700;cursor:pointer;">5</button>
+        <button id="refu-cancha-6" onclick="refuSetCancha('6')" style="padding:8px 0;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--g3);font-size:13px;font-weight:700;cursor:pointer;">6</button>
+        <button id="refu-cancha-7" onclick="refuSetCancha('7')" style="padding:8px 0;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--g3);font-size:13px;font-weight:700;cursor:pointer;">7</button>
+        <button id="refu-cancha-8" onclick="refuSetCancha('8')" style="padding:8px 0;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--g3);font-size:13px;font-weight:700;cursor:pointer;">8</button>
+        <button id="refu-cancha-CC" onclick="refuSetCancha('CC')" style="padding:8px 0;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--g3);font-size:13px;font-weight:700;cursor:pointer;">CC</button>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-o" onclick="refuGuardarClase()">Guardar</button>
+        <button class="btn btn-g" onclick="refuCerrarModal()">Cancelar</button>
+      </div>
     </div>
   </div>
 
