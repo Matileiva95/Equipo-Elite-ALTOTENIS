@@ -2155,6 +2155,7 @@ let asistTipo = 'tenis'; // 'tenis' | 'fisico'
 let asistPlayerIdx = 0;
 let asistMes = new Date();
 asistMes.setDate(1);asistMes.setHours(0,0,0,0);
+let asistBusqueda = '';  // buscador global de jugadores en la vista diaria
 
 function renderAsistencia() {
   return `
@@ -2186,6 +2187,38 @@ function renderAsistencia() {
 
 let asistModalIdx = null;
 
+function asistSetBusqueda(q){
+  asistBusqueda = q;
+  const cont = document.getElementById('asist-search-results');
+  if(cont) cont.innerHTML = asistRenderResultados(q);
+  // NO re-renderizar toda la pantalla — solo el contenedor de resultados, para no
+  // perder el foco del input mientras se escribe.
+}
+function asistRenderResultados(q){
+  const query = (q||'').toLowerCase().trim();
+  if(!query) return '';  // input vacío → sin resultados, pantalla normal
+  const dateKey = asistFecha.toISOString().slice(0,10);  // MISMO dateKey que renderAsistDia
+  const matches = (data.players||[])
+    .filter(p => canViewGroup(p.group_id))              // respeta permisos
+    .filter(p => (p.name||'').toLowerCase().includes(query));
+  if(!matches.length) return '<div style="font-size:13px;color:#aaa;padding:8px 4px;margin-bottom:12px;">Sin resultados</div>';
+  return `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">` +
+    matches.map(p => {
+      const idx = data.players.indexOf(p);
+      const grupo = (window._groups||[]).find(g => g.id === p.group_id);
+      const grupoNombre = grupo ? grupo.name : 'Sin grupo';
+      return `<div onclick="abrirAsistModal(${idx},'${dateKey}')"
+        style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff8f0;border:1px solid #FFD9B0;border-radius:var(--rsm);cursor:pointer;">
+        <div class="pav" style="background:${COLORS[idx%COLORS.length]};width:30px;height:30px;font-size:11px;flex-shrink:0;">${ini(p.name)}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;color:var(--gray);">${escHtml(p.name)}</div>
+          <div style="font-size:11px;color:var(--g3);">${escHtml(grupoNombre)}</div>
+        </div>
+        <span style="font-size:16px;color:var(--orange);">›</span>
+      </div>`;
+    }).join('') + `</div>`;
+}
+
 function renderAsistDia() {
   const players = activeGroup ? data.players.filter(p => p.group_id === activeGroup) : data.players;
   const dateKey = asistFecha.toISOString().slice(0,10);
@@ -2216,6 +2249,11 @@ function renderAsistDia() {
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
         ${ESTADOS.map(e=>`<div class="asist-legend"><div class="asist-dot e-${e.id}"></div>${e.nombre}</div>`).join('')}
       </div>
+
+      <input id="asist-search" type="text" placeholder="Buscar jugador en toda la academia..."
+        value="${escHtml(asistBusqueda)}" oninput="asistSetBusqueda(this.value)"
+        style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;margin-bottom:12px;box-sizing:border-box;outline:none;"/>
+      <div id="asist-search-results">${asistRenderResultados(asistBusqueda)}</div>
 
       <div style="display:flex;flex-direction:column;gap:6px;">
         ${players.map((p,i) => {
