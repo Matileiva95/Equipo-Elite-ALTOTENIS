@@ -482,8 +482,9 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button class="nav-btn" onclick="navTo('scouting')">◎ &nbsp;Scouting</button>
       <button class="nav-btn" onclick="navTo('asistencia')">✓ &nbsp;Asistencia</button>
       <button class="nav-btn" onclick="navTo('grupal')">⊞ &nbsp;Grupal</button>
-      <button class="nav-btn" onclick="navTo('gira')">✈ &nbsp;Torneo/Gira</button>
+      <button class="nav-btn" onclick="navTo('gira')">📅 &nbsp;Calendario</button>
       <button class="nav-btn" onclick="navTo('reforzamiento')">◐ &nbsp;Reforzamiento</button>
+      <button class="nav-btn" onclick="navTo('evaluacion')">📋 &nbsp;Evaluación de Tenista</button>
       <div class="nav-lbl" style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;">
         <span>Jugadores</span>
         <button class="btn-manage-groups" onclick="openGroupsManager()" title="Gestionar grupos" style="display:none;background:none;border:none;cursor:pointer;font-size:13px;color:var(--g3);padding:2px 4px;">⚙</button>
@@ -506,7 +507,7 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button class="mnav-btn" id="mnav-dashboard" onclick="navTo('dashboard')"><span class="mnav-icon">◈</span>Dashboard</button>
       <button class="mnav-btn" id="mnav-players" onclick="toggleDrawer()"><span class="mnav-icon">👥</span>Jugadores</button>
       <button class="mnav-btn" id="mnav-asistencia" onclick="navTo('asistencia')"><span class="mnav-icon">✓</span>Asist.</button>
-      <button class="mnav-btn" id="mnav-gira" onclick="navTo('gira')"><span class="mnav-icon">✈</span>Torneo/Gira</button>
+      <button class="mnav-btn" id="mnav-gira" onclick="navTo('gira')"><span class="mnav-icon">📅</span>Calendario</button>
       <button class="mnav-btn" id="mnav-mas2" onclick="openMasMenu2()"><span class="mnav-icon">☰</span>Más</button>
     </div>
   </nav>
@@ -520,6 +521,7 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button onclick="closeMasMenu2();navTo('scouting')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">◎</span>Scouting</button>
       <button onclick="closeMasMenu2();navTo('grupal')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">⊞</span>Grupal</button>
       <button onclick="closeMasMenu2();navTo('reforzamiento')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">◐</span>Reforzamiento</button>
+      <button onclick="closeMasMenu2();navTo('evaluacion')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">📋</span>Evaluación de Tenista</button>
       <button onclick="closeMasMenu2();openMasMenu()" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">⚙️</span>Ajustes</button>
       <button onclick="closeMasMenu2();openAddPlayer()" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">👤</span>Agregar jugador</button>
     </div>
@@ -1542,7 +1544,7 @@ function renderPlayerNav(){
   const nav=document.getElementById('player-nav');if(!nav)return;
   const filtered=data.players.map((p,i)=>({p,i})).filter(({p})=>(!activeGroup||p.group_id===activeGroup)&&canViewGroup(p.group_id));
   nav.innerHTML=filtered.map(({p,i})=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span></button>`).join('');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal','gira','reforzamiento'][i]===page));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal','gira','reforzamiento','evaluacion'][i]===page));
 }
 function renderDrawerList(){
   const dl=document.getElementById('drawer-list');if(!dl)return;
@@ -1555,7 +1557,7 @@ function updateMobileNav(){
 }
 function toggleDrawer(){const dr=document.getElementById('player-drawer'),ov=document.getElementById('drawer-overlay');dr.classList.toggle('open');ov.classList.toggle('open');}
 function closeDrawer(){document.getElementById('player-drawer').classList.remove('open');document.getElementById('drawer-overlay').classList.remove('open');}
-function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='grupal')m.innerHTML=renderGrupal();else if(page==='gira')renderGira();else if(page==='reforzamiento')m.innerHTML=renderReforzamiento();else if(page==='player')m.innerHTML=renderPlayer();postRender();}
+function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='grupal')m.innerHTML=renderGrupal();else if(page==='gira')renderGira();else if(page==='reforzamiento')m.innerHTML=renderReforzamiento();else if(page==='evaluacion')renderEvaluacion();else if(page==='player')m.innerHTML=renderPlayer();postRender();}
 function postRender(){document.querySelectorAll('canvas.court-ro').forEach(c=>{try{drawCourtReadOnly(c,JSON.parse(c.dataset.diagram||'[]'));}catch(e){}});if(document.getElementById('court-canvas'))initCourtEditor();if(page==='grupal')renderGrupalContent();}
 
 // ── REFORZAMIENTO ─────────────────────────────────────────
@@ -1787,6 +1789,437 @@ function refuImprimirPDF(){
   requestAnimationFrame(()=>requestAnimationFrame(()=>window.print()));
 }
 
+// ── EVALUACIÓN DE TENISTA (Fase 1: Giras) ─────────────────
+// Todo inline, patrón de renderReforzamiento(). Backend: /api/v1/tours.
+// NO toca código de gira; solo consume GET /api/v1/gira para vincular torneos.
+let evaluacionTours = [];
+let evaluacionLoading = false;
+let evaluacionActiveTour = null;      // tour object en vista detalle, null en lista
+let evaluacionLoaded = false;         // evita re-fetch (punto 9 del handoff)
+// estado interno de modales / detalle
+let evaluacionEditingId = null;
+let evaluacionTourEvents = [];
+let evaluacionTourPlayers = [];
+let evaluacionAvailableEvents = [];
+let evaluacionLinkSelection = new Set();
+
+function evaluacionCanManage(){
+  const r = sessionStorage.getItem('ciq_role');
+  return r === 'admin' || r === 'coach' || r === 'super_admin';
+}
+
+function evalToast(msg, isError){
+  let t = document.getElementById('eval-toast');
+  if(!t){ t = document.createElement('div'); t.id = 'eval-toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  const bottom = window.innerWidth < 900 ? '80px' : '24px';
+  t.setAttribute('style', `position:fixed;left:50%;transform:translateX(-50%);bottom:${bottom};z-index:300;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;max-width:90%;text-align:center;box-shadow:0 4px 18px rgba(0,0,0,.18);background:${isError?'#c0392b':'#1e8449'};color:#fff;`);
+  clearTimeout(window._evalToastT);
+  window._evalToastT = setTimeout(()=>{ const el = document.getElementById('eval-toast'); if(el) el.remove(); }, 3600);
+}
+
+function evaluacionFmtRange(s, e){
+  const p = x => { const [y,m,d] = (x||'').split('-').map(Number); return {y,m,d}; };
+  const a = p(s), b = p(e);
+  if(!a.y || !b.y) return `${s||''} – ${e||''}`;
+  const f = (o, yr) => `${o.d} ${MONTHS[o.m-1]||''}${yr ? ' '+o.y : ''}`;
+  return a.y === b.y ? `${f(a,false)} – ${f(b,true)}` : `${f(a,true)} – ${f(b,true)}`;
+}
+
+function evaluacionChipStyle(active){
+  return `flex-shrink:0;padding:6px 16px;border-radius:20px;border:1px solid var(--orange);background:${active?'var(--orange)':'#fff'};color:${active?'#fff':'var(--orange)'};font-size:13px;font-weight:600;cursor:pointer;`;
+}
+
+function evaluacionStatusBadge(status){
+  return status === 'closed'
+    ? `<span style="font-size:10px;font-weight:700;background:#ececec;color:#666;border-radius:5px;padding:2px 7px;">CERRADA</span>`
+    : `<span style="font-size:10px;font-weight:700;background:#eafaf1;color:#1e8449;border-radius:5px;padding:2px 7px;">ACTIVA</span>`;
+}
+
+let evaluacionFilter = 'active';
+
+async function evaluacionLoadTours(){
+  if(evaluacionLoading) return;
+  evaluacionLoading = true;
+  try{
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/tours?academyId=${ACADEMY_ID}`);
+    if(res && res.ok){ evaluacionTours = await res.json(); evaluacionLoaded = true; }
+    else if(res){ console.error('tours list', res.status); }
+  }catch(e){ console.error('evaluacionLoadTours', e); }
+  finally{ evaluacionLoading = false; }
+}
+
+// ── Vista lista ──────────────────────────────────────────
+function renderEvaluacion(){
+  evaluacionActiveTour = null;
+  document.querySelectorAll('.mnav-btn').forEach(b => b.classList.remove('active'));
+  const m = document.getElementById('main');
+  if(!m) return;
+  const canManage = evaluacionCanManage();
+  m.innerHTML = `
+    <div style="padding:20px 4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--gray);">📋 Evaluación de Tenista</div>
+          <div style="font-size:12px;color:var(--g3);margin-top:2px;">Giras y evaluaciones por jugador</div>
+        </div>
+        ${canManage ? `<button class="btn btn-o" onclick="evaluacionOpenCreate()">+ Gira</button>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button id="eval-filter-active" onclick="evaluacionSetFilter('active')" style="${evaluacionChipStyle(evaluacionFilter==='active')}">Activas</button>
+        <button id="eval-filter-closed" onclick="evaluacionSetFilter('closed')" style="${evaluacionChipStyle(evaluacionFilter==='closed')}">Cerradas</button>
+      </div>
+      <div id="eval-list"><div class="empty">Cargando giras…</div></div>
+    </div>`;
+  if(evaluacionLoaded){ evaluacionRenderList(); }
+  else { evaluacionLoadTours().then(() => evaluacionRenderList()); }
+}
+
+function evaluacionSetFilter(f){
+  evaluacionFilter = f;
+  const a = document.getElementById('eval-filter-active'), c = document.getElementById('eval-filter-closed');
+  if(a) a.setAttribute('style', evaluacionChipStyle(f === 'active'));
+  if(c) c.setAttribute('style', evaluacionChipStyle(f === 'closed'));
+  evaluacionRenderList();
+}
+
+function evaluacionRenderList(){
+  const el = document.getElementById('eval-list');
+  if(!el) return;
+  if(!evaluacionLoaded){ el.innerHTML = '<div class="empty">Cargando giras…</div>'; return; }
+  const rows = evaluacionTours.filter(t => t.status === evaluacionFilter);
+  const canManage = evaluacionCanManage();
+  if(!rows.length){
+    el.innerHTML = `<div class="empty">${evaluacionFilter === 'active' ? 'No hay giras activas.' : 'No hay giras cerradas.'}${
+      evaluacionFilter === 'active' && canManage
+        ? '<br><br><button class="btn btn-o" onclick="evaluacionOpenCreate()">+ Crear primera Gira</button>'
+        : ''}</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(t => `
+    <div class="card" style="margin-bottom:12px;cursor:pointer;" onclick="renderEvaluacionTourDetail('${t.id}')">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="font-size:26px;line-height:1;">${escHtml(t.emoji || '🎾')}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:15px;font-weight:700;color:var(--gray);">${escHtml(t.name)}</div>
+          <div style="font-size:12px;color:var(--g3);margin-top:3px;">${evaluacionFmtRange(t.start_date, t.end_date)}</div>
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            ${t.surface ? `<span style="font-size:10px;font-weight:700;background:var(--g5);color:var(--g2);border-radius:5px;padding:2px 7px;">${escHtml(t.surface)}</span>` : ''}
+            ${evaluacionStatusBadge(t.status)}
+          </div>
+        </div>
+        ${canManage ? `<button onclick="event.stopPropagation();evaluacionDeleteTour('${t.id}',false)" style="background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--g3);font-size:12px;cursor:pointer;padding:4px 8px;" title="Borrar gira">✕</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+// ── Modal crear / editar ─────────────────────────────────
+function evaluacionOpenCreate(){
+  evaluacionEditingId = null;
+  document.getElementById('eval-tour-modal-title').textContent = 'Nueva Gira';
+  document.getElementById('eval-f-name').value = '';
+  document.getElementById('eval-f-emoji').value = '🎾';
+  document.getElementById('eval-f-surface').value = '';
+  document.getElementById('eval-f-start').value = hoyChile();
+  document.getElementById('eval-f-end').value = hoyChile();
+  document.getElementById('eval-f-notes').value = '';
+  document.getElementById('eval-tour-modal').classList.add('open');
+}
+
+function evaluacionOpenEdit(id){
+  const t = evaluacionTours.find(x => x.id === id) || (evaluacionActiveTour && evaluacionActiveTour.id === id ? evaluacionActiveTour : null);
+  if(!t) return;
+  evaluacionEditingId = id;
+  document.getElementById('eval-tour-modal-title').textContent = 'Editar Gira';
+  document.getElementById('eval-f-name').value = t.name || '';
+  document.getElementById('eval-f-emoji').value = t.emoji || '🎾';
+  document.getElementById('eval-f-surface').value = t.surface || '';
+  document.getElementById('eval-f-start').value = t.start_date || '';
+  document.getElementById('eval-f-end').value = t.end_date || '';
+  document.getElementById('eval-f-notes').value = t.notes || '';
+  document.getElementById('eval-tour-modal').classList.add('open');
+}
+
+function evaluacionCloseModal(){ document.getElementById('eval-tour-modal').classList.remove('open'); }
+
+async function evaluacionSaveTour(){
+  const name = document.getElementById('eval-f-name').value.trim();
+  const start_date = document.getElementById('eval-f-start').value;
+  const end_date = document.getElementById('eval-f-end').value;
+  const emoji = document.getElementById('eval-f-emoji').value.trim() || '🎾';
+  const surface = document.getElementById('eval-f-surface').value || null;
+  const notes = document.getElementById('eval-f-notes').value.trim() || null;
+  if(!name){ evalToast('El nombre es obligatorio', true); return; }
+  if(!start_date || !end_date){ evalToast('Completá las fechas de inicio y fin', true); return; }
+  if(end_date < start_date){ evalToast('La fecha de fin no puede ser anterior a la de inicio', true); return; }
+  const payload = { academyId: ACADEMY_ID, name, emoji, start_date, end_date, surface, notes };
+  const editing = evaluacionEditingId;
+  try{
+    const url = editing ? `${BACKEND_URL}/api/v1/tours/${editing}` : `${BACKEND_URL}/api/v1/tours`;
+    const res = await apiFetch(url, { method: editing ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if(!res || !res.ok){
+      const err = await res?.json().catch(() => ({}));
+      if(res && res.status === 409){ evalToast(err.error || 'Ya existe una gira con ese nombre en esta academia', true); return; }
+      evalToast('Error al guardar: ' + (err.error || err.message || res?.status || 'desconocido'), true);
+      return;
+    }
+    evaluacionCloseModal();
+    evalToast(editing ? 'Gira actualizada' : 'Gira creada', false);
+    await evaluacionLoadTours();
+    if(evaluacionActiveTour && editing === evaluacionActiveTour.id){ renderEvaluacionTourDetail(editing); }
+    else { evaluacionRenderList(); }
+    if(page === 'dashboard') renderMain();
+  }catch(e){ console.error('evaluacionSaveTour', e); evalToast('Error al guardar: ' + e.message, true); }
+}
+
+async function evaluacionDeleteTour(id, fromDetail){
+  if(!confirm('¿Borrar esta gira? Los torneos del calendario se desvinculan pero no se eliminan.')) return;
+  try{
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/tours/${id}?academyId=${ACADEMY_ID}`, { method: 'DELETE' });
+    if(!res || !res.ok){
+      const e = await res?.json().catch(() => ({}));
+      evalToast('Error al borrar: ' + (e.error || res?.status || 'desconocido'), true);
+      return;
+    }
+    evalToast('Gira borrada', false);
+    await evaluacionLoadTours();
+    if(fromDetail) renderEvaluacion(); else evaluacionRenderList();
+    if(page === 'dashboard') renderMain();
+  }catch(e){ console.error('evaluacionDeleteTour', e); evalToast('Error al borrar', true); }
+}
+
+// ── Vista detalle de gira ────────────────────────────────
+async function renderEvaluacionTourDetail(tourId){
+  page = 'evaluacion';
+  const m = document.getElementById('main');
+  if(!m) return;
+  document.querySelectorAll('.mnav-btn').forEach(b => b.classList.remove('active'));
+  m.innerHTML = `<div style="padding:20px 4px;"><div class="empty">Cargando gira…</div></div>`;
+  if(!evaluacionLoaded) await evaluacionLoadTours();
+  let tour = evaluacionTours.find(t => t.id === tourId);
+  if(!tour){
+    try{
+      const r = await apiFetch(`${BACKEND_URL}/api/v1/tours/${tourId}?academyId=${ACADEMY_ID}`);
+      if(r && r.ok) tour = await r.json();
+    }catch(e){ /* noop */ }
+  }
+  if(!tour){
+    m.innerHTML = `<div style="padding:20px 4px;"><div class="empty">Gira no encontrada.<br><br><button class="btn btn-g" onclick="renderEvaluacion()">← Volver</button></div></div>`;
+    return;
+  }
+  evaluacionActiveTour = tour;
+  evaluacionTourEvents = [];
+  evaluacionTourPlayers = [];
+  m.innerHTML = evaluacionTourDetailHTML(tour);
+  evaluacionLoadTourDetail(tour.id);
+}
+
+function evaluacionTourDetailHTML(t){
+  const canManage = evaluacionCanManage();
+  return `
+  <div style="padding:20px 4px;">
+    <button class="btn btn-g btn-sm" onclick="renderEvaluacion()" style="margin-bottom:14px;">← Giras</button>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="font-size:30px;line-height:1;">${escHtml(t.emoji || '🎾')}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:17px;font-weight:700;color:var(--gray);">${escHtml(t.name)}</div>
+          <div style="font-size:12px;color:var(--g3);margin-top:3px;">${evaluacionFmtRange(t.start_date, t.end_date)}</div>
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            ${t.surface ? `<span style="font-size:10px;font-weight:700;background:var(--g5);color:var(--g2);border-radius:5px;padding:2px 7px;">${escHtml(t.surface)}</span>` : ''}
+            ${evaluacionStatusBadge(t.status)}
+          </div>
+          ${t.notes ? `<div style="font-size:12px;color:var(--g2);margin-top:8px;white-space:pre-wrap;">${escHtml(t.notes)}</div>` : ''}
+        </div>
+      </div>
+      ${canManage ? `<div class="btn-row">
+        <button class="btn btn-g btn-sm" onclick="evaluacionOpenEdit('${t.id}')">Editar</button>
+        ${t.status === 'active'
+          ? `<button class="btn btn-g btn-sm" onclick="evaluacionCloseTour('${t.id}')">Cerrar Gira</button>`
+          : `<button class="btn btn-g btn-sm" onclick="evaluacionReopenTour('${t.id}')">Reabrir Gira</button>`}
+        <button class="btn btn-red btn-sm" onclick="evaluacionDeleteTour('${t.id}',true)">Borrar</button>
+      </div>` : ''}
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;">Torneos vinculados</div>
+      ${canManage ? `<button class="btn btn-o btn-sm" onclick="evaluacionOpenLinkModal()">+ Vincular torneos</button>` : ''}
+    </div>
+    <div id="eval-detail-events" style="margin-bottom:18px;"><div class="empty">Cargando torneos…</div></div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Grupos representados</div>
+    <div id="eval-detail-groups" style="margin-bottom:18px;"><div style="font-size:12px;color:var(--g4);">Cargando…</div></div>
+
+    <div class="card" style="background:var(--g5);text-align:center;color:var(--g3);font-size:12px;">
+      Las evaluaciones por jugador llegan en la Fase 2.
+    </div>
+  </div>`;
+}
+
+async function evaluacionLoadTourDetail(id){
+  try{
+    const [evRes, plRes] = await Promise.all([
+      apiFetch(`${BACKEND_URL}/api/v1/tours/${id}/events?academyId=${ACADEMY_ID}`),
+      apiFetch(`${BACKEND_URL}/api/v1/tours/${id}/players?academyId=${ACADEMY_ID}`),
+    ]);
+    evaluacionTourEvents = (evRes && evRes.ok) ? await evRes.json() : [];
+    evaluacionTourPlayers = (plRes && plRes.ok) ? await plRes.json() : [];
+  }catch(e){
+    console.error('evaluacionLoadTourDetail', e);
+    evaluacionTourEvents = []; evaluacionTourPlayers = [];
+  }
+  evaluacionRenderDetailEvents();
+  evaluacionRenderDetailGroups();
+}
+
+function evaluacionRenderDetailEvents(){
+  const el = document.getElementById('eval-detail-events');
+  if(!el) return;
+  const canManage = evaluacionCanManage();
+  if(!Array.isArray(evaluacionTourEvents) || !evaluacionTourEvents.length){
+    el.innerHTML = '<div class="empty">Sin torneos vinculados todavía.</div>';
+    return;
+  }
+  el.innerHTML = evaluacionTourEvents.map(ev => `
+    <div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--gray);">${escHtml(ev.city || '—')} <span style="font-weight:400;color:var(--g3);">· ${escHtml(ev.country || '')}</span></div>
+        <div style="font-size:11px;color:var(--g3);margin-top:2px;">${escHtml(ev.week || '')}${ev.level ? ' · ' + escHtml(ev.level) : ''}${ev.group && ev.group.name ? ' · ' + escHtml(ev.group.name) : ''}</div>
+      </div>
+      ${canManage ? `<button onclick="evaluacionUnlinkEvent('${ev.id}')" style="background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--g3);font-size:12px;cursor:pointer;padding:4px 8px;" title="Desvincular">✕</button>` : ''}
+    </div>`).join('');
+}
+
+function evaluacionRenderDetailGroups(){
+  const el = document.getElementById('eval-detail-groups');
+  if(!el) return;
+  if(!Array.isArray(evaluacionTourPlayers) || !evaluacionTourPlayers.length){
+    el.innerHTML = '<div style="font-size:12px;color:var(--g4);">Sin jugadores — vinculá torneos que tengan jugadores inscritos.</div>';
+    return;
+  }
+  const groups = window._groups || [];
+  const counts = {};
+  evaluacionTourPlayers.forEach(p => { const k = p.group_id || '_sin'; counts[k] = (counts[k] || 0) + 1; });
+  const chips = Object.entries(counts).map(([gid, n]) => {
+    const g = groups.find(x => x.id === gid);
+    const name = g ? g.name : (gid === '_sin' ? 'Sin grupo' : '—');
+    return `<span style="font-size:12px;font-weight:600;background:var(--g5);color:var(--g2);border-radius:20px;padding:4px 12px;">${escHtml(name)} (${n})</span>`;
+  });
+  el.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;">${chips.join('')}</div>`;
+}
+
+async function evaluacionSetTourStatus(id, action){
+  try{
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/tours/${id}/${action}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ academyId: ACADEMY_ID }) });
+    if(!res || !res.ok){ const e = await res?.json().catch(() => ({})); evalToast('Error: ' + (e.error || res?.status || 'desconocido'), true); return; }
+    evalToast(action === 'close' ? 'Gira cerrada' : 'Gira reabierta', false);
+    await evaluacionLoadTours();
+    renderEvaluacionTourDetail(id);
+    if(page === 'dashboard') renderMain();
+  }catch(e){ console.error('evaluacionSetTourStatus', e); evalToast('Error al cambiar el estado', true); }
+}
+function evaluacionCloseTour(id){ if(confirm('¿Cerrar esta gira? Podés reabrirla después.')) evaluacionSetTourStatus(id, 'close'); }
+function evaluacionReopenTour(id){ evaluacionSetTourStatus(id, 'reopen'); }
+
+// ── Modal vincular torneos ───────────────────────────────
+async function evaluacionOpenLinkModal(){
+  if(!evaluacionActiveTour) return;
+  evaluacionLinkSelection = new Set();
+  const modal = document.getElementById('eval-link-modal');
+  const list = document.getElementById('eval-link-list');
+  if(list) list.innerHTML = '<div class="empty">Cargando torneos…</div>';
+  modal.classList.add('open');
+  try{
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/gira?academyId=${ACADEMY_ID}`);
+    const all = (res && res.ok) ? await res.json() : [];
+    evaluacionAvailableEvents = (Array.isArray(all) ? all : []).filter(e => !e.tour_id);
+  }catch(e){ console.error('evaluacionOpenLinkModal', e); evaluacionAvailableEvents = []; }
+  evaluacionRenderLinkList();
+}
+
+function evaluacionRenderLinkList(){
+  const list = document.getElementById('eval-link-list');
+  if(!list) return;
+  if(!evaluacionAvailableEvents.length){
+    list.innerHTML = '<div class="empty">No hay torneos libres en el Calendario.</div>';
+    return;
+  }
+  list.innerHTML = evaluacionAvailableEvents.map(e => {
+    const sel = evaluacionLinkSelection.has(e.id);
+    return `<div onclick="evaluacionToggleLinkEvent('${e.id}')" style="padding:9px 11px;border:1px solid ${sel?'var(--orange)':'var(--border)'};background:${sel?'#fff3e8':'#fff'};border-radius:8px;margin-bottom:6px;cursor:pointer;">
+      <div style="font-size:13px;font-weight:${sel?'700':'500'};color:${sel?'var(--orange)':'var(--gray)'};">${escHtml(e.city || '—')} <span style="font-weight:400;color:var(--g3);">· ${escHtml(e.country || '')}</span></div>
+      <div style="font-size:11px;color:var(--g3);margin-top:2px;">${escHtml(e.week || '')}${e.level ? ' · ' + escHtml(e.level) : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function evaluacionToggleLinkEvent(id){
+  if(evaluacionLinkSelection.has(id)) evaluacionLinkSelection.delete(id);
+  else evaluacionLinkSelection.add(id);
+  evaluacionRenderLinkList();
+}
+
+function evaluacionCloseLinkModal(){ document.getElementById('eval-link-modal').classList.remove('open'); }
+
+async function evaluacionSaveLinks(){
+  if(!evaluacionActiveTour) return;
+  const ids = [...evaluacionLinkSelection];
+  if(!ids.length){ evalToast('Elegí al menos un torneo', true); return; }
+  try{
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/tours/${evaluacionActiveTour.id}/events`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ academyId: ACADEMY_ID, event_ids: ids }) });
+    if(!res || !res.ok){
+      const e = await res?.json().catch(() => ({}));
+      const detail = (e.details && e.details.length) ? ' — ' + e.details.join(' · ') : '';
+      evalToast((e.error || 'No se pudieron vincular los torneos') + detail, true);
+      return;
+    }
+    evaluacionCloseLinkModal();
+    evalToast('Torneos vinculados', false);
+    evaluacionLoadTourDetail(evaluacionActiveTour.id);
+  }catch(e){ console.error('evaluacionSaveLinks', e); evalToast('Error al vincular', true); }
+}
+
+async function evaluacionUnlinkEvent(eventId){
+  if(!evaluacionActiveTour) return;
+  if(!confirm('¿Desvincular este torneo de la gira?')) return;
+  try{
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/tours/${evaluacionActiveTour.id}/events/${eventId}?academyId=${ACADEMY_ID}`, { method: 'DELETE' });
+    if(!res || !res.ok){ const e = await res?.json().catch(() => ({})); evalToast('Error: ' + (e.error || res?.status || 'desconocido'), true); return; }
+    evalToast('Torneo desvinculado', false);
+    evaluacionLoadTourDetail(evaluacionActiveTour.id);
+  }catch(e){ console.error('evaluacionUnlinkEvent', e); evalToast('Error al desvincular', true); }
+}
+
+// ── Card del dashboard ───────────────────────────────────
+function evaluacionDashboardCard(){
+  if(!evaluacionLoaded){
+    return `<div class="card" style="font-size:13px;color:var(--g3);">Cargando…</div>`;
+  }
+  const active = evaluacionTours
+    .filter(t => t.status === 'active')
+    .sort((a,b) => (b.start_date || '').localeCompare(a.start_date || ''));
+  if(!active.length){
+    const canManage = evaluacionCanManage();
+    return `<div class="card" style="text-align:center;">
+      <div style="font-size:13px;color:var(--g3);${canManage ? 'margin-bottom:12px;' : ''}">Aún no hay giras.</div>
+      ${canManage ? `<button class="btn btn-o btn-sm" onclick="navTo('evaluacion');evaluacionOpenCreate()">+ Crear primera Gira</button>` : ''}
+    </div>`;
+  }
+  const t = active[0];
+  return `<div class="card">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="font-size:24px;line-height:1;">${escHtml(t.emoji || '🎾')}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;color:var(--gray);">${escHtml(t.name)}</div>
+        <div style="font-size:11px;color:var(--g3);margin-top:2px;">${evaluacionFmtRange(t.start_date, t.end_date)}</div>
+      </div>
+      <span style="font-size:10px;font-weight:700;background:#eafaf1;color:#1e8449;border-radius:5px;padding:2px 7px;flex-shrink:0;">ACTIVA</span>
+    </div>
+    <button class="btn btn-o btn-sm" style="width:100%;margin-top:12px;" onclick="navTo('evaluacion');renderEvaluacionTourDetail('${t.id}')">Continuar ${escHtml(t.name)} →</button>
+    ${active.length > 1 ? `<div style="font-size:11px;color:var(--g4);text-align:center;margin-top:8px;">+${active.length-1} gira${active.length-1 > 1 ? 's' : ''} activa${active.length-1 > 1 ? 's' : ''} más</div>` : ''}
+  </div>`;
+}
+
 // ── DASHBOARD ─────────────────────────────────────────────
 function renderDashboard(){
   const today=new Date();today.setHours(0,0,0,0);
@@ -1799,6 +2232,11 @@ function renderDashboard(){
   if(!giraEvents.length&&!gira_loading){
     gira_loading=true;
     giraLoadStaticData().then(()=>giraLoadData()).then(()=>{gira_loading=false;if(page==='dashboard')renderMain();}).catch(()=>{gira_loading=false;});
+  }
+
+  // Auto-cargar giras (módulo Evaluación de Tenista) para la card del dashboard — una sola vez
+  if(!evaluacionLoaded&&!evaluacionLoading){
+    evaluacionLoadTours().then(()=>{if(page==='dashboard')renderMain();});
   }
 
   const GROUP_COLOR={
@@ -2040,7 +2478,7 @@ function renderDashboard(){
 
   <!-- 3. PRÓXIMOS TORNEOS -->
   <div style="margin-bottom:20px;">
-    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Próximos torneos / giras</div>
+    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Próximos torneos</div>
     ${!upcoming.length
       ?`<div style="background:#f9f9f7;border:1px solid #eee;border-radius:10px;padding:12px 16px;font-size:13px;color:#aaa;">Sin eventos en las próximas 4 semanas${!giraEvents.length?' — cargando datos…':''}</div>`
       :upcoming.map(ev=>{
@@ -2058,6 +2496,12 @@ function renderDashboard(){
             ${cNames.length?`<div style="font-size:11px;color:#555;margin-top:2px;">🎾 ${cNames.join(', ')}</div>`:''}
           </div>`;
         }).join('')}
+  </div>
+
+  <!-- 3b. EVALUACIÓN DE TENISTA -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">📋 Evaluación de Tenista</div>
+    ${evaluacionDashboardCard()}
   </div>
 
   <!-- 4. CARGA SEMANAL POR GRUPO -->
@@ -8472,7 +8916,7 @@ async function renderGira() {
     <div style="padding:16px 16px 100px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div>
-          <div style="font-size:18px;font-weight:700;color:#333">✈ Torneo/Gira 2026</div>
+          <div style="font-size:18px;font-weight:700;color:#333">📅 Calendario 2026</div>
           <div style="font-size:12px;color:#888;margin-top:2px">Control semanal · May – Dic 2026</div>
         </div>
         <button onclick="giraOpenAdd()" style="background:#FF6B00;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">+ Evento</button>
@@ -10817,6 +11261,56 @@ function savePuntoAPunto() {
   </div>
 
   <div id="refu-print" style="display:none;"></div>
+
+  <!-- ── EVALUACIÓN DE TENISTA: modal crear / editar Gira ── -->
+  <div class="modal-overlay" id="eval-tour-modal">
+    <div class="modal" style="max-width:460px;">
+      <div class="modal-header">
+        <div class="modal-title" id="eval-tour-modal-title">Nueva Gira</div>
+        <button class="modal-close" onclick="evaluacionCloseModal()">×</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="fg"><label>Nombre</label><input id="eval-f-name" type="text" placeholder="Ej: Gira Costa" maxlength="120"/></div>
+        <div style="display:grid;grid-template-columns:90px 1fr;gap:10px;">
+          <div class="fg"><label>Emoji</label><input id="eval-f-emoji" type="text" value="🎾" maxlength="8" style="text-align:center;"/></div>
+          <div class="fg"><label>Superficie</label>
+            <select id="eval-f-surface">
+              <option value="">—</option>
+              <option value="ARCILLA">Arcilla</option>
+              <option value="CEMENTO">Cemento</option>
+              <option value="HIERBA">Hierba</option>
+              <option value="INDOOR">Indoor</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="fg"><label>Desde</label><input id="eval-f-start" type="date"/></div>
+          <div class="fg"><label>Hasta</label><input id="eval-f-end" type="date"/></div>
+        </div>
+        <div class="fg"><label>Notas</label><textarea id="eval-f-notes" placeholder="Opcional" maxlength="3000"></textarea></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-o" onclick="evaluacionSaveTour()">Guardar</button>
+        <button class="btn btn-g" onclick="evaluacionCloseModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EVALUACIÓN DE TENISTA: modal vincular torneos ── -->
+  <div class="modal-overlay" id="eval-link-modal">
+    <div class="modal" style="max-width:460px;">
+      <div class="modal-header">
+        <div class="modal-title">Vincular torneos</div>
+        <button class="modal-close" onclick="evaluacionCloseLinkModal()">×</button>
+      </div>
+      <div style="font-size:12px;color:var(--g3);margin-bottom:10px;">Torneos del Calendario sin gira asignada. Elegí los que pertenecen a esta gira.</div>
+      <div id="eval-link-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
+      <div class="btn-row">
+        <button class="btn btn-o" onclick="evaluacionSaveLinks()">Vincular seleccionados</button>
+        <button class="btn btn-g" onclick="evaluacionCloseLinkModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
