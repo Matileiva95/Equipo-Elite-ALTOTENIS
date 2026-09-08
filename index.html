@@ -2122,14 +2122,60 @@ function evaluacionCloseTour(id){ if(confirm('¿Cerrar esta gira? Podés reabrir
 function evaluacionReopenTour(id){ evaluacionSetTourStatus(id, 'reopen'); }
 
 // ── Modal vincular torneos ───────────────────────────────
+// "2026-W27" → { start:'2026-06-29', end:'2026-07-05' } (lunes-domingo, ISO-8601).
+function evaluacionIsoWeekRange(weekStr){
+  const m = /^(\d{4})-W(\d{2})$/.exec((weekStr || '').trim());
+  if(!m) return null;
+  const year = +m[1], week = +m[2];
+  const jan4 = new Date(Date.UTC(year, 0, 4));               // la semana 1 ISO contiene el 4 de enero
+  const week1Monday = new Date(jan4);
+  week1Monday.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7));  // lunes de la semana 1
+  const monday = new Date(week1Monday);
+  monday.setUTCDate(week1Monday.getUTCDate() + (week - 1) * 7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const iso = d => d.toISOString().slice(0, 10);
+  return { start: iso(monday), end: iso(sunday) };
+}
+
+// Filtros del modal — 100% en cliente sobre evaluacionAvailableEvents (ya cargado).
+// Buscador (city/country/level) AND rango de fechas de la gira.
+function evaluacionFilteredLinkEvents(){
+  let rows = evaluacionAvailableEvents.slice();
+  const q = (document.getElementById('eval-link-search')?.value || '').trim().toLowerCase();
+  if(q){
+    rows = rows.filter(e =>
+      (e.city || '').toLowerCase().includes(q) ||
+      (e.country || '').toLowerCase().includes(q) ||
+      (e.level || '').toLowerCase().includes(q)
+    );
+  }
+  const inRange = document.getElementById('eval-link-inrange')?.checked;
+  if(inRange && evaluacionActiveTour){
+    const ts = evaluacionActiveTour.start_date, te = evaluacionActiveTour.end_date;
+    rows = rows.filter(e => {
+      const w = evaluacionIsoWeekRange(e.week);
+      if(!w) return false;                     // week no parseable → fuera del rango
+      return w.start <= te && w.end >= ts;     // solapamiento de intervalos
+    });
+  }
+  return rows;
+}
+
 async function evaluacionOpenLinkModal(){
   if(!evaluacionActiveTour) return;
   evaluacionLinkSelection = new Set();
   const modal = document.getElementById('eval-link-modal');
   const list = document.getElementById('eval-link-list');
+  const search = document.getElementById('eval-link-search');
+  const inrange = document.getElementById('eval-link-inrange');
+  if(search) search.value = '';
+  if(inrange) inrange.checked = true;
   if(list) list.innerHTML = '<div class="empty">Cargando torneos…</div>';
   modal.classList.add('open');
+  if(search) setTimeout(() => search.focus(), 50);
   try{
+    // Una sola llamada al abrir el modal; los filtros no vuelven a pegar al backend.
     const res = await apiFetch(`${BACKEND_URL}/api/v1/gira?academyId=${ACADEMY_ID}`);
     const all = (res && res.ok) ? await res.json() : [];
     evaluacionAvailableEvents = (Array.isArray(all) ? all : []).filter(e => !e.tour_id);
@@ -2139,12 +2185,20 @@ async function evaluacionOpenLinkModal(){
 
 function evaluacionRenderLinkList(){
   const list = document.getElementById('eval-link-list');
+  const countEl = document.getElementById('eval-link-count');
   if(!list) return;
   if(!evaluacionAvailableEvents.length){
     list.innerHTML = '<div class="empty">No hay torneos libres en el Calendario.</div>';
+    if(countEl) countEl.textContent = '';
     return;
   }
-  list.innerHTML = evaluacionAvailableEvents.map(e => {
+  const rows = evaluacionFilteredLinkEvents();
+  if(countEl) countEl.textContent = `${rows.length} torneo${rows.length === 1 ? '' : 's'} encontrado${rows.length === 1 ? '' : 's'}`;
+  if(!rows.length){
+    list.innerHTML = '<div class="empty">Ningún torneo coincide con los filtros.</div>';
+    return;
+  }
+  list.innerHTML = rows.map(e => {
     const sel = evaluacionLinkSelection.has(e.id);
     return `<div onclick="evaluacionToggleLinkEvent('${e.id}')" style="padding:9px 11px;border:1px solid ${sel?'var(--orange)':'var(--border)'};background:${sel?'#fff3e8':'#fff'};border-radius:8px;margin-bottom:6px;cursor:pointer;">
       <div style="font-size:13px;font-weight:${sel?'700':'500'};color:${sel?'var(--orange)':'var(--gray)'};">${escHtml(e.city || '—')} <span style="font-weight:400;color:var(--g3);">· ${escHtml(e.country || '')}</span></div>
@@ -11304,6 +11358,12 @@ function savePuntoAPunto() {
         <button class="modal-close" onclick="evaluacionCloseLinkModal()">×</button>
       </div>
       <div style="font-size:12px;color:var(--g3);margin-bottom:10px;">Torneos del Calendario sin gira asignada. Elegí los que pertenecen a esta gira.</div>
+      <input type="search" id="eval-link-search" placeholder="Buscar por ciudad, país o categoría..." oninput="evaluacionRenderLinkList()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;outline:none;"/>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--g2);margin-bottom:8px;cursor:pointer;">
+        <input type="checkbox" id="eval-link-inrange" checked onchange="evaluacionRenderLinkList()" style="accent-color:var(--orange);"/>
+        Solo torneos dentro del rango de la gira
+      </label>
+      <div id="eval-link-count" style="font-size:11px;color:var(--g3);margin-bottom:8px;"></div>
       <div id="eval-link-list" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
       <div class="btn-row">
         <button class="btn btn-o" onclick="evaluacionSaveLinks()">Vincular seleccionados</button>
