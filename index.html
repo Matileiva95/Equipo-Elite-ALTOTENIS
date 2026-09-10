@@ -2110,42 +2110,67 @@ function evaluacionRenderDetailGroups(){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EVALUACIÓN DE TENISTA — FASE 2 (formulario con rúbrica por jugador)
+// EVALUACIÓN DE TENISTA — FASE 2 · Tanda 1 (formulario con rúbrica por jugador)
 // Las 12 keys de RUBRIC_ITEMS coinciden 1:1 con RUBRIC_KEYS del backend.
+// Paleta de notas cálida (--score1..7) y modal de texto ampliado auto-inyectados.
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── Constantes de rúbrica ──────────────────────────────────────────────────
+// ── Constantes de rúbrica (con guías Fortaleza / A mejorar) ─────────────────
 const RUBRIC_ITEMS = [
-  { block: 'Servicio', icon: '🎾', items: [
-    { key: 'servicio.primer',  label: 'Primer servicio' },
-    { key: 'servicio.segundo', label: 'Segundo servicio' },
-    { key: 'servicio.resto',   label: 'Resto' },
+  { block: 'Servicio y resto', icon: '🎾', items: [
+    { key: 'servicio.primer',  label: 'Primer servicio',
+      pos: 'Consistencia >60%, variedad de direcciones y efectos (cortado, plano) en momentos clave.',
+      neg: 'Bajo % de primeros, falta de potencia o predecible en las direcciones.' },
+    { key: 'servicio.segundo', label: 'Segundo servicio',
+      pos: 'Bote alto (kick), profundidad constante, pocas dobles faltas bajo presión.',
+      neg: 'Saque atacable, falta de peso, dobles faltas en momentos decisivos.' },
+    { key: 'servicio.resto',   label: 'Resto / Devolución',
+      pos: 'Bloqueo sólido ante saques rápidos, castiga segundos saques con agresividad.',
+      neg: 'Errores no forzados en resto, problemas para leer saques al cuerpo.' },
   ]},
   { block: 'Juego de fondo', icon: '↔️', items: [
-    { key: 'fondo.profundidad',  label: 'Profundidad' },
-    { key: 'fondo.transicion',   label: 'Transición' },
-    { key: 'fondo.consistencia', label: 'Consistencia' },
+    { key: 'fondo.profundidad',  label: 'Profundidad y peso',
+      pos: 'Bola profunda y pesada que empuja al rival detrás de la línea, buena altura con margen.',
+      neg: 'Bolas cortas que invitan al ataque, pierde profundidad bajo presión.' },
+    { key: 'fondo.transicion',   label: 'Transición y ataque',
+      pos: 'Reconoce la bola corta, sube el punto y define con la aproximación o el drive ganador.',
+      neg: 'No aprovecha la bola corta, se queda en el intercambio, falla al acelerar.' },
+    { key: 'fondo.consistencia', label: 'Consistencia y relleno',
+      pos: 'Bajo índice de errores no forzados en intercambios largos, construye el punto.',
+      neg: 'Errores tempranos, impaciencia, pierde el punto antes de construirlo.' },
   ]},
   { block: 'Juego en red', icon: '🥅', items: [
-    { key: 'red.aproximacion', label: 'Aproximación' },
-    { key: 'red.volea',        label: 'Volea' },
-    { key: 'red.defensa',      label: 'Defensa (passing / lob)' },
+    { key: 'red.aproximacion', label: 'Bola de aproximación',
+      pos: 'Aproximación profunda y bien direccionada que cierra ángulos y prepara la volea cómoda.',
+      neg: 'Aproximación corta o al centro que deja passing fácil.' },
+    { key: 'red.volea',        label: 'Volea y cierre',
+      pos: 'Volea firme y colocada, cierra en la primera oportunidad, buen juego de manos.',
+      neg: 'Volea dubitativa o sin profundidad, falla la definición.' },
+    { key: 'red.defensa',      label: 'Defensa y smash',
+      pos: 'Resuelve el globo con smash sólido, buena cobertura del passing, lee la jugada.',
+      neg: 'Sufre con el globo, smash inseguro, queda mal parado.' },
   ]},
   { block: 'Juego de pies', icon: '👟', items: [
-    { key: 'pies.split_step',    label: 'Split step' },
-    { key: 'pies.ajuste',        label: 'Ajuste' },
-    { key: 'pies.recuperacion',  label: 'Recuperación' },
+    { key: 'pies.split_step',    label: 'Split-step y reacción',
+      pos: 'Split-step a tiempo con el golpe del rival, arranque explosivo, buena primera reacción.',
+      neg: 'Split-step tardío o ausente, arranca tarde, llega justo.' },
+    { key: 'pies.ajuste',        label: 'Ajuste e impacto',
+      pos: 'Ajusta los apoyos para golpear equilibrado, buen punto de impacto y transferencia de peso.',
+      neg: 'Golpea desequilibrado, mal ajuste de los últimos pasos.' },
+    { key: 'pies.recuperacion',  label: 'Recuperación y cobertura',
+      pos: 'Recupera rápido la posición tras cada golpe, cubre bien la cancha.',
+      neg: 'Lento para recuperar, queda descolocado en los cambios de dirección.' },
   ]},
 ];
 
-// Value 'Campeon' (sin tilde) es el que el backend reconoce para eximir del rival.
 const ROUND_OPTIONS = ['Q1','Q2','Q3','Primera ronda','Segunda ronda','Octavos','Cuartos','Semifinal','Final','Campeon','Otro'];
 
 // ── Estado ──────────────────────────────────────────────────────────────────
-let evalReportsSummary = [];   // cache del summary de la gira en vista detalle
-let evalFormState = null;      // estado del formulario abierto
+let evalReportsSummary = [];
+let evalFormState = null;
+let evalTextCtx = null;   // { kind:'rubric'|'field', key } para el modal de texto
 
-// ── Lista de jugadores en la vista detalle de gira ──────────────────────────
+// ── Lista de jugadores en la vista detalle ──────────────────────────────────
 async function evaluacionLoadReportsSummary(tourId){
   try{
     const res = await apiFetch(`${BACKEND_URL}/api/v1/tours/${tourId}/reports/summary?academyId=${ACADEMY_ID}`);
@@ -2170,13 +2195,24 @@ function evaluacionRenderDetailPlayers(){
   const byPlayer = {};
   (evalReportsSummary || []).forEach(r => { byPlayer[r.player_id] = r; });
   const canManage = evaluacionCanManage();
-  const sorted = players.slice().sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||''));
-  el.innerHTML = sorted.map(p => {
+  // Pendientes primero, después borradores, después completadas; alfabético dentro de cada grupo.
+  const rank = { pending: 0, draft: 1, completed: 2 };
+  const sorted = players.slice().sort((a, b) => {
+    const sa = byPlayer[a.id] ? byPlayer[a.id].status : 'pending';
+    const sb = byPlayer[b.id] ? byPlayer[b.id].status : 'pending';
+    if(rank[sa] !== rank[sb]) return rank[sa] - rank[sb];
+    return (a.full_name || '').localeCompare(b.full_name || '');
+  });
+  const pendCount = players.filter(p => !byPlayer[p.id] || byPlayer[p.id].status !== 'completed').length;
+  const header = pendCount
+    ? `<div style="font-size:11px;color:var(--od);font-weight:700;margin-bottom:8px;">Faltan ${pendCount} por evaluar</div>`
+    : `<div style="font-size:11px;color:var(--gd);font-weight:700;margin-bottom:8px;">✓ Todas las evaluaciones completas</div>`;
+  const rows = sorted.map(p => {
     const rep = byPlayer[p.id];
     const status = rep ? rep.status : 'pending';
     const count = rep ? (rep.tournaments_count || 0) : 0;
     const btnLabel = rep ? (status === 'completed' ? 'Ver / Editar' : 'Continuar') : 'Evaluar';
-    return `<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+    return `<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;${status==='completed'?'opacity:.72;':''}">
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:700;color:var(--gray);">${escHtml(p.full_name || '—')}</div>
         <div style="font-size:11px;color:var(--g3);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -2186,6 +2222,15 @@ function evaluacionRenderDetailPlayers(){
       ${canManage ? `<button class="btn btn-o btn-sm" onclick="evaluacionOpenForm('${escHtml(p.id)}')">${btnLabel}</button>` : ''}
     </div>`;
   }).join('');
+  const addBtn = canManage
+    ? `<button class="btn btn-sm" onclick="evaluacionAddPlayerPrompt()" style="width:100%;padding:11px;border:1px dashed var(--g4);background:#fff;color:var(--g2);font-weight:600;margin-top:2px;border-radius:10px;cursor:pointer;">+ Agregar jugador manualmente</button>`
+    : '';
+  el.innerHTML = header + rows + addBtn;
+}
+
+// Placeholder de Tanda 2 (agregar jugador manual). Por ahora avisa.
+function evaluacionAddPlayerPrompt(){
+  evalToast('Agregar jugador manual llega en la próxima tanda', false);
 }
 
 // ── Apertura del formulario ─────────────────────────────────────────────────
@@ -2200,7 +2245,7 @@ function evalNormalizeTournament(t){
     surface: t.surface || '',
     round_reached: t.round_reached || '',
     lost_against: t.lost_against || '',
-    lost_against_country: t.lost_against_country || '',
+    score: t.score || '',
   };
 }
 
@@ -2213,7 +2258,6 @@ async function evaluacionOpenForm(playerId){
   const m = document.getElementById('main');
   if(m) m.innerHTML = `<div style="padding:20px 4px;"><div class="empty">Cargando evaluación…</div></div>`;
 
-  // ¿ya existe report para este jugador? (según summary)
   const summ = (evalReportsSummary || []).find(r => r.player_id === playerId);
   let report = null;
   if(summ){
@@ -2255,7 +2299,7 @@ function evaluacionBackToDetail(){
   const tour = evaluacionActiveTour;
   evalFormState = null;
   if(!tour){ renderEvaluacion(); return; }
-  renderEvaluacionTourDetail(tour.id);   // recarga detalle + summary + players
+  renderEvaluacionTourDetail(tour.id);
 }
 
 // ── HTML del formulario ─────────────────────────────────────────────────────
@@ -2266,8 +2310,8 @@ function evaluacionFormHTML(){
   <div style="padding:20px 4px;max-width:760px;margin:0 auto;">
     <button class="btn btn-g btn-sm" onclick="evaluacionBackToDetail()" style="margin-bottom:14px;">← ${escHtml(tour ? tour.name : 'Gira')}</button>
 
-    <div class="card" style="margin-bottom:16px;">
-      <div style="font-size:11px;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;">Evaluación de gira</div>
+    <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#fff,#fdf6ee);border-color:#f0e2d0;">
+      <div style="font-size:11px;color:var(--od);text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Evaluación de gira${tour ? ' · ' + escHtml(tour.name) : ''}</div>
       <div style="font-size:20px;font-weight:800;color:var(--gray);margin-top:2px;">${escHtml(s.playerName)}</div>
       <div id="eval-form-progress" style="margin-top:10px;">${evalFormProgressHTML()}</div>
     </div>
@@ -2282,6 +2326,7 @@ function evaluacionFormHTML(){
     <div id="eval-form-tournaments" style="margin-bottom:18px;">${evalTournamentsHTML()}</div>
 
     <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Rúbrica técnico-táctica</div>
+    <div style="background:#FFF8EC;border:1px solid #F5DFAF;border-radius:8px;padding:10px 12px;font-size:11.5px;color:#8a6a1f;margin-bottom:12px;line-height:1.5;">💡 Tocá el <b>?</b> de cada situación para ver qué mirar. Ponés la nota 1–7 y, si querés, una observación breve.</div>
     <div style="margin-bottom:18px;">${evalRubricHTML()}</div>
 
     <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Físico y mental</div>
@@ -2318,30 +2363,41 @@ function evalFormProgressHTML(){
   const pct = Math.round((n / 12) * 100);
   const done = n === 12;
   return `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-    <span style="font-size:12px;font-weight:700;color:${done ? '#1e8449' : 'var(--g2)'};">${n}/12 notas</span>
+    <span style="font-size:12px;font-weight:800;color:${done ? 'var(--gd)' : 'var(--od)'};">${n}/12 notas</span>
     <span style="font-size:12px;color:var(--g3);">Promedio: <b style="color:var(--gray);">${avg}</b></span>
-    <div style="flex:1;min-width:90px;height:6px;background:var(--g5);border-radius:3px;overflow:hidden;">
-      <div style="width:${pct}%;height:100%;background:${done ? '#1e8449' : 'var(--orange)'};transition:width .2s;"></div>
+    <div style="flex:1;min-width:90px;height:7px;background:var(--g5);border-radius:4px;overflow:hidden;">
+      <div style="width:${pct}%;height:100%;background:${done ? 'var(--gd)' : 'var(--orange)'};transition:width .2s;"></div>
     </div>
   </div>`;
 }
 
-// ── Rúbrica (acordeones) ────────────────────────────────────────────────────
+// ── Rúbrica (acordeones + guías + paleta cálida) ────────────────────────────
 function evalCssKey(k){ return String(k).replace(/\./g, '_'); }
+
+function evalScoreVar(n){
+  const i = Math.max(1, Math.min(7, Math.round(n)));
+  return `var(--score${i})`;
+}
+function evalScoreTextColor(n){
+  return (Math.round(n) === 4) ? '#333' : '#fff';
+}
 
 function evalRubricHTML(){
   const s = evalFormState;
   return RUBRIC_ITEMS.map((block, bi) => {
-    let filled = 0;
-    block.items.forEach(it => { if(s.rubric[it.key] && typeof s.rubric[it.key].score === 'number') filled++; });
-    const complete = filled === block.items.length;
-    const open = bi === 0;   // primer bloque abierto por defecto
-    return `<div class="eval-acc card" style="margin-bottom:8px;padding:0;overflow:hidden;">
+    let filled = 0, sum = 0;
+    block.items.forEach(it => {
+      const r = s.rubric[it.key];
+      if(r && typeof r.score === 'number'){ filled++; sum += r.score; }
+    });
+    const open = bi === 0;
+    const pill = evalBlockPillHTML(bi, filled, sum, block.items.length);
+    return `<div class="eval-acc card" style="margin-bottom:8px;padding:0;overflow:hidden;border-color:#efe8dd;">
       <div class="eval-acc-head" onclick="evalToggleAcc(this.parentNode)" style="display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;">
         <span style="font-size:18px;line-height:1;">${block.icon}</span>
-        <span style="flex:1;font-size:14px;font-weight:700;color:var(--gray);">${escHtml(block.block)}</span>
-        <span id="eval-acc-count-${bi}" style="font-size:11px;font-weight:700;color:${complete ? '#1e8449' : 'var(--g3)'};">${filled}/${block.items.length}</span>
-        <span class="eval-acc-arrow" style="font-size:12px;color:var(--g3);${open ? 'transform:rotate(180deg);' : ''}">▾</span>
+        <span style="flex:1;font-size:14px;font-weight:800;color:var(--gray);">${escHtml(block.block)}</span>
+        ${pill}
+        <span class="eval-acc-arrow" style="font-size:13px;color:var(--g4);${open ? 'transform:rotate(180deg);' : ''}">▾</span>
       </div>
       <div class="eval-acc-body${open ? ' open' : ''}" style="padding:0 14px;">
         ${block.items.map(it => evalRubricItemHTML(it)).join('')}
@@ -2350,29 +2406,45 @@ function evalRubricHTML(){
   }).join('');
 }
 
+function evalBlockPillHTML(bi, filled, sum, total){
+  if(filled){
+    const avg = sum / filled;
+    return `<span class="eval-avg-pill" id="eval-avg-${bi}" style="background:${evalScoreVar(avg)};color:${evalScoreTextColor(avg)};">${avg.toFixed(1)}</span>`;
+  }
+  return `<span class="eval-avg-pill" id="eval-avg-${bi}" style="background:var(--g5);color:var(--g3);">0/${total}</span>`;
+}
+
 function evalRubricItemHTML(it){
   const s = evalFormState;
   const r = s.rubric[it.key] || {};
-  return `<div style="padding:12px 0;border-top:1px solid var(--border);">
-    <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:8px;">${escHtml(it.label)}</div>
-    <div id="eval-score-${evalCssKey(it.key)}" style="display:flex;gap:4px;margin-bottom:8px;">
+  const ck = evalCssKey(it.key);
+  const hasGuide = it.pos || it.neg;
+  return `<div class="eval-sub">
+    <div class="eval-sub-top">
+      <span class="eval-sub-title">${escHtml(it.label)}</span>
+      ${hasGuide ? `<button type="button" class="eval-help" onclick="evalToggleGuide('${ck}')" title="Ver criterios">?</button>` : ''}
+    </div>
+    <div class="eval-guide" id="eval-guide-${ck}">
+      ${it.pos ? `<div class="eval-gline"><span class="eval-gtag pos">FORTALEZA</span><span>${escHtml(it.pos)}</span></div>` : ''}
+      ${it.neg ? `<div class="eval-gline"><span class="eval-gtag neg">A MEJORAR</span><span>${escHtml(it.neg)}</span></div>` : ''}
+    </div>
+    <div id="eval-score-${ck}" class="eval-srow">
       ${[1,2,3,4,5,6,7].map(n => evalScoreBtnHTML(it.key, n, r.score === n)).join('')}
     </div>
-    <input type="text" placeholder="Nota (opcional)" value="${escHtml(r.notes || '')}" maxlength="200"
-      oninput="evalSetNote('${it.key}', this.value)"
-      style="width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;box-sizing:border-box;">
+    <div class="eval-note-wrap">
+      <input type="text" id="eval-note-${ck}" placeholder="Nota (opcional)" value="${escHtml(r.notes || '')}" maxlength="200"
+        oninput="evalSetNote('${it.key}', this.value)" class="eval-note-inp">
+      <button type="button" class="eval-expand" title="Ampliar" onclick="evalOpenText('rubric','${it.key}','${escHtml(it.label)}')">⛶</button>
+    </div>
   </div>`;
 }
 
-function evalScoreColor(n){
-  const hue = ((n - 1) / 6) * 120;   // 1=rojo (0) → 7=verde (120)
-  return `hsl(${hue},60%,45%)`;
-}
-
 function evalScoreBtnHTML(key, n, active){
-  const col = evalScoreColor(n);
+  const bg = active ? evalScoreVar(n) : '#fff';
+  const fg = active ? evalScoreTextColor(n) : 'var(--g3)';
+  const bd = active ? evalScoreVar(n) : 'var(--border)';
   return `<button type="button" onclick="evalSetScore('${key}',${n})"
-    style="flex:1;min-width:0;border-radius:8px;border:2px solid ${active ? col : 'var(--border)'};background:${active ? col : '#fff'};color:${active ? '#fff' : 'var(--g3)'};font-size:14px;font-weight:700;cursor:pointer;padding:8px 0;">${n}</button>`;
+    style="flex:1;min-width:0;border-radius:7px;border:1.5px solid ${bd};background:${bg};color:${fg};font-size:13px;font-weight:800;cursor:pointer;padding:9px 0;transition:all .12s;">${n}</button>`;
 }
 
 function evalSetScore(key, n){
@@ -2382,7 +2454,7 @@ function evalSetScore(key, n){
   s.rubric[key].score = n;
   const cont = document.getElementById('eval-score-' + evalCssKey(key));
   if(cont) cont.innerHTML = [1,2,3,4,5,6,7].map(x => evalScoreBtnHTML(key, x, x === n)).join('');
-  evalUpdateAccCounts();
+  evalUpdateAccPills();
   evalUpdateProgress();
 }
 
@@ -2393,15 +2465,30 @@ function evalSetNote(key, val){
   s.rubric[key].notes = val;
 }
 
-function evalUpdateAccCounts(){
+function evalToggleGuide(ck){
+  const g = document.getElementById('eval-guide-' + ck);
+  if(g) g.classList.toggle('show');
+}
+
+function evalUpdateAccPills(){
   const s = evalFormState;
   RUBRIC_ITEMS.forEach((block, bi) => {
-    let filled = 0;
-    block.items.forEach(it => { if(s.rubric[it.key] && typeof s.rubric[it.key].score === 'number') filled++; });
-    const el = document.getElementById('eval-acc-count-' + bi);
-    if(el){
-      el.textContent = `${filled}/${block.items.length}`;
-      el.style.color = (filled === block.items.length) ? '#1e8449' : 'var(--g3)';
+    let filled = 0, sum = 0;
+    block.items.forEach(it => {
+      const r = s.rubric[it.key];
+      if(r && typeof r.score === 'number'){ filled++; sum += r.score; }
+    });
+    const el = document.getElementById('eval-avg-' + bi);
+    if(!el) return;
+    if(filled){
+      const avg = sum / filled;
+      el.textContent = avg.toFixed(1);
+      el.style.background = evalScoreVar(avg);
+      el.style.color = evalScoreTextColor(avg);
+    } else {
+      el.textContent = `0/${block.items.length}`;
+      el.style.background = 'var(--g5)';
+      el.style.color = 'var(--g3)';
     }
   });
 }
@@ -2433,7 +2520,7 @@ function evalTournamentsHTML(){
 function evalTournamentCardHTML(t, i){
   const isChamp = t.round_reached === 'Campeon';
   const inList = ROUND_OPTIONS.includes(t.round_reached);
-  return `<div class="card" style="margin-bottom:8px;padding:12px 14px;">
+  return `<div class="card" style="margin-bottom:8px;padding:12px 14px;border-color:#efe8dd;">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
       <input type="text" placeholder="Nombre del torneo" value="${escHtml(t.name)}" maxlength="120"
         oninput="evalSetTournament(${i},'name',this.value)"
@@ -2466,9 +2553,9 @@ function evalTournamentCardHTML(t, i){
             style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 8px;font-size:12px;box-sizing:border-box;">
         </div>
         <div>
-          <label style="font-size:10px;color:var(--g3);display:block;margin-bottom:3px;">País del rival</label>
-          <input type="text" placeholder="CHI, ARG…" value="${escHtml(t.lost_against_country)}" maxlength="60"
-            oninput="evalSetTournament(${i},'lost_against_country',this.value)"
+          <label style="font-size:10px;color:var(--g3);display:block;margin-bottom:3px;">Marcador</label>
+          <input type="text" placeholder="4-6, 6-3, 3-6" value="${escHtml(t.score)}" maxlength="60"
+            oninput="evalSetTournament(${i},'score',this.value)"
             style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 8px;font-size:12px;box-sizing:border-box;">
         </div>
       </div>
@@ -2522,17 +2609,62 @@ async function evalDetectTournaments(){
   }catch(e){ console.error('evalDetectTournaments', e); evalToast('Error al autodetectar', true); }
 }
 
-// ── Textareas ───────────────────────────────────────────────────────────────
+// ── Textareas (físico/mental/observación) con botón ampliar ─────────────────
 function evalTextareaField(label, field, val, max){
-  return `<div>
-    ${label ? `<label style="font-size:11px;color:var(--g3);display:block;margin-bottom:4px;">${escHtml(label)}</label>` : ''}
-    <textarea maxlength="${max}" oninput="evalSetField('${field}',this.value)"
-      style="width:100%;min-height:64px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;box-sizing:border-box;resize:vertical;font-family:inherit;">${escHtml(val || '')}</textarea>
+  return `<div style="margin-bottom:10px;">
+    ${label ? `<label class="eval-fm-lbl">${escHtml(label)}</label>` : ''}
+    <div class="eval-ta-wrap">
+      <textarea id="eval-fld-${field}" maxlength="${max}" oninput="evalSetField('${field}',this.value)" class="eval-fm-ta">${escHtml(val || '')}</textarea>
+      <button type="button" class="eval-expand eval-expand-ta" title="Ampliar" onclick="evalOpenText('field','${field}','${escHtml(label || 'Texto')}')">⛶</button>
+    </div>
   </div>`;
 }
 
 function evalSetField(field, val){
   if(evalFormState) evalFormState[field] = val;
+}
+
+// ── Modal de texto ampliado ─────────────────────────────────────────────────
+function evalOpenText(kind, key, title){
+  const s = evalFormState;
+  if(!s) return;
+  evalTextCtx = { kind, key };
+  let val = '';
+  if(kind === 'rubric'){ val = (s.rubric[key] && s.rubric[key].notes) || ''; }
+  else { val = s[key] || ''; }
+  const max = (kind === 'rubric') ? 200 : (key === 'observacion_general' ? 3000 : 2000);
+  const ta = document.getElementById('eval-text-area');
+  const tt = document.getElementById('eval-text-title');
+  if(ta){ ta.value = val; ta.maxLength = max; }
+  if(tt){ tt.textContent = title || 'Texto'; }
+  const ov = document.getElementById('eval-text-modal');
+  if(ov) ov.classList.add('open');
+  setTimeout(() => { if(ta) ta.focus(); }, 50);
+}
+
+function evalSaveText(){
+  const s = evalFormState;
+  if(!s || !evalTextCtx){ evalCloseText(); return; }
+  const ta = document.getElementById('eval-text-area');
+  const val = ta ? ta.value : '';
+  const { kind, key } = evalTextCtx;
+  if(kind === 'rubric'){
+    if(!s.rubric[key]) s.rubric[key] = {};
+    s.rubric[key].notes = val;
+    const inp = document.getElementById('eval-note-' + evalCssKey(key));
+    if(inp) inp.value = val;
+  } else {
+    s[key] = val;
+    const fld = document.getElementById('eval-fld-' + key);
+    if(fld) fld.value = val;
+  }
+  evalCloseText();
+}
+
+function evalCloseText(){
+  const ov = document.getElementById('eval-text-modal');
+  if(ov) ov.classList.remove('open');
+  evalTextCtx = null;
 }
 
 // ── Guardado ────────────────────────────────────────────────────────────────
@@ -2548,7 +2680,6 @@ function evalBuildRubricArray(){
   return arr;
 }
 
-// Validación client-side espejo del backend (feedback inmediato antes de mandar).
 function evalValidateComplete(){
   const s = evalFormState;
   if(!s.tournaments.length) return 'Registrá al menos un torneo jugado';
@@ -2584,7 +2715,7 @@ async function evalSaveReport(status){
       surface: t.surface || '',
       round_reached: (t.round_reached || '').trim(),
       lost_against: (t.lost_against || '').trim(),
-      lost_against_country: (t.lost_against_country || '').trim(),
+      score: (t.score || '').trim(),
     })),
     preparacion: (s.preparacion || '').trim(),
     technical_tactical_rubric: evalBuildRubricArray(),
@@ -2616,19 +2747,64 @@ async function evalSaveReport(status){
   }catch(e){ console.error('evalSaveReport', e); evalToast('Error al guardar: ' + e.message, true); }
 }
 
-// ── Estilos del formulario (inyectados una sola vez) ────────────────────────
+// ── Estilos + modal (auto-inyectados una sola vez) ──────────────────────────
 function evalFormEnsureStyles(){
-  if(document.getElementById('eval-form-styles')) return;
-  const st = document.createElement('style');
-  st.id = 'eval-form-styles';
-  st.textContent = `
-    .eval-acc-body{display:none;}
-    .eval-acc-body.open{display:block;padding-bottom:6px;}
-    .eval-acc-head:active{opacity:.7;}
-    .eval-acc-arrow{transition:transform .2s;display:inline-block;}
-    @media(max-width:560px){ .eval-fm-grid{grid-template-columns:1fr !important;} }
-  `;
-  document.head.appendChild(st);
+  if(!document.getElementById('eval-form-styles')){
+    const st = document.createElement('style');
+    st.id = 'eval-form-styles';
+    st.textContent = `
+      :root{
+        --score1:#d84040;--score2:#e67235;--score3:#eaa53c;--score4:#f0c93a;
+        --score5:#a6ce3a;--score6:#5db83c;--score7:#2f9c3f;
+      }
+      .eval-acc-body{display:none;}
+      .eval-acc-body.open{display:block;padding-bottom:6px;}
+      .eval-acc-head:active{opacity:.7;}
+      .eval-acc-arrow{transition:transform .2s;display:inline-block;}
+      .eval-avg-pill{font-size:11px;font-weight:800;padding:3px 10px;border-radius:12px;min-width:36px;text-align:center;}
+      .eval-sub{background:#faf8f4;border:1px solid #efe8dd;border-radius:10px;padding:12px;margin-bottom:9px;}
+      .eval-sub:last-child{margin-bottom:2px;}
+      .eval-sub-top{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+      .eval-sub-title{flex:1;font-size:13px;font-weight:700;color:var(--gray);}
+      .eval-help{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--orange);background:#fff;color:var(--orange);font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;line-height:1;padding:0;}
+      .eval-help:active{background:var(--ol);}
+      .eval-guide{display:none;background:#FFF8EC;border:1px solid #F5DFAF;border-radius:8px;padding:9px 11px;margin-bottom:9px;}
+      .eval-guide.show{display:block;}
+      .eval-gline{display:flex;gap:7px;font-size:11px;line-height:1.45;margin-bottom:5px;color:var(--g2);}
+      .eval-gline:last-child{margin-bottom:0;}
+      .eval-gtag{font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;flex-shrink:0;height:fit-content;margin-top:1px;letter-spacing:.02em;}
+      .eval-gtag.pos{background:var(--gl);color:var(--gd);}
+      .eval-gtag.neg{background:#fdecea;color:#c0392b;}
+      .eval-srow{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+      .eval-note-wrap{display:flex;gap:6px;margin-top:8px;}
+      .eval-note-inp{flex:1;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;font-family:inherit;box-sizing:border-box;}
+      .eval-expand{border:1px solid var(--border);border-radius:6px;background:#fff;color:#1DA1D6;font-size:14px;cursor:pointer;padding:0 11px;flex-shrink:0;line-height:1;}
+      .eval-expand:active{background:var(--bl);}
+      .eval-fm-lbl{font-size:11px;color:var(--g3);display:block;margin-bottom:4px;}
+      .eval-ta-wrap{position:relative;}
+      .eval-fm-ta{width:100%;min-height:60px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;padding-right:38px;font-size:12px;box-sizing:border-box;resize:vertical;font-family:inherit;background:#faf8f4;}
+      .eval-expand-ta{position:absolute;top:6px;right:6px;padding:3px 8px;}
+      @media(max-width:560px){ .eval-fm-grid{grid-template-columns:1fr !important;} }
+    `;
+    document.head.appendChild(st);
+  }
+  if(!document.getElementById('eval-text-modal')){
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `<div class="modal-overlay" id="eval-text-modal" onclick="if(event.target===this)evalCloseText()">
+      <div class="modal" style="max-width:520px;display:flex;flex-direction:column;max-height:88vh;">
+        <div class="modal-header">
+          <div class="modal-title" id="eval-text-title">Texto</div>
+          <button class="modal-close" onclick="evalCloseText()">×</button>
+        </div>
+        <textarea id="eval-text-area" style="width:100%;flex:1;min-height:220px;border:1px solid var(--border);border-radius:10px;padding:12px;font-size:15px;font-family:inherit;box-sizing:border-box;resize:vertical;"></textarea>
+        <div class="btn-row" style="margin-top:14px;">
+          <button class="btn btn-o" onclick="evalSaveText()">Guardar</button>
+          <button class="btn btn-g" onclick="evalCloseText()">Cancelar</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.appendChild(wrap.firstElementChild);
+  }
 }
 
 async function evaluacionSetTourStatus(id, action){
