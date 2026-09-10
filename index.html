@@ -2050,9 +2050,8 @@ function evaluacionTourDetailHTML(t){
     <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Grupos representados</div>
     <div id="eval-detail-groups" style="margin-bottom:18px;"><div style="font-size:12px;color:var(--g4);">Cargando…</div></div>
 
-    <div class="card" style="background:var(--g5);text-align:center;color:var(--g3);font-size:12px;">
-      Las evaluaciones por jugador llegan en la Fase 2.
-    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Evaluaciones por jugador</div>
+    <div id="eval-detail-players"><div style="font-size:12px;color:var(--g4);">Cargando…</div></div>
   </div>`;
 }
 
@@ -2070,6 +2069,8 @@ async function evaluacionLoadTourDetail(id){
   }
   evaluacionRenderDetailEvents();
   evaluacionRenderDetailGroups();
+  await evaluacionLoadReportsSummary(id);
+  evaluacionRenderDetailPlayers();
 }
 
 function evaluacionRenderDetailEvents(){
@@ -2106,6 +2107,528 @@ function evaluacionRenderDetailGroups(){
     return `<span style="font-size:12px;font-weight:600;background:var(--g5);color:var(--g2);border-radius:20px;padding:4px 12px;">${escHtml(name)} (${n})</span>`;
   });
   el.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;">${chips.join('')}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EVALUACIÓN DE TENISTA — FASE 2 (formulario con rúbrica por jugador)
+// Las 12 keys de RUBRIC_ITEMS coinciden 1:1 con RUBRIC_KEYS del backend.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Constantes de rúbrica ──────────────────────────────────────────────────
+const RUBRIC_ITEMS = [
+  { block: 'Servicio', icon: '🎾', items: [
+    { key: 'servicio.primer',  label: 'Primer servicio' },
+    { key: 'servicio.segundo', label: 'Segundo servicio' },
+    { key: 'servicio.resto',   label: 'Resto' },
+  ]},
+  { block: 'Juego de fondo', icon: '↔️', items: [
+    { key: 'fondo.profundidad',  label: 'Profundidad' },
+    { key: 'fondo.transicion',   label: 'Transición' },
+    { key: 'fondo.consistencia', label: 'Consistencia' },
+  ]},
+  { block: 'Juego en red', icon: '🥅', items: [
+    { key: 'red.aproximacion', label: 'Aproximación' },
+    { key: 'red.volea',        label: 'Volea' },
+    { key: 'red.defensa',      label: 'Defensa (passing / lob)' },
+  ]},
+  { block: 'Juego de pies', icon: '👟', items: [
+    { key: 'pies.split_step',    label: 'Split step' },
+    { key: 'pies.ajuste',        label: 'Ajuste' },
+    { key: 'pies.recuperacion',  label: 'Recuperación' },
+  ]},
+];
+
+// Value 'Campeon' (sin tilde) es el que el backend reconoce para eximir del rival.
+const ROUND_OPTIONS = ['Q1','Q2','Q3','Primera ronda','Segunda ronda','Octavos','Cuartos','Semifinal','Final','Campeon','Otro'];
+
+// ── Estado ──────────────────────────────────────────────────────────────────
+let evalReportsSummary = [];   // cache del summary de la gira en vista detalle
+let evalFormState = null;      // estado del formulario abierto
+
+// ── Lista de jugadores en la vista detalle de gira ──────────────────────────
+async function evaluacionLoadReportsSummary(tourId){
+  try{
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/tours/${tourId}/reports/summary?academyId=${ACADEMY_ID}`);
+    evalReportsSummary = (res && res.ok) ? await res.json() : [];
+  }catch(e){ console.error('evaluacionLoadReportsSummary', e); evalReportsSummary = []; }
+}
+
+function evalReportStatusBadge(status){
+  if(status === 'completed') return `<span style="font-size:10px;font-weight:700;background:#eafaf1;color:#1e8449;border-radius:5px;padding:2px 7px;">COMPLETADA</span>`;
+  if(status === 'draft')     return `<span style="font-size:10px;font-weight:700;background:#fff3e8;color:#FF6B00;border-radius:5px;padding:2px 7px;">BORRADOR</span>`;
+  return `<span style="font-size:10px;font-weight:700;background:#ececec;color:#666;border-radius:5px;padding:2px 7px;">PENDIENTE</span>`;
+}
+
+function evaluacionRenderDetailPlayers(){
+  const el = document.getElementById('eval-detail-players');
+  if(!el) return;
+  const players = evaluacionTourPlayers || [];
+  if(!players.length){
+    el.innerHTML = '<div style="font-size:12px;color:var(--g4);">Sin jugadores — vinculá torneos con jugadores inscritos.</div>';
+    return;
+  }
+  const byPlayer = {};
+  (evalReportsSummary || []).forEach(r => { byPlayer[r.player_id] = r; });
+  const canManage = evaluacionCanManage();
+  const sorted = players.slice().sort((a,b)=>(a.full_name||'').localeCompare(b.full_name||''));
+  el.innerHTML = sorted.map(p => {
+    const rep = byPlayer[p.id];
+    const status = rep ? rep.status : 'pending';
+    const count = rep ? (rep.tournaments_count || 0) : 0;
+    const btnLabel = rep ? (status === 'completed' ? 'Ver / Editar' : 'Continuar') : 'Evaluar';
+    return `<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--gray);">${escHtml(p.full_name || '—')}</div>
+        <div style="font-size:11px;color:var(--g3);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          ${evalReportStatusBadge(status)}${count ? `<span>· ${count} torneo${count===1?'':'s'}</span>` : ''}
+        </div>
+      </div>
+      ${canManage ? `<button class="btn btn-o btn-sm" onclick="evaluacionOpenForm('${escHtml(p.id)}')">${btnLabel}</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Apertura del formulario ─────────────────────────────────────────────────
+function evalNormalizeTournament(t){
+  t = t || {};
+  return {
+    source: t.source || 'manual',
+    gira_event_id: t.gira_event_id || null,
+    name: t.name || '',
+    category: t.category || '',
+    week: t.week || '',
+    surface: t.surface || '',
+    round_reached: t.round_reached || '',
+    lost_against: t.lost_against || '',
+    lost_against_country: t.lost_against_country || '',
+  };
+}
+
+async function evaluacionOpenForm(playerId){
+  const tour = evaluacionActiveTour;
+  if(!tour){ evalToast('Abrí una gira primero', true); return; }
+  const player = (evaluacionTourPlayers || []).find(p => p.id === playerId);
+  if(!player){ evalToast('Jugador no encontrado', true); return; }
+
+  const m = document.getElementById('main');
+  if(m) m.innerHTML = `<div style="padding:20px 4px;"><div class="empty">Cargando evaluación…</div></div>`;
+
+  // ¿ya existe report para este jugador? (según summary)
+  const summ = (evalReportsSummary || []).find(r => r.player_id === playerId);
+  let report = null;
+  if(summ){
+    try{
+      const res = await apiFetch(`${BACKEND_URL}/api/v1/reports/${summ.id}?academyId=${ACADEMY_ID}`);
+      if(res && res.ok) report = await res.json();
+    }catch(e){ console.error('load report', e); }
+  }
+
+  evalFormState = {
+    tourId: tour.id,
+    playerId: playerId,
+    playerName: player.full_name || '',
+    playerLegacyId: (typeof player.legacy_id === 'number') ? player.legacy_id : null,
+    groupId: player.group_id || null,
+    reportId: report ? report.id : null,
+    tournaments: report ? (report.tournaments_played || []).map(evalNormalizeTournament) : [],
+    rubric: {},
+    preparacion: report ? (report.preparacion || '') : '',
+    fisico_positivo: report ? (report.fisico_positivo || '') : '',
+    fisico_negativo: report ? (report.fisico_negativo || '') : '',
+    mental_positivo: report ? (report.mental_positivo || '') : '',
+    mental_negativo: report ? (report.mental_negativo || '') : '',
+    observacion_general: report ? (report.observacion_general || '') : '',
+    status: report ? report.status : 'draft',
+  };
+  if(report && Array.isArray(report.technical_tactical_rubric)){
+    report.technical_tactical_rubric.forEach(it => {
+      evalFormState.rubric[it.key] = { score: it.score, notes: it.notes || '' };
+    });
+  }
+
+  evalFormEnsureStyles();
+  if(m) m.innerHTML = evaluacionFormHTML();
+  window.scrollTo(0, 0);
+}
+
+function evaluacionBackToDetail(){
+  const tour = evaluacionActiveTour;
+  evalFormState = null;
+  if(!tour){ renderEvaluacion(); return; }
+  renderEvaluacionTourDetail(tour.id);   // recarga detalle + summary + players
+}
+
+// ── HTML del formulario ─────────────────────────────────────────────────────
+function evaluacionFormHTML(){
+  const s = evalFormState;
+  const tour = evaluacionActiveTour;
+  return `
+  <div style="padding:20px 4px;max-width:760px;margin:0 auto;">
+    <button class="btn btn-g btn-sm" onclick="evaluacionBackToDetail()" style="margin-bottom:14px;">← ${escHtml(tour ? tour.name : 'Gira')}</button>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-size:11px;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;">Evaluación de gira</div>
+      <div style="font-size:20px;font-weight:800;color:var(--gray);margin-top:2px;">${escHtml(s.playerName)}</div>
+      <div id="eval-form-progress" style="margin-top:10px;">${evalFormProgressHTML()}</div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;">Torneos jugados</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-g btn-sm" onclick="evalDetectTournaments()">⟳ Autodetectar</button>
+        <button class="btn btn-o btn-sm" onclick="evalAddTournament()">+ Manual</button>
+      </div>
+    </div>
+    <div id="eval-form-tournaments" style="margin-bottom:18px;">${evalTournamentsHTML()}</div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Rúbrica técnico-táctica</div>
+    <div style="margin-bottom:18px;">${evalRubricHTML()}</div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Físico y mental</div>
+    <div class="card" style="margin-bottom:18px;">
+      ${evalTextareaField('Preparación', 'preparacion', s.preparacion, 2000)}
+      <div class="eval-fm-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        ${evalTextareaField('Físico — fortalezas', 'fisico_positivo', s.fisico_positivo, 2000)}
+        ${evalTextareaField('Físico — a mejorar', 'fisico_negativo', s.fisico_negativo, 2000)}
+        ${evalTextareaField('Mental — fortalezas', 'mental_positivo', s.mental_positivo, 2000)}
+        ${evalTextareaField('Mental — a mejorar', 'mental_negativo', s.mental_negativo, 2000)}
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Observación general</div>
+    <div class="card" style="margin-bottom:18px;">
+      ${evalTextareaField('', 'observacion_general', s.observacion_general, 3000)}
+    </div>
+
+    <div style="display:flex;gap:10px;position:sticky;bottom:0;background:#fff;padding:12px 0;box-shadow:0 -6px 14px rgba(0,0,0,.05);">
+      <button class="btn btn-g" style="flex:1;" onclick="evalSaveReport('draft')">Guardar borrador</button>
+      <button class="btn btn-o" style="flex:1;" onclick="evalSaveReport('completed')">✓ Marcar completada</button>
+    </div>
+  </div>`;
+}
+
+function evalFormProgressHTML(){
+  const s = evalFormState;
+  let n = 0, sum = 0;
+  RUBRIC_ITEMS.forEach(b => b.items.forEach(it => {
+    const r = s.rubric[it.key];
+    if(r && typeof r.score === 'number'){ n++; sum += r.score; }
+  }));
+  const avg = n ? (sum / n).toFixed(1) : '—';
+  const pct = Math.round((n / 12) * 100);
+  const done = n === 12;
+  return `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <span style="font-size:12px;font-weight:700;color:${done ? '#1e8449' : 'var(--g2)'};">${n}/12 notas</span>
+    <span style="font-size:12px;color:var(--g3);">Promedio: <b style="color:var(--gray);">${avg}</b></span>
+    <div style="flex:1;min-width:90px;height:6px;background:var(--g5);border-radius:3px;overflow:hidden;">
+      <div style="width:${pct}%;height:100%;background:${done ? '#1e8449' : 'var(--orange)'};transition:width .2s;"></div>
+    </div>
+  </div>`;
+}
+
+// ── Rúbrica (acordeones) ────────────────────────────────────────────────────
+function evalCssKey(k){ return String(k).replace(/\./g, '_'); }
+
+function evalRubricHTML(){
+  const s = evalFormState;
+  return RUBRIC_ITEMS.map((block, bi) => {
+    let filled = 0;
+    block.items.forEach(it => { if(s.rubric[it.key] && typeof s.rubric[it.key].score === 'number') filled++; });
+    const complete = filled === block.items.length;
+    const open = bi === 0;   // primer bloque abierto por defecto
+    return `<div class="eval-acc card" style="margin-bottom:8px;padding:0;overflow:hidden;">
+      <div class="eval-acc-head" onclick="evalToggleAcc(this.parentNode)" style="display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;">
+        <span style="font-size:18px;line-height:1;">${block.icon}</span>
+        <span style="flex:1;font-size:14px;font-weight:700;color:var(--gray);">${escHtml(block.block)}</span>
+        <span id="eval-acc-count-${bi}" style="font-size:11px;font-weight:700;color:${complete ? '#1e8449' : 'var(--g3)'};">${filled}/${block.items.length}</span>
+        <span class="eval-acc-arrow" style="font-size:12px;color:var(--g3);${open ? 'transform:rotate(180deg);' : ''}">▾</span>
+      </div>
+      <div class="eval-acc-body${open ? ' open' : ''}" style="padding:0 14px;">
+        ${block.items.map(it => evalRubricItemHTML(it)).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function evalRubricItemHTML(it){
+  const s = evalFormState;
+  const r = s.rubric[it.key] || {};
+  return `<div style="padding:12px 0;border-top:1px solid var(--border);">
+    <div style="font-size:13px;font-weight:600;color:var(--gray);margin-bottom:8px;">${escHtml(it.label)}</div>
+    <div id="eval-score-${evalCssKey(it.key)}" style="display:flex;gap:4px;margin-bottom:8px;">
+      ${[1,2,3,4,5,6,7].map(n => evalScoreBtnHTML(it.key, n, r.score === n)).join('')}
+    </div>
+    <input type="text" placeholder="Nota (opcional)" value="${escHtml(r.notes || '')}" maxlength="200"
+      oninput="evalSetNote('${it.key}', this.value)"
+      style="width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;box-sizing:border-box;">
+  </div>`;
+}
+
+function evalScoreColor(n){
+  const hue = ((n - 1) / 6) * 120;   // 1=rojo (0) → 7=verde (120)
+  return `hsl(${hue},60%,45%)`;
+}
+
+function evalScoreBtnHTML(key, n, active){
+  const col = evalScoreColor(n);
+  return `<button type="button" onclick="evalSetScore('${key}',${n})"
+    style="flex:1;min-width:0;border-radius:8px;border:2px solid ${active ? col : 'var(--border)'};background:${active ? col : '#fff'};color:${active ? '#fff' : 'var(--g3)'};font-size:14px;font-weight:700;cursor:pointer;padding:8px 0;">${n}</button>`;
+}
+
+function evalSetScore(key, n){
+  const s = evalFormState;
+  if(!s) return;
+  if(!s.rubric[key]) s.rubric[key] = {};
+  s.rubric[key].score = n;
+  const cont = document.getElementById('eval-score-' + evalCssKey(key));
+  if(cont) cont.innerHTML = [1,2,3,4,5,6,7].map(x => evalScoreBtnHTML(key, x, x === n)).join('');
+  evalUpdateAccCounts();
+  evalUpdateProgress();
+}
+
+function evalSetNote(key, val){
+  const s = evalFormState;
+  if(!s) return;
+  if(!s.rubric[key]) s.rubric[key] = {};
+  s.rubric[key].notes = val;
+}
+
+function evalUpdateAccCounts(){
+  const s = evalFormState;
+  RUBRIC_ITEMS.forEach((block, bi) => {
+    let filled = 0;
+    block.items.forEach(it => { if(s.rubric[it.key] && typeof s.rubric[it.key].score === 'number') filled++; });
+    const el = document.getElementById('eval-acc-count-' + bi);
+    if(el){
+      el.textContent = `${filled}/${block.items.length}`;
+      el.style.color = (filled === block.items.length) ? '#1e8449' : 'var(--g3)';
+    }
+  });
+}
+
+function evalUpdateProgress(){
+  const el = document.getElementById('eval-form-progress');
+  if(el) el.innerHTML = evalFormProgressHTML();
+}
+
+function evalToggleAcc(card){
+  const body = card.querySelector('.eval-acc-body');
+  const arrow = card.querySelector('.eval-acc-arrow');
+  if(!body) return;
+  const open = body.classList.toggle('open');
+  if(arrow) arrow.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+// ── Torneos ─────────────────────────────────────────────────────────────────
+function evalRoundLabel(r){ return r === 'Campeon' ? 'Campeón 🏆' : r; }
+
+function evalTournamentsHTML(){
+  const s = evalFormState;
+  if(!s.tournaments.length){
+    return '<div style="font-size:12px;color:var(--g4);padding:8px 0;">Sin torneos. Usá “Autodetectar” o agregá uno manual.</div>';
+  }
+  return s.tournaments.map((t, i) => evalTournamentCardHTML(t, i)).join('');
+}
+
+function evalTournamentCardHTML(t, i){
+  const isChamp = t.round_reached === 'Campeon';
+  const inList = ROUND_OPTIONS.includes(t.round_reached);
+  return `<div class="card" style="margin-bottom:8px;padding:12px 14px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <input type="text" placeholder="Nombre del torneo" value="${escHtml(t.name)}" maxlength="120"
+        oninput="evalSetTournament(${i},'name',this.value)"
+        style="flex:1;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:600;box-sizing:border-box;">
+      ${t.source === 'auto' ? '<span style="font-size:9px;font-weight:700;color:#1e8449;background:#eafaf1;border-radius:4px;padding:2px 6px;">AUTO</span>' : ''}
+      <button onclick="evalRemoveTournament(${i})" title="Quitar torneo" style="background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--g3);font-size:12px;cursor:pointer;padding:4px 8px;">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <label style="font-size:10px;color:var(--g3);display:block;margin-bottom:3px;">Ronda alcanzada</label>
+        <select onchange="evalSetRound(${i},this.value)" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 8px;font-size:12px;box-sizing:border-box;background:#fff;">
+          <option value="">— Elegí —</option>
+          ${ROUND_OPTIONS.map(r => `<option value="${r}"${t.round_reached === r ? ' selected' : ''}>${evalRoundLabel(r)}</option>`).join('')}
+          ${(t.round_reached && !inList) ? `<option value="${escHtml(t.round_reached)}" selected>${escHtml(t.round_reached)}</option>` : ''}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:10px;color:var(--g3);display:block;margin-bottom:3px;">Categoría</label>
+        <input type="text" placeholder="M25, J1…" value="${escHtml(t.category)}" maxlength="40"
+          oninput="evalSetTournament(${i},'category',this.value)"
+          style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 8px;font-size:12px;box-sizing:border-box;">
+      </div>
+    </div>
+    <div id="eval-rival-${i}" style="margin-top:8px;${isChamp ? 'display:none;' : ''}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="font-size:10px;color:var(--g3);display:block;margin-bottom:3px;">Perdió contra ${isChamp ? '' : '<span style="color:#c0392b;">*</span>'}</label>
+          <input type="text" placeholder="Rival" value="${escHtml(t.lost_against)}" maxlength="100"
+            oninput="evalSetTournament(${i},'lost_against',this.value)"
+            style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 8px;font-size:12px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--g3);display:block;margin-bottom:3px;">País del rival</label>
+          <input type="text" placeholder="CHI, ARG…" value="${escHtml(t.lost_against_country)}" maxlength="60"
+            oninput="evalSetTournament(${i},'lost_against_country',this.value)"
+            style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 8px;font-size:12px;box-sizing:border-box;">
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function evalSetTournament(i, field, val){
+  if(evalFormState && evalFormState.tournaments[i]) evalFormState.tournaments[i][field] = val;
+}
+
+function evalSetRound(i, val){
+  if(!evalFormState || !evalFormState.tournaments[i]) return;
+  evalFormState.tournaments[i].round_reached = val;
+  const box = document.getElementById('eval-rival-' + i);
+  if(box) box.style.display = (val === 'Campeon') ? 'none' : 'block';
+}
+
+function evalAddTournament(){
+  evalFormState.tournaments.push(evalNormalizeTournament({ source: 'manual' }));
+  evalRefreshTournaments();
+}
+
+function evalRemoveTournament(i){
+  evalFormState.tournaments.splice(i, 1);
+  evalRefreshTournaments();
+}
+
+function evalRefreshTournaments(){
+  const el = document.getElementById('eval-form-tournaments');
+  if(el) el.innerHTML = evalTournamentsHTML();
+}
+
+async function evalDetectTournaments(){
+  const s = evalFormState;
+  if(!s) return;
+  try{
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/tours/${s.tourId}/reports/detect?academyId=${ACADEMY_ID}&player_id=${s.playerId}`);
+    if(!res || !res.ok){ evalToast('No se pudieron autodetectar torneos', true); return; }
+    const detected = await res.json();
+    if(!Array.isArray(detected) || !detected.length){ evalToast('No hay torneos de este jugador en la gira', false); return; }
+    const existing = new Set(s.tournaments.map(t => t.gira_event_id).filter(Boolean));
+    let added = 0;
+    detected.forEach(d => {
+      if(d.gira_event_id && existing.has(d.gira_event_id)) return;
+      s.tournaments.push(evalNormalizeTournament(d));
+      added++;
+    });
+    evalRefreshTournaments();
+    evalToast(added ? `${added} torneo${added===1?'':'s'} agregado${added===1?'':'s'}` : 'Ya estaban todos agregados', false);
+  }catch(e){ console.error('evalDetectTournaments', e); evalToast('Error al autodetectar', true); }
+}
+
+// ── Textareas ───────────────────────────────────────────────────────────────
+function evalTextareaField(label, field, val, max){
+  return `<div>
+    ${label ? `<label style="font-size:11px;color:var(--g3);display:block;margin-bottom:4px;">${escHtml(label)}</label>` : ''}
+    <textarea maxlength="${max}" oninput="evalSetField('${field}',this.value)"
+      style="width:100%;min-height:64px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;box-sizing:border-box;resize:vertical;font-family:inherit;">${escHtml(val || '')}</textarea>
+  </div>`;
+}
+
+function evalSetField(field, val){
+  if(evalFormState) evalFormState[field] = val;
+}
+
+// ── Guardado ────────────────────────────────────────────────────────────────
+function evalBuildRubricArray(){
+  const s = evalFormState;
+  const arr = [];
+  RUBRIC_ITEMS.forEach(b => b.items.forEach(it => {
+    const r = s.rubric[it.key];
+    if(r && typeof r.score === 'number'){
+      arr.push({ key: it.key, score: r.score, notes: (r.notes || '').trim() });
+    }
+  }));
+  return arr;
+}
+
+// Validación client-side espejo del backend (feedback inmediato antes de mandar).
+function evalValidateComplete(){
+  const s = evalFormState;
+  if(!s.tournaments.length) return 'Registrá al menos un torneo jugado';
+  for(let i = 0; i < s.tournaments.length; i++){
+    const t = s.tournaments[i];
+    const label = (t.name || '').trim() || `#${i + 1}`;
+    if(!t.round_reached || !t.round_reached.trim()) return `Falta la ronda en el torneo ${label}`;
+    if(t.round_reached !== 'Campeon' && !(t.lost_against || '').trim()) return `Falta el rival en el torneo ${label}`;
+  }
+  const rub = evalBuildRubricArray();
+  if(rub.length < 12) return `Faltan ${12 - rub.length} notas por asignar en la rúbrica`;
+  return null;
+}
+
+async function evalSaveReport(status){
+  const s = evalFormState;
+  if(!s) return;
+  if(status === 'completed'){
+    const err = evalValidateComplete();
+    if(err){ evalToast(err, true); return; }
+  }
+  const payload = {
+    academyId: ACADEMY_ID,
+    player_id: s.playerId,
+    player_legacy_id: (typeof s.playerLegacyId === 'number') ? s.playerLegacyId : null,
+    group_id: s.groupId || null,
+    tournaments_played: s.tournaments.map(t => ({
+      source: t.source || 'manual',
+      gira_event_id: t.gira_event_id || null,
+      name: (t.name || '').trim(),
+      category: (t.category || '').trim(),
+      week: t.week || '',
+      surface: t.surface || '',
+      round_reached: (t.round_reached || '').trim(),
+      lost_against: (t.lost_against || '').trim(),
+      lost_against_country: (t.lost_against_country || '').trim(),
+    })),
+    preparacion: (s.preparacion || '').trim(),
+    technical_tactical_rubric: evalBuildRubricArray(),
+    fisico_positivo: (s.fisico_positivo || '').trim(),
+    fisico_negativo: (s.fisico_negativo || '').trim(),
+    mental_positivo: (s.mental_positivo || '').trim(),
+    mental_negativo: (s.mental_negativo || '').trim(),
+    observacion_general: (s.observacion_general || '').trim(),
+    status: status,
+  };
+  const editing = s.reportId;
+  const url = editing
+    ? `${BACKEND_URL}/api/v1/reports/${editing}`
+    : `${BACKEND_URL}/api/v1/tours/${s.tourId}/reports`;
+  try{
+    const res = await apiFetch(url, {
+      method: editing ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if(!res || !res.ok){
+      const e = await res?.json().catch(() => ({}));
+      if(res && res.status === 409){ evalToast('Ya existe una evaluación de este jugador en la gira', true); return; }
+      evalToast(e.error || 'Error al guardar', true);
+      return;
+    }
+    evalToast(status === 'completed' ? 'Evaluación completada' : 'Borrador guardado', false);
+    evaluacionBackToDetail();
+  }catch(e){ console.error('evalSaveReport', e); evalToast('Error al guardar: ' + e.message, true); }
+}
+
+// ── Estilos del formulario (inyectados una sola vez) ────────────────────────
+function evalFormEnsureStyles(){
+  if(document.getElementById('eval-form-styles')) return;
+  const st = document.createElement('style');
+  st.id = 'eval-form-styles';
+  st.textContent = `
+    .eval-acc-body{display:none;}
+    .eval-acc-body.open{display:block;padding-bottom:6px;}
+    .eval-acc-head:active{opacity:.7;}
+    .eval-acc-arrow{transition:transform .2s;display:inline-block;}
+    @media(max-width:560px){ .eval-fm-grid{grid-template-columns:1fr !important;} }
+  `;
+  document.head.appendChild(st);
 }
 
 async function evaluacionSetTourStatus(id, action){
