@@ -2195,7 +2195,6 @@ function evaluacionRenderDetailPlayers(){
   const byPlayer = {};
   (evalReportsSummary || []).forEach(r => { byPlayer[r.player_id] = r; });
   const canManage = evaluacionCanManage();
-  // Pendientes primero, después borradores, después completadas; alfabético dentro de cada grupo.
   const rank = { pending: 0, draft: 1, completed: 2 };
   const sorted = players.slice().sort((a, b) => {
     const sa = byPlayer[a.id] ? byPlayer[a.id].status : 'pending';
@@ -2212,7 +2211,12 @@ function evaluacionRenderDetailPlayers(){
     const status = rep ? rep.status : 'pending';
     const count = rep ? (rep.tournaments_count || 0) : 0;
     const btnLabel = rep ? (status === 'completed' ? 'Ver / Editar' : 'Continuar') : 'Evaluar';
-    return `<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;${status==='completed'?'opacity:.72;':''}">
+    const hasReport = !!rep;
+    const removeBtn = canManage
+      ? `<button onclick="evaluacionRemovePlayer('${escHtml(p.id)}')" title="${hasReport ? 'Borrar evaluación' : 'Quitar de la lista'}"
+           style="background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--g3);font-size:12px;cursor:pointer;padding:5px 9px;flex-shrink:0;">✕</button>`
+      : '';
+    return `<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:8px;${status==='completed'?'opacity:.72;':''}">
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:700;color:var(--gray);">${escHtml(p.full_name || '—')}</div>
         <div style="font-size:11px;color:var(--g3);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -2220,12 +2224,70 @@ function evaluacionRenderDetailPlayers(){
         </div>
       </div>
       ${canManage ? `<button class="btn btn-o btn-sm" onclick="evaluacionOpenForm('${escHtml(p.id)}')">${btnLabel}</button>` : ''}
+      ${removeBtn}
     </div>`;
   }).join('');
   const addBtn = canManage
     ? `<button class="btn btn-sm" onclick="evaluacionAddPlayerPrompt()" style="width:100%;padding:11px;border:1px dashed var(--g4);background:#fff;color:var(--g2);font-weight:600;margin-top:2px;border-radius:10px;cursor:pointer;">+ Agregar jugador manualmente</button>`
     : '';
   el.innerHTML = header + rows + addBtn;
+}
+
+// ¿El jugador está en la gira porque juega un torneo vinculado? Si su UUID
+// aparece en player_ids de algún evento de la gira, su presencia depende del
+// torneo y no se puede "quitar" desde acá (se edita en el calendario).
+function evaluacionPlayerVieneDeTorneo(playerId){
+  const evs = evaluacionTourEvents || [];
+  return evs.some(ev => Array.isArray(ev.player_ids) && ev.player_ids.includes(playerId));
+}
+
+async function evaluacionRemovePlayer(playerId){
+  if(!evaluacionCanManage()) return;
+  const player = (evaluacionTourPlayers || []).find(p => p.id === playerId);
+  const nombre = player ? (player.full_name || 'este jugador') : 'este jugador';
+  const rep = (evalReportsSummary || []).find(r => r.player_id === playerId);
+  const vieneDeTorneo = evaluacionPlayerVieneDeTorneo(playerId);
+
+  // Caso 1: sin evaluación guardada.
+  if(!rep){
+    if(vieneDeTorneo){
+      evalToast('Este jugador está en la gira por un torneo vinculado. Se quita desde el calendario, no acá.', true);
+      return;
+    }
+    // Agregado manual sin evaluación → sacarlo de la lista en memoria.
+    evaluacionTourPlayers = (evaluacionTourPlayers || []).filter(p => p.id !== playerId);
+    evaluacionRenderDetailPlayers();
+    evalToast(`${nombre} quitado de la lista`, false);
+    return;
+  }
+
+  // Caso 2: tiene borrador o evaluación completa → borrar la evaluación.
+  const rol = sessionStorage.getItem('ciq_role');
+  if(rol !== 'admin' && rol !== 'super_admin'){
+    evalToast('Solo un administrador puede borrar una evaluación ya guardada', true);
+    return;
+  }
+  const msg = rep.status === 'completed'
+    ? `¿Borrar la evaluación COMPLETA de ${nombre}? Esta acción no se puede deshacer.`
+    : `¿Borrar el borrador de evaluación de ${nombre}?`;
+  if(!confirm(msg)) return;
+
+  try{
+    const res = await apiFetch(`${BACKEND_URL}/api/v1/reports/${rep.id}?academyId=${ACADEMY_ID}`, { method: 'DELETE' });
+    if(!res || !res.ok){
+      const e = await res?.json().catch(() => ({}));
+      evalToast('Error al borrar: ' + (e.error || res?.status || 'desconocido'), true);
+      return;
+    }
+    // Sacar el reporte del cache local.
+    evalReportsSummary = (evalReportsSummary || []).filter(r => r.player_id !== playerId);
+    // Si el jugador era manual (no viene de torneo), sacarlo también de la lista.
+    if(!vieneDeTorneo){
+      evaluacionTourPlayers = (evaluacionTourPlayers || []).filter(p => p.id !== playerId);
+    }
+    evaluacionRenderDetailPlayers();
+    evalToast('Evaluación borrada', false);
+  }catch(e){ console.error('evaluacionRemovePlayer', e); evalToast('Error al borrar', true); }
 }
 
 // ── Agregar jugador manual (Tanda 2) ────────────────────────────────────────
