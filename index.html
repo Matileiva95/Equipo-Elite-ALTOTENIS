@@ -2228,9 +2228,102 @@ function evaluacionRenderDetailPlayers(){
   el.innerHTML = header + rows + addBtn;
 }
 
-// Placeholder de Tanda 2 (agregar jugador manual). Por ahora avisa.
+// ── Agregar jugador manual (Tanda 2) ────────────────────────────────────────
+// El selector se arma sobre `giraPlayers` (roster real con UUID de
+// public.players), filtra por full_name y excluye los que ya están en la gira.
 function evaluacionAddPlayerPrompt(){
-  evalToast('Agregar jugador manual llega en la próxima tanda', false);
+  evaluacionOpenAddPlayer();
+}
+
+// Jugadores de la academia que se pueden agregar: los de giraPlayers (UUID
+// real) que NO estén ya en la gira. Los que solo viven en el blob local
+// (sin contraparte migrada en public.players) no aparecen: sin UUID el
+// backend no puede guardarles una evaluación.
+function evaluacionAvailablePlayers(){
+  const roster = Array.isArray(window.giraPlayers) ? window.giraPlayers : [];
+  const yaEnGira = new Set((evaluacionTourPlayers || []).map(p => p.id));
+  return roster
+    .filter(p => p && p.id && !yaEnGira.has(p.id))
+    .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+}
+
+function evaluacionOpenAddPlayer(){
+  if(!evaluacionActiveTour){ evalToast('Abrí una gira primero', true); return; }
+  evalFormEnsureStyles();               // garantiza que exista el sistema de modales/estilos
+  evaluacionEnsureAddPlayerModal();
+  const disp = evaluacionAvailablePlayers();
+  const search = document.getElementById('eval-addp-search');
+  if(search) search.value = '';
+  evaluacionRenderAddPlayerList('');
+  const empty = !disp.length;
+  const listWrap = document.getElementById('eval-addp-list');
+  const noRoster = document.getElementById('eval-addp-empty');
+  if(noRoster) noRoster.style.display = empty ? 'block' : 'none';
+  if(listWrap) listWrap.style.display = empty ? 'none' : 'block';
+  document.getElementById('eval-addplayer-modal').classList.add('open');
+  setTimeout(() => { if(search) search.focus(); }, 50);
+}
+
+function evaluacionCloseAddPlayer(){
+  const ov = document.getElementById('eval-addplayer-modal');
+  if(ov) ov.classList.remove('open');
+}
+
+function evaluacionRenderAddPlayerList(query){
+  const el = document.getElementById('eval-addp-list');
+  if(!el) return;
+  const q = (query || '').toLowerCase().trim();
+  const disp = evaluacionAvailablePlayers().filter(p => !q || (p.full_name || '').toLowerCase().includes(q));
+  if(!disp.length){
+    el.innerHTML = '<div style="font-size:13px;color:var(--g4);padding:10px 0;">Sin resultados</div>';
+    return;
+  }
+  el.innerHTML = disp.map(p => `
+    <div onclick="evaluacionPickAddPlayer('${escHtml(p.id)}')"
+      style="padding:10px 12px;border:1px solid var(--border);background:#fff;border-radius:9px;margin-bottom:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gray);display:flex;align-items:center;gap:8px;">
+      <span style="flex:1;min-width:0;">${escHtml(p.full_name || '—')}</span>
+      <span style="font-size:11px;color:var(--orange);font-weight:700;">Evaluar →</span>
+    </div>`).join('');
+}
+
+function evaluacionFilterAddPlayer(q){
+  evaluacionRenderAddPlayerList(q);
+}
+
+function evaluacionPickAddPlayer(playerId){
+  // Sumar el jugador elegido a la lista en memoria de la gira, para que el
+  // formulario lo encuentre y para que quede visible al volver al detalle.
+  const roster = Array.isArray(window.giraPlayers) ? window.giraPlayers : [];
+  const p = roster.find(x => x.id === playerId);
+  if(!p){ evalToast('Jugador no encontrado', true); return; }
+  const yaEsta = (evaluacionTourPlayers || []).some(x => x.id === playerId);
+  if(!yaEsta){
+    evaluacionTourPlayers = evaluacionTourPlayers || [];
+    evaluacionTourPlayers.push({ id: p.id, full_name: p.full_name, group_id: p.group_id ?? null });
+  }
+  evaluacionCloseAddPlayer();
+  evaluacionOpenForm(playerId);
+}
+
+// Modal auto-inyectado una sola vez (mismo sistema .modal-overlay/.open).
+function evaluacionEnsureAddPlayerModal(){
+  if(document.getElementById('eval-addplayer-modal')) return;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<div class="modal-overlay" id="eval-addplayer-modal" onclick="if(event.target===this)evaluacionCloseAddPlayer()">
+    <div class="modal" style="max-width:460px;display:flex;flex-direction:column;max-height:86vh;">
+      <div class="modal-header">
+        <div class="modal-title">Agregar jugador</div>
+        <button class="modal-close" onclick="evaluacionCloseAddPlayer()">×</button>
+      </div>
+      <input type="text" id="eval-addp-search" placeholder="Buscar por nombre…" oninput="evaluacionFilterAddPlayer(this.value)"
+        style="width:100%;border:1px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13px;box-sizing:border-box;margin-bottom:12px;font-family:inherit;">
+      <div id="eval-addp-list" style="overflow-y:auto;flex:1;"></div>
+      <div id="eval-addp-empty" style="display:none;font-size:12.5px;color:var(--g3);line-height:1.5;padding:6px 2px;">
+        No hay jugadores disponibles para agregar. Puede que ya estén todos en la gira, o que el jugador aún no esté migrado al sistema (aparece en tus listas locales pero todavía no en el registro central de la academia).
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(wrap.firstElementChild);
 }
 
 // ── Apertura del formulario ─────────────────────────────────────────────────
@@ -2252,7 +2345,12 @@ function evalNormalizeTournament(t){
 async function evaluacionOpenForm(playerId){
   const tour = evaluacionActiveTour;
   if(!tour){ evalToast('Abrí una gira primero', true); return; }
-  const player = (evaluacionTourPlayers || []).find(p => p.id === playerId);
+  let player = (evaluacionTourPlayers || []).find(p => p.id === playerId);
+  if(!player){
+    const roster = Array.isArray(window.giraPlayers) ? window.giraPlayers : [];
+    const rp = roster.find(x => x.id === playerId);
+    if(rp) player = { id: rp.id, full_name: rp.full_name, group_id: rp.group_id ?? null };
+  }
   if(!player){ evalToast('Jugador no encontrado', true); return; }
 
   const m = document.getElementById('main');
