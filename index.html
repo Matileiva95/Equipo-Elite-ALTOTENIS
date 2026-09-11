@@ -2240,17 +2240,20 @@ function evaluacionAddPlayerPrompt(){
 // (sin contraparte migrada en public.players) no aparecen: sin UUID el
 // backend no puede guardarles una evaluación.
 function evaluacionAvailablePlayers(){
-  const roster = Array.isArray(window.giraPlayers) ? window.giraPlayers : [];
+  const roster = Array.isArray(giraPlayers) ? giraPlayers : [];
   const yaEnGira = new Set((evaluacionTourPlayers || []).map(p => p.id));
   return roster
     .filter(p => p && p.id && !yaEnGira.has(p.id))
     .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
 }
 
-function evaluacionOpenAddPlayer(){
+async function evaluacionOpenAddPlayer(){
   if(!evaluacionActiveTour){ evalToast('Abrí una gira primero', true); return; }
   evalFormEnsureStyles();               // garantiza que exista el sistema de modales/estilos
   evaluacionEnsureAddPlayerModal();
+  if(!Array.isArray(giraPlayers) || !giraPlayers.length){
+    try{ await giraLoadStaticData(); }catch(e){ console.error('carga roster', e); }
+  }
   const disp = evaluacionAvailablePlayers();
   const search = document.getElementById('eval-addp-search');
   if(search) search.value = '';
@@ -2293,7 +2296,7 @@ function evaluacionFilterAddPlayer(q){
 function evaluacionPickAddPlayer(playerId){
   // Sumar el jugador elegido a la lista en memoria de la gira, para que el
   // formulario lo encuentre y para que quede visible al volver al detalle.
-  const roster = Array.isArray(window.giraPlayers) ? window.giraPlayers : [];
+  const roster = Array.isArray(giraPlayers) ? giraPlayers : [];
   const p = roster.find(x => x.id === playerId);
   if(!p){ evalToast('Jugador no encontrado', true); return; }
   const yaEsta = (evaluacionTourPlayers || []).some(x => x.id === playerId);
@@ -2347,7 +2350,7 @@ async function evaluacionOpenForm(playerId){
   if(!tour){ evalToast('Abrí una gira primero', true); return; }
   let player = (evaluacionTourPlayers || []).find(p => p.id === playerId);
   if(!player){
-    const roster = Array.isArray(window.giraPlayers) ? window.giraPlayers : [];
+    const roster = Array.isArray(giraPlayers) ? giraPlayers : [];
     const rp = roster.find(x => x.id === playerId);
     if(rp) player = { id: rp.id, full_name: rp.full_name, group_id: rp.group_id ?? null };
   }
