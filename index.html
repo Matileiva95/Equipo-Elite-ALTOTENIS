@@ -2187,13 +2187,26 @@ function evalReportStatusBadge(status){
 function evaluacionRenderDetailPlayers(){
   const el = document.getElementById('eval-detail-players');
   if(!el) return;
-  const players = evaluacionTourPlayers || [];
+  const byPlayer = {};
+  (evalReportsSummary || []).forEach(r => { byPlayer[r.player_id] = r; });
+  // Combinar: jugadores que vienen de torneos + los que tienen reporte
+  // (agregados manual) aunque no estén en evaluacionTourPlayers.
+  const players = (evaluacionTourPlayers || []).slice();
+  const yaEnLista = new Set(players.map(p => p.id));
+  (evalReportsSummary || []).forEach(r => {
+    if(!yaEnLista.has(r.player_id)){
+      players.push({
+        id: r.player_id,
+        full_name: (r.player && r.player.full_name) || '—',
+        group_id: null,
+      });
+      yaEnLista.add(r.player_id);
+    }
+  });
   if(!players.length){
     el.innerHTML = '<div style="font-size:12px;color:var(--g4);">Sin jugadores — vinculá torneos con jugadores inscritos.</div>';
     return;
   }
-  const byPlayer = {};
-  (evalReportsSummary || []).forEach(r => { byPlayer[r.player_id] = r; });
   const canManage = evaluacionCanManage();
   const rank = { pending: 0, draft: 1, completed: 2 };
   const sorted = players.slice().sort((a, b) => {
