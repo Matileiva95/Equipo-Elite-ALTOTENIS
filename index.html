@@ -2050,12 +2050,17 @@ function evaluacionTourDetailHTML(t){
     <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Grupos representados</div>
     <div id="eval-detail-groups" style="margin-bottom:18px;"><div style="font-size:12px;color:var(--g4);">Cargando…</div></div>
 
-    <div style="font-size:11px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Evaluaciones por jugador</div>
+    <div class="tab-row" style="margin-bottom:12px;">
+      <button class="tab-btn active" id="eval-tab-evaluar" onclick="evaluacionSetDetailTab('evaluar')">Evaluar</button>
+      <button class="tab-btn" id="eval-tab-comparar" onclick="evaluacionSetDetailTab('comparar')">Comparar</button>
+    </div>
     <div id="eval-detail-players"><div style="font-size:12px;color:var(--g4);">Cargando…</div></div>
+    <div id="eval-detail-compare" style="display:none;"></div>
   </div>`;
 }
 
 async function evaluacionLoadTourDetail(id){
+  evalCompareReports = null; evalDetailTab = 'evaluar';
   try{
     const [evRes, plRes] = await Promise.all([
       apiFetch(`${BACKEND_URL}/api/v1/tours/${id}/events?academyId=${ACADEMY_ID}`),
@@ -2301,6 +2306,129 @@ async function evaluacionRemovePlayer(playerId){
     evaluacionRenderDetailPlayers();
     evalToast('Evaluación borrada', false);
   }catch(e){ console.error('evaluacionRemovePlayer', e); evalToast('Error al borrar', true); }
+}
+
+// ── Comparar (Tanda 3) · ranking por situación ──────────────────────────────
+let evalDetailTab = 'evaluar';   // 'evaluar' | 'comparar'
+let evalCompareReports = null;   // cache de reportes completos de la gira (o null si no cargados)
+
+function evaluacionSetDetailTab(tab){
+  evalDetailTab = tab;
+  const bEval = document.getElementById('eval-tab-evaluar');
+  const bComp = document.getElementById('eval-tab-comparar');
+  if(bEval) bEval.classList.toggle('active', tab === 'evaluar');
+  if(bComp) bComp.classList.toggle('active', tab === 'comparar');
+  const players = document.getElementById('eval-detail-players');
+  const compare = document.getElementById('eval-detail-compare');
+  if(players) players.style.display = (tab === 'evaluar') ? 'block' : 'none';
+  if(compare) compare.style.display = (tab === 'comparar') ? 'block' : 'none';
+  if(tab === 'comparar') evaluacionRenderCompare();
+}
+
+// Carga los reportes completos de la gira (con las notas) y arma la vista.
+async function evaluacionRenderCompare(){
+  const el = document.getElementById('eval-detail-compare');
+  if(!el || !evaluacionActiveTour) return;
+
+  if(evalCompareReports === null){
+    el.innerHTML = '<div class="empty" style="padding:24px 0;">Cargando evaluaciones…</div>';
+    try{
+      const res = await apiFetch(`${BACKEND_URL}/api/v1/tours/${evaluacionActiveTour.id}/reports?academyId=${ACADEMY_ID}`);
+      evalCompareReports = (res && res.ok) ? await res.json() : [];
+    }catch(e){ console.error('evaluacionRenderCompare', e); evalCompareReports = []; }
+  }
+
+  // Solo evaluaciones completadas cuentan para el ranking.
+  const completed = (evalCompareReports || []).filter(r => r.status === 'completed');
+
+  if(!completed.length){
+    el.innerHTML = `<div style="background:#FFF8EC;border:1px solid #F5DFAF;border-radius:10px;padding:16px;font-size:12.5px;color:#8a6a1f;line-height:1.5;text-align:center;">
+      Todavía no hay evaluaciones completadas en esta gira.<br>El ranking aparece cuando marques al menos una como completada.
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="sel-wrap" id="eval-compare-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"></div>
+    <div id="eval-compare-block"></div>
+    <div style="font-size:11px;color:var(--g3);margin-top:10px;padding:6px 2px;display:flex;align-items:center;gap:6px;">
+      <span style="width:11px;height:11px;border-radius:3px;background:#fdf0f0;border:1px solid #f0caca;display:inline-block;"></span>
+      Nota menor a 5.0 — candidato a refuerzo en esa situación.
+    </div>
+    <div style="font-size:11px;color:var(--g4);margin-top:4px;padding:0 2px;">Ranking sobre ${completed.length} evaluación${completed.length===1?'':'es'} completada${completed.length===1?'':'s'}.</div>`;
+
+  evalCompareBlockKey = evalCompareBlockKey || RUBRIC_ITEMS[0].block;
+  evaluacionRenderCompareChips();
+  evaluacionRenderCompareBlock();
+}
+
+let evalCompareBlockKey = null;   // qué bloque se está mostrando
+
+function evaluacionRenderCompareChips(){
+  const el = document.getElementById('eval-compare-chips');
+  if(!el) return;
+  el.innerHTML = RUBRIC_ITEMS.map(b => {
+    const on = b.block === evalCompareBlockKey;
+    return `<button onclick="evaluacionPickCompareBlock('${escHtml(b.block)}')"
+      style="border:1.5px solid ${on?'var(--orange)':'var(--border)'};background:${on?'var(--ol)':'#fff'};color:${on?'var(--od)':'var(--g2)'};border-radius:20px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;">${b.icon} ${escHtml(b.block)}</button>`;
+  }).join('');
+}
+
+function evaluacionPickCompareBlock(blockName){
+  evalCompareBlockKey = blockName;
+  evaluacionRenderCompareChips();
+  evaluacionRenderCompareBlock();
+}
+
+// Promedio de un jugador en un bloque (solo sub-ítems con score numérico).
+function evaluacionPlayerBlockAvg(report, block){
+  const rubric = Array.isArray(report.technical_tactical_rubric) ? report.technical_tactical_rubric : [];
+  const byKey = {};
+  rubric.forEach(it => { if(it && typeof it.score === 'number') byKey[it.key] = it.score; });
+  let sum = 0, n = 0;
+  block.items.forEach(it => { if(typeof byKey[it.key] === 'number'){ sum += byKey[it.key]; n++; } });
+  return n ? (sum / n) : null;
+}
+
+function evaluacionRenderCompareBlock(){
+  const el = document.getElementById('eval-compare-block');
+  if(!el) return;
+  const block = RUBRIC_ITEMS.find(b => b.block === evalCompareBlockKey) || RUBRIC_ITEMS[0];
+  const completed = (evalCompareReports || []).filter(r => r.status === 'completed');
+
+  // Fila por jugador con su promedio en el bloque; se descartan los que no
+  // tengan ninguna nota del bloque (avg null).
+  const rows = completed.map(r => ({
+    name: (r.player && r.player.full_name) || '—',
+    avg: evaluacionPlayerBlockAvg(r, block),
+  })).filter(x => x.avg !== null)
+     .sort((a, b) => b.avg - a.avg);
+
+  const avgBlock = rows.length ? (rows.reduce((s, x) => s + x.avg, 0) / rows.length) : null;
+
+  const headPill = avgBlock !== null
+    ? `<span style="font-size:11px;font-weight:800;padding:3px 9px;border-radius:11px;background:${evalScoreVar(avgBlock)};color:${evalScoreTextColor(avgBlock)};">Prom ${avgBlock.toFixed(1)}</span>`
+    : '';
+
+  const body = rows.length
+    ? rows.map((x, i) => {
+        const low = x.avg < 5.0;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;${low?'background:#fdf0f0;':''}">
+          <span style="font-size:11px;font-weight:700;color:var(--g4);width:18px;text-align:center;flex-shrink:0;">${i+1}</span>
+          <span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:${low?'#c0392b':'var(--gray)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(x.name)}${low?'<span style="font-size:9px;font-weight:800;color:#c0392b;background:#fdecea;border-radius:4px;padding:1px 5px;margin-left:6px;">REFUERZO</span>':''}</span>
+          <span style="font-size:13px;font-weight:800;border-radius:7px;padding:3px 10px;min-width:42px;text-align:center;flex-shrink:0;background:${evalScoreVar(x.avg)};color:${evalScoreTextColor(x.avg)};">${x.avg.toFixed(1)}</span>
+        </div>`;
+      }).join('')
+    : '<div style="font-size:12px;color:var(--g4);padding:12px 8px;">Sin notas en esta situación todavía.</div>';
+
+  el.innerHTML = `<div class="card" style="padding:0;overflow:hidden;border-color:#efe8dd;">
+    <div style="display:flex;align-items:center;gap:9px;padding:12px 14px;border-bottom:1px solid #f2ede4;">
+      <span style="font-size:17px;">${block.icon}</span>
+      <span style="flex:1;font-size:14px;font-weight:800;">${escHtml(block.block)}</span>
+      ${headPill}
+    </div>
+    <div style="padding:6px 8px;">${body}</div>
+  </div>`;
 }
 
 // ── Agregar jugador manual (Tanda 2) ────────────────────────────────────────
