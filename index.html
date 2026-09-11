@@ -2085,7 +2085,7 @@ function evaluacionRenderDetailEvents(){
     <div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:700;color:var(--gray);">${escHtml(ev.city || '—')} <span style="font-weight:400;color:var(--g3);">· ${escHtml(ev.country || '')}</span></div>
-        <div style="font-size:11px;color:var(--g3);margin-top:2px;">${escHtml(ev.week || '')}${ev.level ? ' · ' + escHtml(ev.level) : ''}${ev.group && ev.group.name ? ' · ' + escHtml(ev.group.name) : ''}</div>
+        <div style="font-size:11px;color:var(--g3);margin-top:2px;">${escHtml(weekToRangeGira(ev.week))}${ev.level ? ' · ' + escHtml(ev.level) : ''}${ev.group && ev.group.name ? ' · ' + escHtml(ev.group.name) : ''}</div>
       </div>
       ${canManage ? `<button onclick="evaluacionUnlinkEvent('${ev.id}')" style="background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--g3);font-size:12px;cursor:pointer;padding:4px 8px;" title="Desvincular">✕</button>` : ''}
     </div>`).join('');
@@ -3077,7 +3077,7 @@ function evaluacionRenderLinkList(){
     const sel = evaluacionLinkSelection.has(e.id);
     return `<div onclick="evaluacionToggleLinkEvent('${e.id}')" style="padding:9px 11px;border:1px solid ${sel?'var(--orange)':'var(--border)'};background:${sel?'#fff3e8':'#fff'};border-radius:8px;margin-bottom:6px;cursor:pointer;">
       <div style="font-size:13px;font-weight:${sel?'700':'500'};color:${sel?'var(--orange)':'var(--gray)'};">${escHtml(e.city || '—')} <span style="font-weight:400;color:var(--g3);">· ${escHtml(e.country || '')}</span></div>
-      <div style="font-size:11px;color:var(--g3);margin-top:2px;">${escHtml(e.week || '')}${e.level ? ' · ' + escHtml(e.level) : ''}</div>
+      <div style="font-size:11px;color:var(--g3);margin-top:2px;">${escHtml(weekToRangeGira(e.week))}${e.level ? ' · ' + escHtml(e.level) : ''}</div>
     </div>`;
   }).join('');
 }
@@ -3417,7 +3417,7 @@ function renderDashboard(){
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
               <div>
                 <div style="font-size:14px;font-weight:700;color:#1a1a1a;">${ev.city} <span style="font-weight:400;color:#888;">· ${ev.country}</span></div>
-                <div style="font-size:11px;color:#bbb;margin-top:2px;">${ev.week}</div>
+                <div style="font-size:11px;color:#bbb;margin-top:2px;">${escHtml(weekToRangeGira(ev.week))}</div>
               </div>
               <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">${giraLevelBadge(ev.level)}<span style="background:#eee;color:#555;font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600;">${ev.surface||''}</span></div>
             </div>
