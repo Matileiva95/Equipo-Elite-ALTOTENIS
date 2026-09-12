@@ -2208,19 +2208,32 @@ function evaluacionRenderDetailPlayers(){
       yaEnLista.add(r.player_id);
     }
   });
-  if(!players.length){
+  // Deduplicar por nombre: la base puede tener el mismo jugador con distinto
+  // UUID. Conservamos una sola fila por nombre, priorizando la que tenga
+  // evaluación (para no perder el acceso al reporte desde la lista).
+  const dedup = {};
+  players.forEach(p => {
+    const nombre = (p.full_name || '').trim().toLowerCase();
+    const tieneReporte = !!byPlayer[p.id];
+    const previo = dedup[nombre];
+    if(!previo){ dedup[nombre] = p; return; }
+    const previoTieneReporte = !!byPlayer[previo.id];
+    if(tieneReporte && !previoTieneReporte) dedup[nombre] = p;
+  });
+  const playersDedup = Object.values(dedup);
+  if(!playersDedup.length){
     el.innerHTML = '<div style="font-size:12px;color:var(--g4);">Sin jugadores — vinculá torneos con jugadores inscritos.</div>';
     return;
   }
   const canManage = evaluacionCanManage();
   const rank = { pending: 0, draft: 1, completed: 2 };
-  const sorted = players.slice().sort((a, b) => {
+  const sorted = playersDedup.slice().sort((a, b) => {
     const sa = byPlayer[a.id] ? byPlayer[a.id].status : 'pending';
     const sb = byPlayer[b.id] ? byPlayer[b.id].status : 'pending';
     if(rank[sa] !== rank[sb]) return rank[sa] - rank[sb];
     return (a.full_name || '').localeCompare(b.full_name || '');
   });
-  const pendCount = players.filter(p => !byPlayer[p.id] || byPlayer[p.id].status !== 'completed').length;
+  const pendCount = playersDedup.filter(p => !byPlayer[p.id] || byPlayer[p.id].status !== 'completed').length;
   const header = pendCount
     ? `<div style="font-size:11px;color:var(--od);font-weight:700;margin-bottom:8px;">Faltan ${pendCount} por evaluar</div>`
     : `<div style="font-size:11px;color:var(--gd);font-weight:700;margin-bottom:8px;">✓ Todas las evaluaciones completas</div>`;
