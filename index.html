@@ -1822,7 +1822,26 @@ function czMove(key, from, to) {
   cz.msg = null; czSave();
 }
 function czQuitar(key, from) { const day = czDay(true); if (day.A && day.A[from]) day.A[from] = day.A[from].filter(x => x !== key); cz.sel = null; cz.sheet = null; czSave(); }
-function czSelect(key, from) { cz.sel = (cz.sel && cz.sel.key === key && cz.sel.from === from) ? null : { key, from }; cz.msg = null; renderMain(); }
+// Intercambia dos jugadores (a viene de fa, puede ser null = sin cancha; b está en fb)
+function czSwap(a, fa, b, fb) {
+  const day = czDay(true); const A = day.A || (day.A = {});
+  const P = czPlayers(); const nm = key => { const p = P.find(x => x.key === key); return p ? p.n : 'El jugador'; };
+  const inTurn = (key, t, except) => Object.keys(A).find(k => k !== except && k.split('-')[0] === t && (A[k] || []).indexOf(key) >= 0);
+  cz.sel = null; cz.sheet = null;
+  if (a === b) { renderMain(); return; }
+  const tb = fb.split('-')[0];
+  let c = inTurn(a, tb, fb); if (c && c !== fa) { cz.msg = '⚠ ' + nm(a) + ' ya está en ' + czKeyLabel(c) + '. No puede estar dos veces en el mismo turno.'; renderMain(); return; }
+  if (fa) { const ta = fa.split('-')[0]; c = inTurn(b, ta, fa); if (c && c !== fb) { cz.msg = '⚠ ' + nm(b) + ' ya está en ' + czKeyLabel(c) + '. No puede estar dos veces en el mismo turno.'; renderMain(); return; } }
+  A[fb] = (A[fb] || []).map(x => x === b ? a : x);
+  if (fa) A[fa] = (A[fa] || []).map(x => x === a ? b : x);
+  cz.msg = null; czSave();
+}
+// Tocar un jugador: lo selecciona; si ya había otro seleccionado en otra cancha, los intercambia
+function czSelect(key, from) {
+  if (cz.sel && from && cz.sel.key !== key && cz.sel.from !== from) { czSwap(cz.sel.key, cz.sel.from || null, key, from); return; }
+  cz.sel = (cz.sel && cz.sel.key === key && cz.sel.from === from) ? null : { key, from }; cz.msg = null; renderMain();
+}
+function czDropOn(ev, key, k) { ev.preventDefault(); ev.stopPropagation(); if (cz.drag && cz.drag.key !== key) { if (cz.drag.from === k) { cz.drag = null; return; } czSwap(cz.drag.key, cz.drag.from || null, key, k); } cz.drag = null; }
 function czDragStart(ev, key, from) { cz.drag = { key, from }; try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', key); } catch (e) {} }
 function czDrop(ev, to) { ev.preventDefault(); if (cz.drag) czMove(cz.drag.key, cz.drag.from, to); cz.drag = null; }
 function czOpenSheet(key, from) { cz.sheet = { key, from }; renderMain(); }
@@ -1969,7 +1988,7 @@ function czRenderResTab(P, day, A, An, nuevos) {
   if (cz.sel) {
     const sp = P.find(p => p.key === cz.sel.key);
     h += `<div class="cz-desk" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;border-radius:10px;background:#1a1a1a;color:#fff">
-      <span style="flex:1 1 240px;font-size:14px">Moviendo a <b>${escHtml(sp ? sp.n : '')}</b> → toca "Mover aquí" en otra cancha.</span>
+      <span style="flex:1 1 240px;font-size:14px">Moviendo a <b>${escHtml(sp ? sp.n : '')}</b> → toca "Mover aquí" en otra cancha, o toca a otro jugador para <b>intercambiarlos</b>.</span>
       ${cz.sel.from ? `<button class="cz-btn" onclick="czQuitar('${cz.sel.key}','${cz.sel.from}')">Quitar de esta cancha</button>` : ''}
       <button class="cz-btn" onclick="czSelect('${cz.sel.key}','${cz.sel.from || ''}')">Listo</button></div>`;
   }
@@ -2006,12 +2025,12 @@ function czRenderGridDesk(P, day, A) {
       h += `<div ${on ? `ondragover="event.preventDefault()" ondrop="czDrop(event,'${k}')"` : ''} style="min-height:84px;padding:6px;border-top:1px solid var(--border);border-left:1px solid var(--border);background:${!on ? '#F1F2F4' : occ.length === 0 ? '#F0FAF4' : maxD >= 2 ? '#FDF1F1' : '#fff'}">
         ${tag ? `<div style="font-size:10px;font-weight:800;letter-spacing:.05em;margin-bottom:4px;color:${tagCol}">${tag}</div>` : ''}
         ${!on ? '<span style="color:#C4C7CC">—</span>' : ''}
-        <div style="display:flex;flex-direction:column;gap:3px">${occ.map(j => { const p = P[j]; const isSel = cz.sel && cz.sel.key === p.key; const dim = cz.sel && !isSel; const sh = p.n.split(' '); return `<button draggable="true" ondragstart="czDragStart(event,'${p.key}','${k}')" onclick="czSelect('${p.key}','${k}')" class="cz-chip ${p.g === 'Elite' ? 'cz-e' : 'cz-f'}" style="${isSel ? 'border-color:#1a1a1a;' : ''}${dim ? 'opacity:.35' : ''}"><span>${escHtml(sh[0] + ' ' + (sh[1] ? sh[1][0] + '.' : ''))}</span><b>${p.lvl}</b></button>`; }).join('')}</div>
+        <div style="display:flex;flex-direction:column;gap:3px">${occ.map(j => { const p = P[j]; const isSel = cz.sel && cz.sel.key === p.key; const dim = cz.sel && !isSel; const sh = p.n.split(' '); return `<button draggable="true" ondragstart="czDragStart(event,'${p.key}','${k}')" ondragover="event.preventDefault()" ondrop="czDropOn(event,'${p.key}','${k}')" onclick="czSelect('${p.key}','${k}')" class="cz-chip ${p.g === 'Elite' ? 'cz-e' : 'cz-f'}" style="${isSel ? 'border-color:#1a1a1a;' : ''}${dim ? 'opacity:.35' : ''}"><span>${escHtml(sh[0] + ' ' + (sh[1] ? sh[1][0] + '.' : ''))}</span><b>${p.lvl}</b></button>`; }).join('')}</div>
         ${canDrop ? `<button onclick="czMove('${cz.sel.key}',${cz.sel.from ? `'${cz.sel.from}'` : 'null'},'${k}')" style="margin-top:4px;width:100%;height:26px;border-radius:6px;border:1.5px dashed #1a1a1a;background:#fff;font-size:11px;font-weight:800;cursor:pointer">Mover aquí</button>` : ''}
       </div>`;
     });
   });
-  return h + `</div></div><div style="font-size:12px;color:var(--g3);margin-top:8px">Arrastra un jugador a otra cancha, o tócalo y luego "Mover aquí". Naranjo = Elite · Celeste = F2 · El número es el nivel (no sale en el PDF).</div></div>`;
+  return h + `</div></div><div style="font-size:12px;color:var(--g3);margin-top:8px">Arrastra un jugador a otra cancha (o sobre otro jugador para intercambiarlos), o tócalo y luego "Mover aquí". Naranjo = Elite · Celeste = F2 · El número es el nivel (no sale en el PDF).</div></div>`;
 }
 
 function czRenderMobile(P, day, A) {
@@ -2072,7 +2091,8 @@ function czRenderSheet(P, day) {
     body = `<div style="font-size:18px;font-weight:800">${escHtml(p.n)} · nivel ${p.lvl}</div>
       <div style="font-size:13px;color:var(--g3)">${s.from ? 'Ahora en ' + czKeyLabel(s.from) : 'Sin cancha en ' + t}</div>
       <div style="font-size:11px;font-weight:800;color:var(--g3);letter-spacing:.06em;margin:14px 0 6px">${s.from ? 'MOVER A OTRA CANCHA DE ' + t : 'UBICAR EN ' + t}</div>
-      ${ks.map(k => { const o = (A[k] || []); const full = o.length >= 4; const who = o.map(key => { const q = P.find(x => x.key === key); return q ? q.n.split(' ')[0] + ' ' + q.lvl : ''; }).join(', ') || 'Libre'; return `<button onclick="${full ? '' : `czMove('${p.key}',${s.from ? `'${s.from}'` : 'null'},'${k}')`}" ${full ? 'disabled' : ''} style="width:100%;min-height:48px;display:flex;align-items:center;gap:10px;padding:0 12px;margin-bottom:6px;border-radius:10px;border:1px solid var(--border);background:${full ? '#F4F5F6' : '#fff'};opacity:${full ? '.5' : '1'};font-size:14px;cursor:${full ? 'not-allowed' : 'pointer'};font-family:inherit;color:#1a1a1a"><b>${czCourtLabel(k.split('-')[1])}</b><span style="flex:1;text-align:left;font-size:12px;color:var(--g3)">${escHtml(who)}</span><b style="font-size:12px">${o.length}/4</b></button>`; }).join('') || '<div style="font-size:13px;color:var(--g3)">No hay otras canchas en este turno.</div>'}
+      ${ks.map(k => { const o = (A[k] || []); const full = o.length >= 4; const who = o.map(key => { const q = P.find(x => x.key === key); return q ? q.n.split(' ')[0] + ' ' + q.lvl : ''; }).join(', ') || 'Libre'; if (full) return `<div style="padding:8px 10px;margin-bottom:6px;border-radius:10px;border:1px solid var(--border);background:#FAFAFB"><div style="display:flex;justify-content:space-between;font-size:13px"><b>${czCourtLabel(k.split('-')[1])}</b><span style="font-size:12px;color:var(--g3)">llena · toca para intercambiar</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${o.map(key => { const q = P.find(x => x.key === key); return q ? `<button onclick="czSwap('${p.key}',${s.from ? `'${s.from}'` : 'null'},'${q.key}','${k}')" style="min-height:40px;padding:0 10px;border-radius:9px;border:1px solid #C4C7CC;background:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⇄ ${escHtml(q.n.split(' ')[0] + ' ' + (q.n.split(' ')[1] || '').charAt(0))}. <span style="color:var(--g3)">${q.lvl}</span></button>` : ''; }).join('')}</div></div>`;
+        return `<button onclick="czMove('${p.key}',${s.from ? `'${s.from}'` : 'null'},'${k}')" style="width:100%;min-height:48px;display:flex;align-items:center;gap:10px;padding:0 12px;margin-bottom:6px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:14px;cursor:pointer;font-family:inherit;color:#1a1a1a"><b>${czCourtLabel(k.split('-')[1])}</b><span style="flex:1;text-align:left;font-size:12px;color:var(--g3)">${escHtml(who)}</span><b style="font-size:12px">${o.length}/4</b></button>`; }).join('') || '<div style="font-size:13px;color:var(--g3)">No hay otras canchas en este turno.</div>'}
       ${turnOpts.length ? `<div style="font-size:11px;font-weight:800;color:var(--g3);letter-spacing:.06em;margin:14px 0 6px">CAMBIAR DE TURNO</div><div style="display:flex;flex-wrap:wrap;gap:6px">${turnOpts.map(x => { const kk = CZ_COURTS.filter(c => day.courts[x.id + '-' + c.id]).map(c => x.id + '-' + c.id); const busy = kk.some(k => (A[k] || []).indexOf(p.key) >= 0); const target = kk.filter(k => (A[k] || []).length < 4).sort((a, b) => (A[a] || []).length - (A[b] || []).length)[0]; return `<button onclick="${busy ? `czBusyMsg('${p.key}','${x.id}')` : target ? `czMove('${p.key}',${s.from ? `'${s.from}'` : 'null'},'${target}')` : ''}" style="height:44px;padding:0 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${busy ? '#E8B4B4' : '#C4C7CC'};background:${busy ? '#FCECEC' : '#fff'};color:${busy ? '#9B2C2C' : '#1a1a1a'}">${x.id} ${x.h}${busy ? ' · ya está' : ''}</button>`; }).join('')}</div>` : ''}
       ${s.from ? `<button onclick="czQuitar('${p.key}','${s.from}')" style="width:100%;height:48px;margin-top:14px;border-radius:12px;border:1px solid #E8B4B4;background:#fff;color:#9B2C2C;font-weight:800;font-size:14px;cursor:pointer">Quitar de este turno</button>` : ''}`;
   }
