@@ -5406,11 +5406,11 @@ async function savePlayerModal(){
     hand:document.getElementById('m-hand').value,
     email:emailVal
   };
-  if(editingPlayerId!==null){data.players[editingPlayerId]={...data.players[editingPlayerId],...managed,id:editingPlayerId};}
+  if(editingPlayerId!==null){data.players[editingPlayerId]={...data.players[editingPlayerId],...managed};}
   else{
     const pd={...managed,ranking:rankingVal,style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]};
     const groupVal = document.getElementById('m-group')?.value || null;
-    const newId=data.players.length;
+    const newId=Math.max(-1,...data.players.map(p=>Number(p.id)).filter(Number.isFinite))+1;
     data.players.push({...pd,id:newId,group_id:groupVal,pkey:crypto.randomUUID()});
   }
   scheduleSync();
@@ -5438,7 +5438,7 @@ async function savePlayerModal(){
 
 async function deletePlayer(){
   if(!confirm('¿Eliminar a '+data.players[editingPlayerId].name+'?'))return;
-  data.players.splice(editingPlayerId,1);data.players.forEach((p,i)=>p.id=i);
+  data.players.splice(editingPlayerId,1);
   scheduleSync();closePlayerModal();pid=null;page='dashboard';renderAll();
 }
 
