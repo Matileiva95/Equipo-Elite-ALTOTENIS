@@ -485,6 +485,7 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button class="nav-btn" onclick="navTo('gira')">📅 &nbsp;Calendario</button>
       <button class="nav-btn" onclick="navTo('reforzamiento')">◐ &nbsp;Reforzamiento</button>
       <button class="nav-btn" onclick="navTo('evaluacion')">📋 &nbsp;Evaluación de Tenista</button>
+      <button class="nav-btn" onclick="navTo('canchas')">🎾 &nbsp;Programación de canchas</button>
       <div class="nav-lbl" style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;">
         <span>Jugadores</span>
         <button class="btn-manage-groups" onclick="openGroupsManager()" title="Gestionar grupos" style="display:none;background:none;border:none;cursor:pointer;font-size:13px;color:var(--g3);padding:2px 4px;">⚙</button>
@@ -522,6 +523,7 @@ body{background:#faf7f2;color:#1a1a1a;}
       <button onclick="closeMasMenu2();navTo('grupal')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">⊞</span>Grupal</button>
       <button onclick="closeMasMenu2();navTo('reforzamiento')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">◐</span>Reforzamiento</button>
       <button onclick="closeMasMenu2();navTo('evaluacion')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">📋</span>Evaluación de Tenista</button>
+      <button onclick="closeMasMenu2();navTo('canchas')" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">🎾</span>Programación de canchas</button>
       <button onclick="closeMasMenu2();openMasMenu()" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">⚙️</span>Ajustes</button>
       <button onclick="closeMasMenu2();openAddPlayer()" style="display:flex;align-items:center;gap:10px;padding:14px;border:1px solid #eee;border-radius:12px;background:#f9f9f7;font-size:14px;font-weight:500;cursor:pointer;color:#333"><span style="font-size:20px">👤</span>Agregar jugador</button>
     </div>
@@ -1544,7 +1546,7 @@ function renderPlayerNav(){
   const nav=document.getElementById('player-nav');if(!nav)return;
   const filtered=data.players.map((p,i)=>({p,i})).filter(({p})=>(!activeGroup||p.group_id===activeGroup)&&canViewGroup(p.group_id));
   nav.innerHTML=filtered.map(({p,i})=>`<button class="pnav${page==='player'&&pid===i?' active':''}" onclick="navTo('player',${i})"><div class="pav" style="background:${COLORS[i%COLORS.length]};">${ini(p.name)}</div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span></button>`).join('');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal','gira','reforzamiento','evaluacion'][i]===page));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',['dashboard','coaching','scouting','asistencia','grupal','gira','reforzamiento','evaluacion','canchas'][i]===page));
 }
 function renderDrawerList(){
   const dl=document.getElementById('drawer-list');if(!dl)return;
@@ -1557,8 +1559,530 @@ function updateMobileNav(){
 }
 function toggleDrawer(){const dr=document.getElementById('player-drawer'),ov=document.getElementById('drawer-overlay');dr.classList.toggle('open');ov.classList.toggle('open');}
 function closeDrawer(){document.getElementById('player-drawer').classList.remove('open');document.getElementById('drawer-overlay').classList.remove('open');}
-function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='grupal')m.innerHTML=renderGrupal();else if(page==='gira')renderGira();else if(page==='reforzamiento')m.innerHTML=renderReforzamiento();else if(page==='evaluacion')renderEvaluacion();else if(page==='player')m.innerHTML=renderPlayer();postRender();}
+function renderMain(){const m=document.getElementById('main');if(page==='dashboard')m.innerHTML=renderDashboard();else if(page==='coaching')m.innerHTML=renderCoaching();else if(page==='scouting')m.innerHTML=renderScouting();else if(page==='asistencia')m.innerHTML=renderAsistencia();else if(page==='grupal')m.innerHTML=renderGrupal();else if(page==='gira')renderGira();else if(page==='reforzamiento')m.innerHTML=renderReforzamiento();else if(page==='evaluacion')renderEvaluacion();else if(page==='canchas')m.innerHTML=renderCanchas();else if(page==='player')m.innerHTML=renderPlayer();postRender();}
 function postRender(){document.querySelectorAll('canvas.court-ro').forEach(c=>{try{drawCourtReadOnly(c,JSON.parse(c.dataset.diagram||'[]'));}catch(e){}});if(document.getElementById('court-canvas'))initCourtEditor();if(page==='grupal')renderGrupalContent();}
+
+// ── PROGRAMACIÓN DE CANCHAS ───────────────────────────────
+// Reparte a los jugadores de Elite y F2 en las canchas del día.
+// Datos en data.canchas (blob, se guarda con scheduleSync):
+//   jug[pkey]   = {lvl, surf, pair, need, av:[turnos]}  → config que se arrastra a los días siguientes
+//   dias[fecha] = {courts:{'T1-3':1}, ausentes:{pkey:1}, A:{'T1-3':[pkey,...]}, coaches:{T1:[...]}, by, at}
+//   coachesLast = últimos entrenadores por turno (se copian al crear un día nuevo)
+// Jugadores identificados SIEMPRE por pkey (nunca por índice del array).
+const CZ_GROUPS = { 'af18ac1d-9ea2-441f-b83b-023afd315bfc': 'Elite', 'fdb992b2-e71b-4ced-bfc0-c3d67f685a84': 'F2' };
+const CZ_TURNS = [{id:'T1',h:'7:00'},{id:'T2',h:'8:30'},{id:'T3',h:'10:00'},{id:'T4',h:'11:30'},{id:'T5',h:'13:00'},{id:'T6',h:'14:30'},{id:'T7',h:'15:30'}];
+const CZ_COURTS = [{id:'1',s:'C'},{id:'2',s:'C'},{id:'3',s:'A'},{id:'4',s:'A'},{id:'CC',s:'A'},{id:'5',s:'A'},{id:'6',s:'A'},{id:'7',s:'A'},{id:'8',s:'A'}];
+const CZ_DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const CZ_MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+// Niveles iniciales entregados por Matías (2026-10-04). Se usan solo si el jugador no tiene ficha propia.
+const CZ_SEED = {
+  'antonia vergara':9,'thomas menzel':9,'nicolas villalon':9,'benjamin torrealba':9,'fernanda rain':7,'diego ortiz':9,'leon achurra':8,
+  'max becerra':8,'carlos silva':8,'felipe morales':7,'luis robles':7,'martin egana':7,'max tapia':7,'gerald padilla':7,'facundo mena':10,
+  'santiago clavero':7,'jaime prohens':7,'nicolas iraira':7,'nicolas rebolledo':8,'sebastian porlfit':7,'josefa meneses':7,
+  'pedro santana':7,'jose ojeda':5,'emilia barra':4,'juan herrera':5,'mariana herdener':6,'pablo norambuena':5,'catalina porre':6,
+  'sofia peralta':6,'clemente soto':6,'lucas letellier':5,'lucas letelier':5,'alonso gonzalez':5,'alonso gambra':4,'samantha alvarez':7,
+  'jose valladares':5,'eduardo pena':7,'tristan easton':7,'gaspar garrido':5,'lucas rebolledo':5,'vicente walker':6,'gaspar easton':6,'alonso vera':7
+};
+const CZ_SOLO_DUO = ['antonia vergara','facundo mena'];
+const CZ_SURF_SEED = { 'antonia vergara': 'A', 'max becerra': 'C' };
+
+let cz = { fecha: null, tab: 'res', sel: null, msg: null, coachPick: null, onlyOn: false, turno: 'T1', sheet: null, drag: null, seed: 1 };
+
+function czNorm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase().replace(/\s+/g, ' '); }
+function czIso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function czParse(f) { const [y, m, d] = f.split('-').map(Number); return new Date(y, m - 1, d); }
+function czDefaultFecha() { const d = new Date(); d.setDate(d.getDate() + 1); if (d.getDay() === 0) d.setDate(d.getDate() + 1); return czIso(d); }
+function czFechaLabel(f) { const d = czParse(f); const s = CZ_DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + CZ_MESES[d.getMonth()] + ' de ' + d.getFullYear(); return s.charAt(0).toUpperCase() + s.slice(1); }
+function czCourtLabel(id) { return id === 'CC' ? 'Central' : 'Cancha ' + id; }
+function czKeyLabel(k) { const [t, c] = k.split('-'); return t + ' · ' + czCourtLabel(c); }
+function czFixed(f) {
+  const x = {'T3-1':1,'T3-2':1,'T4-1':1,'T4-2':1,'T4-3':1,'T4-4':1,'T5-1':1,'T5-2':1,'T5-4':1,'T7-7':1,'T7-8':1};
+  if (czParse(f).getDay() === 3) delete x['T5-4']; // miércoles sin la 4 en T5
+  return x;
+}
+function czStore() {
+  if (!data.canchas) data.canchas = { v: 1, jug: {}, dias: {}, coachesLast: {} };
+  data.canchas.jug = data.canchas.jug || {}; data.canchas.dias = data.canchas.dias || {}; data.canchas.coachesLast = data.canchas.coachesLast || {};
+  return data.canchas;
+}
+function czDay(create) {
+  const C = data.canchas || {};
+  const d = (C.dias || {})[cz.fecha];
+  if (d || !create) return d || { courts: czFixed(cz.fecha), ausentes: {}, A: null, coaches: JSON.parse(JSON.stringify(C.coachesLast || {})), virtual: true };
+  const S = czStore();
+  S.dias[cz.fecha] = { courts: czFixed(cz.fecha), ausentes: {}, A: null, coaches: JSON.parse(JSON.stringify(S.coachesLast || {})) };
+  // poda: guardar programaciones completas solo de los últimos 60 días (el historial de canchas se conserva)
+  Object.keys(S.dias).forEach(f => { if (czParse(f) < new Date(Date.now() - 60 * 864e5)) { S.dias[f] = { courts: S.dias[f].courts, ausentes: {}, A: null, coaches: {} }; } });
+  return S.dias[cz.fecha];
+}
+function czSave() { scheduleSync(); renderMain(); }
+
+// Jugadores elegibles (Elite + F2) con su ficha de canchas
+function czPlayers() {
+  const C = data.canchas || {}; const jug = C.jug || {}; const day = czDay(false);
+  return (data.players || [])
+    .filter(p => CZ_GROUPS[p.group_id] && p.pkey)
+    .map(p => {
+      const nn = czNorm(p.name); const c = jug[p.pkey]; const seed = CZ_SEED[nn];
+      const lvl = c ? c.lvl : (seed || 6);
+      const av = {}; (c ? c.av : CZ_TURNS.map(t => t.id)).forEach(t => { av[t] = 1; });
+      return {
+        key: p.pkey, n: p.name, g: CZ_GROUPS[p.group_id], lvl,
+        surf: c ? c.surf : (CZ_SURF_SEED[nn] || 'any'),
+        pair: c ? c.pair : (CZ_SOLO_DUO.indexOf(nn) >= 0 ? 'all' : lvl >= 8 ? 'one' : 'any'),
+        need: c ? c.need : 2, av, nuevo: !c && !seed,
+        on: !(day.ausentes || {})[p.pkey]
+      };
+    })
+    .sort((a, b) => (a.g === b.g ? a.n.localeCompare(b.n) : a.g === 'Elite' ? -1 : 1));
+}
+function czEnsurePkeys() {
+  let changed = false;
+  (data.players || []).forEach(p => { if (CZ_GROUPS[p.group_id] && !p.pkey) { p.pkey = crypto.randomUUID(); changed = true; } });
+  if (changed) scheduleSync();
+}
+
+// ── Motor de reparto (mismo que se validó en el simulador) ──
+function czPen(a, b) { const d = Math.abs(a - b); return d <= 1 ? 0 : d === 2 ? 60 : 500; }
+function czOkSurf(p, c) { return p.surf === 'any' || p.surf === c.s; }
+function czRng(seed) { let a = seed >>> 0; return function () { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function czCourtScore(A, P) {
+  let s = 0; const SIZE = { 1: -30, 2: 0, 3: -35, 4: -5 }; const duo = {};
+  Object.keys(A).forEach(k => {
+    const o = A[k]; const n = o.length; if (!n) return;
+    s += 40 + SIZE[n];
+    for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) s -= czPen(P[o[a]].lvl, P[o[b]].lvl);
+    o.forEach(j => { if (P[j].pair === 'all' && n !== 2) s -= 150; if (n === 2) duo[j] = 1; });
+  });
+  P.forEach((p, j) => { if (p.on && p.pair === 'one' && duo[j]) s += 100; });
+  return s;
+}
+function czTc(courts) { const tc = {}; CZ_TURNS.forEach(t => { tc[t.id] = CZ_COURTS.filter(c => courts[t.id + '-' + c.id]); }); return tc; }
+function czImprove(A0, P, tc) {
+  const A = {}; Object.keys(A0).forEach(k => { A[k] = A0[k].slice(); });
+  let cur = czCourtScore(A, P);
+  for (let pass = 0; pass < 8; pass++) {
+    let improved = false;
+    Object.keys(tc).forEach(t => {
+      const keys = tc[t].map(c => t + '-' + c.id); const cOf = {}; tc[t].forEach(c => { cOf[t + '-' + c.id] = c; });
+      keys.forEach(k => {
+        (A[k] || []).slice().forEach(j => {
+          if ((A[k] || []).indexOf(j) < 0) return;
+          for (let x = 0; x < keys.length; x++) {
+            const k2 = keys[x]; if (k2 === k || !czOkSurf(P[j], cOf[k2])) continue;
+            const occ2 = A[k2] || [];
+            if (occ2.length < 4) {
+              const a = A[k], b = occ2; A[k] = a.filter(q => q !== j); A[k2] = b.concat([j]);
+              const s = czCourtScore(A, P); if (s > cur + 0.01) { cur = s; improved = true; return; }
+              A[k] = a; A[k2] = b;
+            }
+            for (let y = 0; y < occ2.length; y++) {
+              const q = occ2[y]; if (!czOkSurf(P[q], cOf[k])) continue;
+              const a = A[k], b = A[k2]; A[k] = a.map(v => v === j ? q : v); A[k2] = b.map(v => v === q ? j : v);
+              const s = czCourtScore(A, P); if (s > cur + 0.01) { cur = s; improved = true; return; }
+              A[k] = a; A[k2] = b;
+            }
+          }
+        });
+      });
+    });
+    if (!improved) break;
+  }
+  return A;
+}
+function czSolve(P, courts, seed) {
+  const tc = czTc(courts); const ps = P.map((p, i) => Object.assign({ i }, p)).filter(p => p.on);
+  const flex = {}; ps.forEach(p => { let n = 0; CZ_TURNS.forEach(t => { if (p.av[t.id]) n += tc[t.id].filter(c => czOkSurf(p, c)).length; }); flex[p.i] = n; });
+  const rnd = czRng(seed * 7919 + 13); const CROWD = [0, 4, 20, 14]; const cands = [];
+  for (let it = 0; it < 250; it++) {
+    const A = {}; const pt = {}; ps.forEach(p => { pt[p.i] = []; });
+    const place = (p) => {
+      let bestK = null, bestT = null, bc = 1e9;
+      CZ_TURNS.forEach(t => {
+        if (!p.av[t.id] || pt[p.i].indexOf(t.id) >= 0) return;
+        tc[t.id].forEach(c => {
+          if (!czOkSurf(p, c)) return;
+          const k = t.id + '-' + c.id; const occ = A[k] || []; if (occ.length >= 4) return;
+          const allIn = occ.some(j => P[j].pair === 'all'); if ((p.pair === 'all' || allIn) && occ.length >= 2) return;
+          let cost = CROWD[occ.length]; occ.forEach(j => { cost += czPen(p.lvl, P[j].lvl); });
+          if (p.pair === 'one' && occ.length === 1) cost -= 4;
+          cost += rnd() * 8;
+          if (cost < bc) { bc = cost; bestK = k; bestT = t.id; }
+        });
+      });
+      if (bestK) { (A[bestK] = A[bestK] || []).push(p.i); pt[p.i].push(bestT); }
+    };
+    for (let round = 1; round <= 2; round++) {
+      ps.filter(p => p.need >= round).map(p => ({ p, key: flex[p.i] + (p.pair === 'all' ? -40 : 0) + rnd() * 6 }))
+        .sort((a, b) => a.key - b.key).forEach(o => place(o.p));
+    }
+    let met1 = 0, met = 0; ps.forEach(p => { const n = pt[p.i].length; if (n >= 1) met1++; met += Math.min(n, p.need); });
+    cands.push({ s: met1 * 10000 + met * 1000 + czCourtScore(A, P), base: met1 * 10000 + met * 1000, A });
+  }
+  cands.sort((a, b) => b.s - a.s);
+  let best = null;
+  cands.slice(0, 4).forEach(c => { const A = czImprove(c.A, P, tc); const s = c.base + czCourtScore(A, P); if (!best || s > best.s) best = { s, A }; });
+  return best ? best.A : {};
+}
+// Convierte la programación guardada (pkeys) a índices de P (ignora jugadores que ya no existen)
+function czToIdx(Akeys, P) {
+  const ix = {}; P.forEach((p, i) => { ix[p.key] = i; }); const A = {};
+  Object.keys(Akeys || {}).forEach(k => { A[k] = (Akeys[k] || []).filter(key => ix[key] !== undefined).map(key => ix[key]); });
+  return A;
+}
+function czAnalyze(P, courts, A) {
+  const tc = czTc(courts); const cOf = {}; CZ_COURTS.forEach(c => { cOf[c.id] = c; });
+  const ses = {}; P.forEach((p, i) => { ses[i] = []; });
+  Object.keys(A).forEach(k => { if (!courts[k]) return; A[k].forEach(j => { ses[j].push(k); }); });
+  const alerts = []; let crosses = 0, threes = 0;
+  Object.keys(A).forEach(k => {
+    const o = A[k]; if (!o.length || !courts[k]) return;
+    if (o.length === 3) threes++;
+    for (let a = 0; a < o.length; a++) for (let b = a + 1; b < o.length; b++) {
+      const d = Math.abs(P[o[a]].lvl - P[o[b]].lvl);
+      if (d >= 2) { crosses++; alerts.push({ t: d >= 3 ? 'bad' : 'warn', txt: 'Cruce de ' + d + ' niveles: ' + P[o[a]].n + ' (' + P[o[a]].lvl + ') con ' + P[o[b]].n + ' (' + P[o[b]].lvl + ') · ' + czKeyLabel(k) }); }
+    }
+    o.forEach(j => {
+      const p = P[j]; const [t, c] = k.split('-');
+      if (p.pair === 'all' && o.length !== 2) alerts.push({ t: 'warn', txt: p.n + ' entrena de a ' + o.length + ' en ' + czKeyLabel(k) + ' (debía ser de a 2).' });
+      if (!czOkSurf(p, cOf[c])) alerts.push({ t: 'warn', txt: p.n + ' quedó en ' + (cOf[c].s === 'C' ? 'cemento' : 'arcilla') + ' en ' + czKeyLabel(k) + '.' });
+      if (!p.av[t]) alerts.push({ t: 'bad', txt: p.n + ' quedó en ' + t + ', que no está en sus turnos.' });
+    });
+  });
+  const unmet = []; let got = 0, needed = 0, duoWant = 0, duoOk = 0, nOn = 0;
+  P.forEach((p, i) => {
+    if (!p.on) return; nOn++; needed += p.need;
+    const n = ses[i].length; got += Math.min(n, p.need);
+    if (p.pair === 'one') { duoWant++; if (ses[i].some(k => A[k].length === 2)) duoOk++; else alerts.push({ t: 'warn', txt: p.n + ' (' + p.lvl + ') no tuvo turno de a 2.' }); }
+    if (n >= p.need) return;
+    const turnsWith = CZ_TURNS.filter(t => p.av[t.id] && tc[t.id].some(c => czOkSurf(p, c))).length;
+    const sname = p.surf === 'A' ? 'arcilla' : 'cemento';
+    let why;
+    if (turnsWith === 0) why = p.surf !== 'any' ? 'No hay ' + sname + ' en ninguno de sus turnos.' : 'No hay canchas en ninguno de sus turnos.';
+    else if (turnsWith < p.need) why = p.surf !== 'any' ? 'Solo hay ' + sname + ' en ' + turnsWith + ' de sus turnos.' : 'Solo ' + turnsWith + ' de sus turnos tiene cancha.';
+    else why = 'Sus turnos están llenos o sin nivel compatible.';
+    unmet.push({ key: p.key, n: p.n, got: n + ' de ' + p.need, why });
+  });
+  const free = []; CZ_TURNS.forEach(t => tc[t.id].forEach(c => { const k = t.id + '-' + c.id; if (!(A[k] || []).length) free.push(czKeyLabel(k)); }));
+  if (free.length) alerts.push({ t: 'ok', txt: free.length + ' cancha(s) libre(s): ' + free.join(', ') + '.' });
+  if (!crosses) alerts.unshift({ t: 'ok', txt: 'Ningún cruce de 2 o más niveles.' });
+  return { unmet, alerts, crosses, threes, nOn, needed, got, duoWant, duoOk };
+}
+
+// ── Acciones ──
+function czIrFecha(delta) { const d = czParse(cz.fecha); d.setDate(d.getDate() + delta); cz.fecha = czIso(d); cz.sel = null; cz.msg = null; cz.sheet = null; renderMain(); }
+function czTab(t) { cz.tab = t; cz.sel = null; cz.sheet = null; renderMain(); }
+function czGenerar() {
+  const P = czPlayers(); const day = czDay(true);
+  if (day.A && !confirm('Ya hay una programación para este día. ¿Generar una nueva? Se pierden los cambios manuales.')) return;
+  cz.seed = (cz.seed || 1) + 1;
+  const A = czSolve(P, day.courts, Date.now() % 100000 + cz.seed);
+  const out = {}; Object.keys(A).forEach(k => { out[k] = A[k].map(i => P[i].key); });
+  day.A = out; day.by = (typeof user !== 'undefined' && user) ? user : ''; day.at = new Date().toISOString();
+  czStore().coachesLast = JSON.parse(JSON.stringify(day.coaches || {}));
+  cz.tab = 'res'; cz.sel = null; cz.msg = null; czSave();
+}
+function czToggleCourt(k) {
+  const day = czDay(true);
+  if (day.courts[k]) {
+    const n = day.A && day.A[k] ? day.A[k].length : 0;
+    if (n && !confirm(czKeyLabel(k) + ' tiene ' + n + ' jugador(es). Si la quitas, quedan sin cancha. ¿Continuar?')) return;
+    delete day.courts[k]; if (day.A) delete day.A[k];
+  } else day.courts[k] = 1;
+  czSave();
+}
+function czToggleOn(key) {
+  const day = czDay(true); day.ausentes = day.ausentes || {};
+  if (day.ausentes[key]) delete day.ausentes[key];
+  else { day.ausentes[key] = 1; if (day.A) Object.keys(day.A).forEach(k => { day.A[k] = day.A[k].filter(x => x !== key); }); }
+  czSave();
+}
+function czSetJug(key, fn) {
+  const p = czPlayers().find(x => x.key === key); if (!p) return;
+  const o = { lvl: p.lvl, surf: p.surf, pair: p.pair, need: p.need, av: CZ_TURNS.map(t => t.id).filter(t => p.av[t]) };
+  fn(o); czStore().jug[key] = o; czSave();
+}
+function czLvl(key, d) { czSetJug(key, o => { o.lvl = Math.max(1, Math.min(10, o.lvl + d)); if (d > 0 && o.lvl >= 8 && o.pair === 'any') o.pair = 'one'; }); }
+function czNeed(key) { czSetJug(key, o => { o.need = o.need === 2 ? 1 : 2; }); }
+function czAv(key, t) { czSetJug(key, o => { o.av = o.av.indexOf(t) >= 0 ? o.av.filter(x => x !== t) : o.av.concat([t]); }); }
+function czSurf(key) { czSetJug(key, o => { o.surf = o.surf === 'any' ? 'A' : o.surf === 'A' ? 'C' : 'any'; }); }
+function czPair(key) { czSetJug(key, o => { o.pair = o.pair === 'any' ? 'one' : o.pair === 'one' ? 'all' : 'any'; }); }
+function czOnlyOn() { cz.onlyOn = !cz.onlyOn; renderMain(); }
+
+function czMove(key, from, to) {
+  const day = czDay(true); if (!day.A) day.A = {};
+  const t2 = to.split('-')[0]; const p = czPlayers().find(x => x.key === key);
+  cz.sel = null; cz.sheet = null;
+  if (from === to) { renderMain(); return; }
+  const other = Object.keys(day.A).find(k => k !== from && k.split('-')[0] === t2 && day.A[k].indexOf(key) >= 0);
+  if (other) { cz.msg = '⚠ ' + (p ? p.n : 'El jugador') + ' ya está en ' + czKeyLabel(other) + '. No puede estar dos veces en el mismo turno.'; renderMain(); return; }
+  if ((day.A[to] || []).length >= 4) { cz.msg = '⚠ ' + czKeyLabel(to) + ' ya tiene 4 jugadores.'; renderMain(); return; }
+  if (from && day.A[from]) day.A[from] = day.A[from].filter(x => x !== key);
+  day.A[to] = (day.A[to] || []).concat([key]);
+  cz.msg = null; czSave();
+}
+function czQuitar(key, from) { const day = czDay(true); if (day.A && day.A[from]) day.A[from] = day.A[from].filter(x => x !== key); cz.sel = null; cz.sheet = null; czSave(); }
+function czSelect(key, from) { cz.sel = (cz.sel && cz.sel.key === key && cz.sel.from === from) ? null : { key, from }; cz.msg = null; renderMain(); }
+function czDragStart(ev, key, from) { cz.drag = { key, from }; try { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', key); } catch (e) {} }
+function czDrop(ev, to) { ev.preventDefault(); if (cz.drag) czMove(cz.drag.key, cz.drag.from, to); cz.drag = null; }
+function czOpenSheet(key, from) { cz.sheet = { key, from }; renderMain(); }
+function czCloseSheet() { cz.sheet = null; cz.coachPick = null; renderMain(); }
+function czTurno(t) { cz.turno = t; cz.msg = null; renderMain(); }
+
+function czCoachList() { return ((data.availabilityConfig || {}).coaches || []).slice(); }
+function czCoachAdd(t, i) {
+  const name = czCoachList()[i]; if (!name) return;
+  const day = czDay(true); day.coaches = day.coaches || {}; const cur = day.coaches[t] || [];
+  if (cur.indexOf(name) < 0) day.coaches[t] = cur.concat([name]);
+  czStore().coachesLast = JSON.parse(JSON.stringify(day.coaches)); czSave();
+}
+function czCoachDel(t, i) {
+  const day = czDay(true); day.coaches = day.coaches || {}; const cur = (day.coaches[t] || []).slice();
+  cur.splice(i, 1); day.coaches[t] = cur;
+  czStore().coachesLast = JSON.parse(JSON.stringify(day.coaches)); czSave();
+}
+function czBusyMsg(key, t) { const p = czPlayers().find(x => x.key === key); cz.msg = '⚠ ' + (p ? p.n : 'El jugador') + ' ya está en ' + t + '. No puede estar dos veces en el mismo turno.'; cz.sheet = null; renderMain(); }
+function czCoachCopy(t) {
+  const day = czDay(true); const src = (day.coaches || {})[t] || []; day.coaches = {};
+  CZ_TURNS.forEach(x => { day.coaches[x.id] = src.slice(); });
+  czStore().coachesLast = JSON.parse(JSON.stringify(day.coaches)); cz.coachPick = null; czSave();
+}
+function czCoachPick(t) { cz.coachPick = cz.coachPick === t ? null : t; renderMain(); }
+
+// ── Render ──
+function renderCanchas() {
+  if (!cz.fecha) cz.fecha = czDefaultFecha();
+  czEnsurePkeys();
+  const P = czPlayers(); const day = czDay(false);
+  const A = day.A ? czToIdx(day.A, P) : null;
+  const An = A ? czAnalyze(P, day.courts, A) : null;
+  const esManana = cz.fecha === czIso(new Date(Date.now() + 864e5));
+  const tabs = [['res', 'Programación'], ['canchas', 'Canchas del día'], ['jug', 'Jugadores']];
+  const nCourts = Object.keys(day.courts).length;
+  const nOn = P.filter(p => p.on).length;
+  const nuevos = P.filter(p => p.nuevo).length;
+
+  let h = `<style>
+  .cz-wrap{max-width:1400px;margin:0 auto}
+  .cz-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px}
+  .cz-btn{height:40px;padding:0 14px;border-radius:9px;border:1px solid var(--border);background:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+  .cz-btn-o{background:var(--orange);border-color:var(--orange);color:#fff}
+  .cz-tab{height:42px;padding:0 12px;border:0;background:transparent;font-size:14px;font-weight:600;color:var(--g3);cursor:pointer;border-bottom:3px solid transparent;font-family:inherit}
+  .cz-tab.on{color:#1a1a1a;font-weight:800;border-bottom-color:var(--orange)}
+  .cz-chip{display:flex;justify-content:space-between;gap:4px;width:100%;padding:3px 7px;border-radius:6px;font-size:12px;font-weight:600;cursor:grab;border:2px solid transparent;text-align:left;font-family:inherit}
+  .cz-e{background:#FFE8D6;color:#8A3300}.cz-f{background:#DDF0F8;color:#0B5573}
+  .cz-mob{display:none}
+  @media(max-width:760px){.cz-desk{display:none}.cz-mob{display:block}}
+  .cz-tbtn{height:32px;min-width:36px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;border:1px solid #D5D8DC;background:#fff;color:#8A8E94;font-family:inherit}
+  .cz-tbtn.on{background:#1a1a1a;border-color:#1a1a1a;color:#fff}
+  </style><div class="cz-wrap">`;
+
+  // cabecera
+  h += `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:6px">
+      <button class="cz-btn" onclick="czIrFecha(-1)" aria-label="Día anterior">‹</button>
+      <div style="text-align:center;min-width:200px">
+        <div style="font-size:11px;font-weight:800;color:var(--orange);letter-spacing:.06em">${esManana ? 'PROGRAMACIÓN PARA MAÑANA' : 'PROGRAMACIÓN DE CANCHAS'}</div>
+        <div style="font-size:17px;font-weight:800">${czFechaLabel(cz.fecha)}</div>
+      </div>
+      <button class="cz-btn" onclick="czIrFecha(1)" aria-label="Día siguiente">›</button>
+    </div>
+    <div style="flex:1"></div>
+    <button class="cz-btn cz-btn-o" onclick="czGenerar()">${day.A ? 'Regenerar ↻' : 'Generar programación'}</button>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--border);margin-bottom:14px">
+    ${tabs.map(([id, l]) => `<button class="cz-tab${cz.tab === id ? ' on' : ''}" onclick="czTab('${id}')">${l}</button>`).join('')}
+  </div>`;
+  if (cz.msg) h += `<div style="padding:10px 12px;margin-bottom:12px;border-radius:9px;background:#FCECEC;color:#9B2C2C;font-size:13px;font-weight:700">${escHtml(cz.msg)}</div>`;
+
+  if (cz.tab === 'canchas') h += czRenderCanchasTab(day, nCourts, nOn, P);
+  else if (cz.tab === 'jug') h += czRenderJugTab(P, nOn, nuevos);
+  else h += czRenderResTab(P, day, A, An, nuevos);
+
+  h += `</div>`;
+  if (cz.sheet) h += czRenderSheet(P, day);
+  return h;
+}
+
+function czRenderCanchasTab(day, nCourts, nOn, P) {
+  const fx = czFixed(cz.fecha);
+  let h = `<div class="cz-card"><div style="font-size:14px;color:var(--g3);margin-bottom:12px">Negro = fija del club · Naranjo = recibida para este día · Toca para activar o quitar.</div>
+  <div style="overflow-x:auto"><div style="min-width:560px;display:grid;grid-template-columns:62px repeat(9,minmax(0,1fr));gap:5px">
+  <div></div>${CZ_COURTS.map(c => `<div style="text-align:center;padding:5px 2px;border-radius:7px;font-size:12px;font-weight:800;background:${c.s === 'C' ? '#E4ECF2' : '#F7E1D3'};color:${c.s === 'C' ? '#2D4A60' : '#8C3A14'}">${c.id === 'CC' ? 'Central' : c.id}</div>`).join('')}`;
+  CZ_TURNS.forEach(t => {
+    h += `<div style="display:flex;flex-direction:column;justify-content:center"><b style="font-size:14px">${t.id}</b><span style="font-size:11px;color:var(--g3)">${t.h}</span></div>`;
+    CZ_COURTS.forEach(c => {
+      const k = t.id + '-' + c.id; const on = !!day.courts[k]; const f = !!fx[k];
+      const st = on ? (f ? 'background:#1a1a1a;color:#fff;border:0' : 'background:#FFE8D6;color:#8A3300;border:2px solid var(--orange)') : 'background:#fff;color:#9A9EA4;border:1.5px dashed #C4C7CC';
+      h += `<button onclick="czToggleCourt('${k}')" aria-label="${czKeyLabel(k)}" style="height:44px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;${st}">${on ? (f ? 'Fija' : '✓') : '+'}</button>`;
+    });
+  });
+  h += `</div></div><div style="margin-top:12px;font-size:14px;color:var(--g3)">${nCourts} canchas = ${nCourts * 4} lugares · ${nOn} jugadores vienen.</div></div>`;
+  return h;
+}
+
+function czRenderJugTab(P, nOn, nuevos) {
+  const SURF = { any: 'Cualquiera', A: 'Solo arcilla', C: 'Solo cemento' };
+  const PAIR = { any: 'Hasta 4', one: '1 de a 2', all: 'Solo de a 2' };
+  let h = `<div class="cz-card">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:flex-end;margin-bottom:10px">
+      <div><div style="font-size:17px;font-weight:800">${nOn} de ${P.length} jugadores vienen</div>
+      <div style="font-size:13px;color:var(--g3);max-width:720px">Todo lo que marques <b>queda guardado para los días siguientes</b>. Solo <b>"Viene"</b> es de este día.</div></div>
+      <button class="cz-btn" onclick="czOnlyOn()" style="${cz.onlyOn ? 'background:#1a1a1a;color:#fff;border-color:#1a1a1a' : ''}">Mostrar solo los que vienen</button>
+    </div>
+    ${nuevos ? `<div style="padding:9px 12px;border-radius:9px;background:#FFF4EC;color:#8A3300;font-size:13px;font-weight:600;margin-bottom:10px">⚠ ${nuevos} jugador(es) nuevo(s) sin configurar: revisa su nivel y sus turnos.</div>` : ''}
+    <div style="font-size:12px;color:var(--g3);margin-bottom:8px"><b>Pareja:</b> "Hasta 4" sin preferencia · "1 de a 2" al menos un turno de a 2 al día · "Solo de a 2" siempre de a 2</div>`;
+  P.forEach(p => {
+    if (cz.onlyOn && !p.on) return;
+    const k = p.key;
+    h += `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid #EEF0F2;${p.on ? '' : 'opacity:.55'}">
+      <button class="cz-tbtn" onclick="czToggleOn('${k}')" style="width:52px;${p.on ? 'background:#1E8E4E;border-color:#1E8E4E;color:#fff' : ''}">${p.on ? 'Viene' : 'No'}</button>
+      <div style="flex:1 1 160px;min-width:140px"><div style="font-weight:700;font-size:14px">${escHtml(p.n)}${p.nuevo ? ' <span style="font-size:10px;font-weight:800;color:#8A3300;background:#FFE8D6;padding:1px 5px;border-radius:4px">NUEVO</span>' : ''}</div><div style="font-size:11px;color:var(--g3)">${p.g}</div></div>
+      <div style="display:flex;align-items:center;gap:3px"><button class="cz-tbtn" onclick="czLvl('${k}',-1)" aria-label="Bajar nivel">−</button><span class="${p.g === 'Elite' ? 'cz-e' : 'cz-f'}" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">${p.lvl}</span><button class="cz-tbtn" onclick="czLvl('${k}',1)" aria-label="Subir nivel">+</button></div>
+      <button class="cz-tbtn on" onclick="czNeed('${k}')" style="width:44px;${p.need === 1 ? 'background:#5C6066;border-color:#5C6066' : ''}">${p.need}×</button>
+      <div style="display:flex;gap:3px;flex-wrap:wrap">${CZ_TURNS.map(t => `<button class="cz-tbtn${p.av[t.id] ? ' on' : ''}" onclick="czAv('${k}','${t.id}')">${t.id}</button>`).join('')}</div>
+      <button class="cz-tbtn${p.surf !== 'any' ? ' on' : ''}" onclick="czSurf('${k}')" style="width:96px;${p.surf === 'A' ? 'background:#8C3A14;border-color:#8C3A14' : p.surf === 'C' ? 'background:#2D4A60;border-color:#2D4A60' : ''}">${SURF[p.surf]}</button>
+      <button class="cz-tbtn${p.pair !== 'any' ? ' on' : ''}" onclick="czPair('${k}')" style="width:90px;${p.pair !== 'any' ? 'background:#1D6B44;border-color:#1D6B44' : ''}">${PAIR[p.pair]}</button>
+    </div>`;
+  });
+  return h + `</div>`;
+}
+
+function czRenderResTab(P, day, A, An, nuevos) {
+  if (!A) {
+    return `<div class="cz-card" style="text-align:center;padding:28px 16px">
+      <div style="font-size:16px;font-weight:800;margin-bottom:6px">Aún no hay programación para este día</div>
+      <div style="font-size:14px;color:var(--g3);margin-bottom:14px">Revisa <b>Canchas del día</b> y <b>Jugadores</b> (quién viene), y luego genera.</div>
+      ${nuevos ? `<div style="font-size:13px;color:#8A3300;margin-bottom:12px">⚠ Hay ${nuevos} jugador(es) nuevo(s) sin configurar.</div>` : ''}
+      <button class="cz-btn cz-btn-o" onclick="czGenerar()">Generar programación</button></div>`;
+  }
+  const full = An.nOn - An.unmet.length;
+  const stat = (v, k, good) => `<div style="flex:1 1 140px;padding:10px 12px;border-radius:10px;border:1px solid ${good === false ? '#F0B4B4' : 'var(--border)'};background:${good === false ? '#FCECEC' : good ? '#E8F5EE' : '#fff'};color:${good === false ? '#9B2C2C' : good ? '#1D6B44' : '#1a1a1a'}"><div style="font-size:20px;font-weight:800">${v}</div><div style="font-size:12px">${k}</div></div>`;
+  let h = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+    ${stat(full + ' de ' + An.nOn, 'jugadores con todos sus turnos', full === An.nOn)}
+    ${stat(An.needed - An.got, 'turnos sin cancha', An.needed === An.got)}
+    ${stat(An.crosses, 'cruces de nivel', An.crosses === 0)}
+    ${stat(An.threes, 'canchas de a 3', An.threes === 0 ? true : undefined)}
+    ${stat(An.duoOk + ' de ' + An.duoWant, 'nivel 8+ de a 2 hoy', An.duoOk === An.duoWant)}
+  </div>`;
+  if (day.at) h += `<div style="font-size:12px;color:var(--g3);margin:-4px 0 10px">Generada${day.by ? ' por ' + escHtml(day.by) : ''} · ${new Date(day.at).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}. Si cambias canchas o quién viene, vuelve a generar.</div>`;
+  if (cz.sel) {
+    const sp = P.find(p => p.key === cz.sel.key);
+    h += `<div class="cz-desk" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;margin-bottom:10px;border-radius:10px;background:#1a1a1a;color:#fff">
+      <span style="flex:1 1 240px;font-size:14px">Moviendo a <b>${escHtml(sp ? sp.n : '')}</b> → toca "Mover aquí" en otra cancha.</span>
+      ${cz.sel.from ? `<button class="cz-btn" onclick="czQuitar('${cz.sel.key}','${cz.sel.from}')">Quitar de esta cancha</button>` : ''}
+      <button class="cz-btn" onclick="czSelect('${cz.sel.key}','${cz.sel.from || ''}')">Listo</button></div>`;
+  }
+  h += `<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
+    <div style="flex:999 1 640px;min-width:0">${czRenderGridDesk(P, day, A)}${czRenderMobile(P, day, A)}</div>
+    <div style="flex:1 1 280px;display:flex;flex-direction:column;gap:12px">${czRenderSide(An)}</div>
+  </div>`;
+  return h;
+}
+
+function czRenderGridDesk(P, day, A) {
+  const cols = CZ_COURTS.filter(c => CZ_TURNS.some(t => day.courts[t.id + '-' + c.id]));
+  const rows = CZ_TURNS.filter(t => cols.some(c => day.courts[t.id + '-' + c.id]));
+  const coaches = day.coaches || {}; const all = czCoachList();
+  let h = `<div class="cz-desk cz-card" style="padding:10px"><div style="overflow-x:auto"><div style="min-width:${130 + cols.length * 120}px;display:grid;grid-template-columns:130px repeat(${cols.length},minmax(0,1fr));border:1px solid var(--border);border-radius:9px;overflow:hidden">
+    <div style="background:#1a1a1a;color:#fff;font-size:11px;font-weight:800;padding:9px">TURNO</div>
+    ${cols.map(c => `<div style="background:${c.s === 'C' ? '#E4ECF2' : '#F7E1D3'};color:${c.s === 'C' ? '#2D4A60' : '#8C3A14'};font-size:11px;font-weight:800;padding:9px 4px;text-align:center;border-left:1px solid var(--border)">${c.id === 'CC' ? 'CENTRAL' : 'CANCHA ' + c.id}</div>`).join('')}`;
+  rows.forEach(t => {
+    const co = coaches[t.id] || [];
+    h += `<div style="padding:8px;border-top:1px solid var(--border);background:#FAFAFB">
+      <div style="font-weight:800;font-size:14px">${t.id} <span style="font-weight:500;font-size:12px;color:var(--g3)">${t.h}</span></div>
+      <div style="display:flex;flex-direction:column;gap:3px;margin-top:5px">
+        ${co.map((n, ci) => `<span style="display:flex;align-items:center;justify-content:space-between;padding:1px 2px 1px 6px;border-radius:5px;background:#E8F5EE;color:#1D6B44;font-size:11px;font-weight:700">${escHtml(n)}<button onclick="czCoachDel('${t.id}',${ci})" aria-label="Quitar entrenador" style="border:0;background:transparent;color:#1D6B44;cursor:pointer;font-size:11px">✕</button></span>`).join('')}
+        <button onclick="czCoachPick('${t.id}')" style="height:24px;border-radius:5px;border:1px dashed #8A8E94;background:#fff;font-size:11px;font-weight:700;cursor:pointer">${cz.coachPick === t.id ? 'Cerrar' : '+ Entrenador'}</button>
+        ${cz.coachPick === t.id ? `<div style="display:flex;flex-direction:column;gap:3px;padding:4px;border:1px solid var(--border);border-radius:6px;background:#fff">${all.map((n, ai) => co.indexOf(n) >= 0 ? '' : `<button onclick="czCoachAdd('${t.id}',${ai})" style="height:26px;border-radius:5px;border:1px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;text-align:left;padding:0 6px">+ ${escHtml(n)}</button>`).join('')}<button onclick="czCoachCopy('${t.id}')" style="height:28px;border-radius:5px;border:0;background:#1a1a1a;color:#fff;font-size:11px;font-weight:700;cursor:pointer">Copiar a todos los turnos</button></div>` : ''}
+      </div></div>`;
+    cols.forEach(c => {
+      const k = t.id + '-' + c.id; const on = !!day.courts[k]; const occ = on ? (A[k] || []) : [];
+      let maxD = 0; for (let a = 0; a < occ.length; a++) for (let b = a + 1; b < occ.length; b++) maxD = Math.max(maxD, Math.abs(P[occ[a]].lvl - P[occ[b]].lvl));
+      const tag = !on ? '' : occ.length === 0 ? 'LIBRE' : maxD >= 2 ? 'CRUCE ' + maxD : occ.length === 2 ? 'DE A 2' : occ.length === 3 ? 'DE A 3' : occ.length === 1 ? 'SOLO' : '';
+      const tagCol = maxD >= 2 ? '#9B2C2C' : occ.length === 3 || occ.length === 1 ? '#8A6D00' : '#1D6B44';
+      const selBusy = cz.sel && Object.keys(day.A || {}).some(kk => kk !== cz.sel.from && kk.split('-')[0] === t.id && (day.A[kk] || []).indexOf(cz.sel.key) >= 0);
+      const canDrop = cz.sel && on && cz.sel.from !== k && occ.length < 4 && !selBusy;
+      h += `<div ${on ? `ondragover="event.preventDefault()" ondrop="czDrop(event,'${k}')"` : ''} style="min-height:84px;padding:6px;border-top:1px solid var(--border);border-left:1px solid var(--border);background:${!on ? '#F1F2F4' : occ.length === 0 ? '#F0FAF4' : maxD >= 2 ? '#FDF1F1' : '#fff'}">
+        ${tag ? `<div style="font-size:10px;font-weight:800;letter-spacing:.05em;margin-bottom:4px;color:${tagCol}">${tag}</div>` : ''}
+        ${!on ? '<span style="color:#C4C7CC">—</span>' : ''}
+        <div style="display:flex;flex-direction:column;gap:3px">${occ.map(j => { const p = P[j]; const isSel = cz.sel && cz.sel.key === p.key; const dim = cz.sel && !isSel; const sh = p.n.split(' '); return `<button draggable="true" ondragstart="czDragStart(event,'${p.key}','${k}')" onclick="czSelect('${p.key}','${k}')" class="cz-chip ${p.g === 'Elite' ? 'cz-e' : 'cz-f'}" style="${isSel ? 'border-color:#1a1a1a;' : ''}${dim ? 'opacity:.35' : ''}"><span>${escHtml(sh[0] + ' ' + (sh[1] ? sh[1][0] + '.' : ''))}</span><b>${p.lvl}</b></button>`; }).join('')}</div>
+        ${canDrop ? `<button onclick="czMove('${cz.sel.key}',${cz.sel.from ? `'${cz.sel.from}'` : 'null'},'${k}')" style="margin-top:4px;width:100%;height:26px;border-radius:6px;border:1.5px dashed #1a1a1a;background:#fff;font-size:11px;font-weight:800;cursor:pointer">Mover aquí</button>` : ''}
+      </div>`;
+    });
+  });
+  return h + `</div></div><div style="font-size:12px;color:var(--g3);margin-top:8px">Arrastra un jugador a otra cancha, o tócalo y luego "Mover aquí". Naranjo = Elite · Celeste = F2 · El número es el nivel (no sale en el PDF).</div></div>`;
+}
+
+function czRenderMobile(P, day, A) {
+  const coaches = day.coaches || {};
+  const keysOf = t => CZ_COURTS.filter(c => day.courts[t + '-' + c.id]).map(c => t + '-' + c.id);
+  if (!keysOf(cz.turno).length) { const f = CZ_TURNS.find(t => keysOf(t.id).length); if (f) cz.turno = f.id; }
+  const T = CZ_TURNS.find(t => t.id === cz.turno);
+  const ks = keysOf(cz.turno);
+  let h = `<div class="cz-mob">
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px">
+      ${CZ_TURNS.map(t => { const kk = keysOf(t.id); const n = kk.reduce((s, k) => s + (A[k] || []).length, 0); const on = cz.turno === t.id; return `<button onclick="czTurno('${t.id}')" style="flex-shrink:0;width:62px;height:56px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;border:1px solid ${on ? 'var(--orange)' : 'var(--border)'};background:${on ? 'var(--orange)' : '#fff'};color:${on ? '#fff' : kk.length ? '#1a1a1a' : '#B9BCC1'}"><b style="font-size:14px">${t.id}</b><span style="font-size:11px">${t.h}</span><span style="font-size:10px;font-weight:700">${kk.length ? n + ' jug.' : '—'}</span></button>`; }).join('')}
+    </div>
+    <div style="font-size:19px;font-weight:800;margin-bottom:8px">${T.id} · ${T.h}</div>
+    <div class="cz-card" style="padding:10px 12px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:800;color:var(--g3);letter-spacing:.06em;margin-bottom:6px">ENTRENADORES</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${(coaches[T.id] || []).map((n, ci) => `<span style="display:inline-flex;align-items:center;gap:2px;height:34px;padding:0 2px 0 10px;border-radius:99px;background:#E8F5EE;color:#1D6B44;font-size:13px;font-weight:700">${escHtml(n)}<button onclick="czCoachDel('${T.id}',${ci})" aria-label="Quitar" style="width:30px;height:30px;border:0;background:transparent;color:#1D6B44;cursor:pointer">✕</button></span>`).join('')}
+      <button onclick="cz.sheet={coach:'${T.id}'};renderMain()" style="height:34px;padding:0 12px;border-radius:99px;border:1.5px dashed #8A8E94;background:#fff;font-size:13px;font-weight:700;cursor:pointer">+ Entrenador</button></div>
+    </div>`;
+  if (!ks.length) h += `<div style="padding:20px;text-align:center;border:1.5px dashed #C4C7CC;border-radius:12px;color:var(--g3)">No hay canchas en este turno.</div>`;
+  ks.forEach(k => {
+    const c = CZ_COURTS.find(x => x.id === k.split('-')[1]); const o = A[k] || [];
+    let maxD = 0; for (let a = 0; a < o.length; a++) for (let b = a + 1; b < o.length; b++) maxD = Math.max(maxD, Math.abs(P[o[a]].lvl - P[o[b]].lvl));
+    const tag = o.length === 0 ? 'LIBRE' : maxD >= 2 ? 'CRUCE ' + maxD : 'DE A ' + o.length;
+    h += `<div style="background:#fff;border-radius:12px;overflow:hidden;border:1px solid ${maxD >= 2 ? '#F0B4B4' : 'var(--border)'};margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${c.s === 'C' ? '#E4ECF2' : '#F7E1D3'};color:${c.s === 'C' ? '#2D4A60' : '#8C3A14'}"><b>${czCourtLabel(c.id)}</b><span style="font-size:11px;font-weight:700;text-transform:uppercase">${c.s === 'C' ? 'cemento' : 'arcilla'}</span><span style="flex:1"></span><span style="font-size:10px;font-weight:800;padding:3px 7px;border-radius:5px;background:#fff">${tag}</span></div>
+      ${o.length ? o.map(j => { const p = P[j]; return `<button onclick="czOpenSheet('${p.key}','${k}')" style="width:100%;min-height:46px;display:flex;align-items:center;gap:10px;padding:0 12px;border:0;border-bottom:1px solid #F1F2F4;background:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;color:#1a1a1a"><span style="width:8px;height:8px;border-radius:50%;background:${p.g === 'Elite' ? 'var(--orange)' : '#1DA1D6'}"></span><span style="flex:1;text-align:left">${escHtml(p.n)}</span><span class="${p.g === 'Elite' ? 'cz-e' : 'cz-f'}" style="min-width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">${p.lvl}</span><span style="color:#8A8E94">⋯</span></button>`; }).join('') : `<div style="padding:12px;font-size:13px;color:#1D6B44;font-weight:600">Libre</div>`}
+    </div>`;
+  });
+  return h + `</div>`;
+}
+
+function czRenderSide(An) {
+  let h = `<div style="border-radius:12px;padding:14px;background:${An.unmet.length ? '#FFF4EC' : '#E8F5EE'};border:1.5px solid ${An.unmet.length ? '#FFB98A' : '#B7DFC7'}">
+    <div style="font-size:13px;font-weight:800;color:${An.unmet.length ? '#8A3300' : '#1D6B44'}">${An.unmet.length ? 'Sin turno completo (' + An.unmet.length + ')' : '✓ Todos con sus turnos completos'}</div>
+    ${An.unmet.map(u => `<div style="padding:8px 0;border-bottom:1px solid #F5D4BE"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:14px">${escHtml(u.n)} <span style="font-weight:600;color:#8A3300">· ${u.got}</span></b><button class="cz-desk" onclick="czSelect('${u.key}','')" style="height:30px;padding:0 10px;border-radius:6px;border:1px solid #8A3300;background:#fff;color:#8A3300;font-size:12px;font-weight:800;cursor:pointer">Ubicar</button><button class="cz-mob" onclick="czOpenSheet('${u.key}','')" style="height:34px;padding:0 10px;border-radius:6px;border:1px solid #8A3300;background:#fff;color:#8A3300;font-size:12px;font-weight:800;cursor:pointer">Ubicar</button></div><div style="font-size:12px;color:#5C3A20;margin-top:2px">${u.why}</div></div>`).join('')}
+  </div>
+  <div class="cz-card"><div style="font-size:12px;font-weight:800;color:var(--g3);letter-spacing:.06em">REVISIÓN</div>
+    ${An.alerts.map(a => `<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid #EEF0F2"><span style="width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;background:${a.t === 'ok' ? '#E8F5EE;color:#1D6B44' : a.t === 'bad' ? '#FCECEC;color:#9B2C2C' : '#FFE8D6;color:#8A3300'}">${a.t === 'ok' ? '✓' : '!'}</span><div style="font-size:13px;line-height:1.45">${escHtml(a.txt)}</div></div>`).join('')}
+  </div>`;
+  return h;
+}
+
+// Hoja inferior (celular): mover jugador o elegir entrenadores
+function czRenderSheet(P, day) {
+  const s = cz.sheet;
+  let body = '';
+  if (s.coach) {
+    const cur = (day.coaches || {})[s.coach] || [];
+    body = `<div style="font-size:18px;font-weight:800;margin-bottom:10px">Entrenadores · ${s.coach}</div>
+      ${czCoachList().map((n, ai) => { const on = cur.indexOf(n) >= 0; return `<button onclick="${on ? `czCoachDel('${s.coach}',${cur.indexOf(n)})` : `czCoachAdd('${s.coach}',${ai})`}" style="width:100%;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;margin-bottom:6px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${on ? '#1D6B44' : 'var(--border)'};background:${on ? '#E8F5EE' : '#fff'};color:${on ? '#1D6B44' : '#1a1a1a'}"><span>${escHtml(n)}</span><b>${on ? '✓' : '+'}</b></button>`; }).join('')}
+      <button onclick="czCoachCopy('${s.coach}')" style="width:100%;height:48px;margin-top:6px;border-radius:12px;border:0;background:#1a1a1a;color:#fff;font-weight:800;font-size:14px;cursor:pointer">Copiar a todos los turnos</button>`;
+  } else {
+    const p = P.find(x => x.key === s.key); if (!p) return '';
+    const A = day.A || {};
+    const t = s.from ? s.from.split('-')[0] : cz.turno;
+    const ks = CZ_COURTS.filter(c => day.courts[t + '-' + c.id]).map(c => t + '-' + c.id).filter(k => k !== s.from);
+    const turnOpts = CZ_TURNS.filter(x => x.id !== t && CZ_COURTS.some(c => day.courts[x.id + '-' + c.id]));
+    body = `<div style="font-size:18px;font-weight:800">${escHtml(p.n)} · nivel ${p.lvl}</div>
+      <div style="font-size:13px;color:var(--g3)">${s.from ? 'Ahora en ' + czKeyLabel(s.from) : 'Sin cancha en ' + t}</div>
+      <div style="font-size:11px;font-weight:800;color:var(--g3);letter-spacing:.06em;margin:14px 0 6px">${s.from ? 'MOVER A OTRA CANCHA DE ' + t : 'UBICAR EN ' + t}</div>
+      ${ks.map(k => { const o = (A[k] || []); const full = o.length >= 4; const who = o.map(key => { const q = P.find(x => x.key === key); return q ? q.n.split(' ')[0] + ' ' + q.lvl : ''; }).join(', ') || 'Libre'; return `<button onclick="${full ? '' : `czMove('${p.key}',${s.from ? `'${s.from}'` : 'null'},'${k}')`}" ${full ? 'disabled' : ''} style="width:100%;min-height:48px;display:flex;align-items:center;gap:10px;padding:0 12px;margin-bottom:6px;border-radius:10px;border:1px solid var(--border);background:${full ? '#F4F5F6' : '#fff'};opacity:${full ? '.5' : '1'};font-size:14px;cursor:${full ? 'not-allowed' : 'pointer'};font-family:inherit;color:#1a1a1a"><b>${czCourtLabel(k.split('-')[1])}</b><span style="flex:1;text-align:left;font-size:12px;color:var(--g3)">${escHtml(who)}</span><b style="font-size:12px">${o.length}/4</b></button>`; }).join('') || '<div style="font-size:13px;color:var(--g3)">No hay otras canchas en este turno.</div>'}
+      ${turnOpts.length ? `<div style="font-size:11px;font-weight:800;color:var(--g3);letter-spacing:.06em;margin:14px 0 6px">CAMBIAR DE TURNO</div><div style="display:flex;flex-wrap:wrap;gap:6px">${turnOpts.map(x => { const kk = CZ_COURTS.filter(c => day.courts[x.id + '-' + c.id]).map(c => x.id + '-' + c.id); const busy = kk.some(k => (A[k] || []).indexOf(p.key) >= 0); const target = kk.filter(k => (A[k] || []).length < 4).sort((a, b) => (A[a] || []).length - (A[b] || []).length)[0]; return `<button onclick="${busy ? `czBusyMsg('${p.key}','${x.id}')` : target ? `czMove('${p.key}',${s.from ? `'${s.from}'` : 'null'},'${target}')` : ''}" style="height:44px;padding:0 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid ${busy ? '#E8B4B4' : '#C4C7CC'};background:${busy ? '#FCECEC' : '#fff'};color:${busy ? '#9B2C2C' : '#1a1a1a'}">${x.id} ${x.h}${busy ? ' · ya está' : ''}</button>`; }).join('')}</div>` : ''}
+      ${s.from ? `<button onclick="czQuitar('${p.key}','${s.from}')" style="width:100%;height:48px;margin-top:14px;border-radius:12px;border:1px solid #E8B4B4;background:#fff;color:#9B2C2C;font-weight:800;font-size:14px;cursor:pointer">Quitar de este turno</button>` : ''}`;
+  }
+  return `<div onclick="czCloseSheet()" style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150"></div>
+    <div style="position:fixed;left:0;right:0;bottom:0;max-height:80vh;overflow-y:auto;background:#fff;border-radius:18px 18px 0 0;padding:10px 16px 26px;z-index:151;box-shadow:0 -4px 24px rgba(0,0,0,.15)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="width:40px;height:4px;border-radius:2px;background:#ddd;margin:0 auto"></div></div>
+      <button onclick="czCloseSheet()" aria-label="Cerrar" style="position:absolute;top:10px;right:12px;width:40px;height:40px;border-radius:50%;border:0;background:#F4F5F6;cursor:pointer">✕</button>
+      ${body}
+    </div>`;
+}
 
 // ── REFORZAMIENTO ─────────────────────────────────────────
 // Mural mensual de clases particulares, agrupado por coach. Commit 1/3: solo
