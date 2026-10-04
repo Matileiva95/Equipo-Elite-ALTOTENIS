@@ -5410,7 +5410,9 @@ async function savePlayerModal(){
   else{
     const pd={...managed,ranking:rankingVal,style:'',goal:'',stars:0,rankingHistory:[],notes:[],events:{},weekPlans:[]};
     const groupVal = document.getElementById('m-group')?.value || null;
-    const newId=Math.max(-1,...data.players.map(p=>Number(p.id)).filter(Number.isFinite))+1;
+    const maxActual=Math.max(-1,...data.players.map(p=>Number(p.id)).filter(Number.isFinite));
+    const newId=Math.max(maxActual, Number(data.lastPlayerId ?? -1))+1;
+    data.lastPlayerId=newId;
     data.players.push({...pd,id:newId,group_id:groupVal,pkey:crypto.randomUUID()});
   }
   scheduleSync();
@@ -5438,6 +5440,8 @@ async function savePlayerModal(){
 
 async function deletePlayer(){
   if(!confirm('¿Eliminar a '+data.players[editingPlayerId].name+'?'))return;
+  const maxActual=Math.max(-1,...data.players.map(p=>Number(p.id)).filter(Number.isFinite));
+  data.lastPlayerId=Math.max(maxActual, Number(data.lastPlayerId ?? -1));
   data.players.splice(editingPlayerId,1);
   scheduleSync();closePlayerModal();pid=null;page='dashboard';renderAll();
 }
