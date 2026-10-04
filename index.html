@@ -1868,6 +1868,55 @@ function czCoachCopy(t) {
 }
 function czCoachPick(t) { cz.coachPick = cz.coachPick === t ? null : t; renderMain(); }
 
+// PDF de la programación (solo nombres, sin niveles). En el celular abre el menú de compartir (WhatsApp); en el computador lo descarga.
+function czPdf() {
+  const day = czDay(false);
+  if (!day.A) { alert('Primero genera la programación del día.'); return; }
+  if (!window.jspdf) { alert('No se pudo cargar el generador de PDF. Recarga la página.'); return; }
+  const P = czPlayers(); const nm = {}; P.forEach(p => { nm[p.key] = p.n; });
+  const used = k => day.courts[k] && (day.A[k] || []).some(x => nm[x]);
+  const cols = CZ_COURTS.filter(c => CZ_TURNS.some(t => used(t.id + '-' + c.id)));
+  const rows = CZ_TURNS.filter(t => cols.some(c => used(t.id + '-' + c.id)));
+  if (!rows.length) { alert('La programación está vacía.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = 297, mL = 12, mR = 12;
+  try { doc.addImage(ALTOTENIS_LOGO_B64, 'PNG', mL, 9, 34, 34 / 2.203); } catch (e) {}
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(26, 26, 26);
+  doc.text('Programación de canchas', pageW - mR, 15, { align: 'right' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(90, 90, 90);
+  doc.text(czFechaLabel(cz.fecha), pageW - mR, 21, { align: 'right' });
+  const asign = rows.reduce((s, t) => s + cols.reduce((s2, c) => s2 + (day.courts[t.id + '-' + c.id] ? (day.A[t.id + '-' + c.id] || []).filter(x => nm[x]).length : 0), 0), 0);
+  doc.setFontSize(8.5); doc.text(cols.length + ' canchas · ' + asign + ' asignaciones', pageW - mR, 26, { align: 'right' });
+  const head = [['TURNO'].concat(cols.map(c => c.id === 'CC' ? 'CENTRAL' : 'CANCHA ' + c.id))];
+  const body = rows.map(t => {
+    const co = ((day.coaches || {})[t.id] || []);
+    return [t.id + '  ' + t.h + (co.length ? '\n' + co.join('\n') : '')].concat(cols.map(c => {
+      const k = t.id + '-' + c.id; if (!day.courts[k]) return '';
+      const o = (day.A[k] || []).map(x => nm[x]).filter(Boolean); return o.length ? o.join('\n') : '—';
+    }));
+  });
+  doc.autoTable({
+    startY: 31, head, body, theme: 'grid', margin: { left: mL, right: mR },
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.4, valign: 'top', lineColor: [225, 227, 230], lineWidth: 0.2, textColor: [26, 26, 26] },
+    headStyles: { fillColor: [30, 142, 78], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 8.5 },
+    columnStyles: { 0: { cellWidth: 36, fillColor: [246, 247, 248], fontSize: 8.5 } },
+    didParseCell: d => { if (d.section === 'body' && d.column.index === 0) d.cell.styles.fontStyle = 'bold'; if (d.section === 'body' && d.column.index > 0 && d.cell.raw === '') d.cell.styles.fillColor = [241, 242, 244]; }
+  });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(150, 150, 150);
+  doc.text('Alto Tenis Academia · generado el ' + new Date().toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), mL, 203);
+  const fname = 'Canchas_' + cz.fecha + '.pdf';
+  const esCelular = window.matchMedia('(max-width: 760px)').matches || /Android|iPhone|iPad/i.test(navigator.userAgent);
+  try {
+    const file = new File([doc.output('blob')], fname, { type: 'application/pdf' });
+    if (esCelular && navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: 'Programación de canchas', text: 'Programación de canchas · ' + czFechaLabel(cz.fecha) }).catch(() => {});
+      return;
+    }
+  } catch (e) {}
+  doc.save(fname);
+}
+
 // ── Render ──
 function renderCanchas() {
   if (!cz.fecha) cz.fecha = czDefaultFecha();
@@ -1907,6 +1956,7 @@ function renderCanchas() {
       <button class="cz-btn" onclick="czIrFecha(1)" aria-label="Día siguiente">›</button>
     </div>
     <div style="flex:1"></div>
+    ${day.A ? `<button class="cz-btn" onclick="czPdf()" style="background:#1E8E4E;border-color:#1E8E4E;color:#fff">📄 PDF / WhatsApp</button>` : ''}
     <button class="cz-btn cz-btn-o" onclick="czGenerar()">${day.A ? 'Regenerar ↻' : 'Generar programación'}</button>
   </div>
   <div style="display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--border);margin-bottom:14px">
