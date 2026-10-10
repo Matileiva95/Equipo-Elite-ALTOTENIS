@@ -4079,6 +4079,11 @@ function renderDashboard(){
   if(!giraEvents.length&&!gira_loading){
     gira_loading=true;
     giraLoadStaticData().then(()=>giraLoadData()).then(()=>{gira_loading=false;if(page==='dashboard')renderMain();}).catch(()=>{gira_loading=false;});
+  }else if(giraActiveGroup!=='all'&&!gira_loading){
+    // giraEvents quedó filtrado por el grupo elegido en el Calendario; el dashboard necesita todos.
+    giraActiveGroup='all';
+    gira_loading=true;
+    giraLoadData().then(()=>{gira_loading=false;if(page==='dashboard')renderMain();}).catch(()=>{gira_loading=false;});
   }
 
   // Auto-cargar giras (módulo Evaluación de Tenista) para la card del dashboard — una sola vez
@@ -4177,10 +4182,27 @@ function renderDashboard(){
   const alertsCollapsed=localStorage.getItem('dashboard_alerts_collapsed')==='1';
 
   // ── 3. PRÓXIMOS TORNEOS ──
-  const in28=new Date(today);in28.setDate(today.getDate()+28);
-  const upcoming=(giraEvents||[]).filter(ev=>{
-    const w=isoWeekToRange(ev.week);return w&&w.end>=today&&w.start<=in28&&(!activeGroup||ev.group_id===activeGroup);
-  }).sort((a,b)=>{const wa=isoWeekToRange(a.week),wb=isoWeekToRange(b.week);return wa.start-wb.start;});
+  // 4 semanas (la actual + 3) en hora de Chile, agrupadas por ev.week como el Calendario.
+  // Filtro de grupo por jugador inscrito; sin jugadores resolubles cae a ev.group_id.
+  const torneosLunes=lunesDeSemana(hoyChile());
+  const torneosUltimoLunes=sumarDias(torneosLunes,21);
+  const torneoEnGrupo=(ev,gid)=>{
+    const ps=(ev.player_ids||[]).map(id=>(giraPlayers||[]).find(p=>p.id===id)).filter(Boolean);
+    return ps.length?ps.some(p=>p.group_id===gid):ev.group_id===gid;
+  };
+  const torneosPorSemana={};
+  (giraEvents||[]).forEach(ev=>{
+    const w=evaluacionIsoWeekRange(ev.week);
+    if(!w||w.start<torneosLunes||w.start>torneosUltimoLunes)return;
+    if(activeGroup&&!torneoEnGrupo(ev,activeGroup))return;
+    (torneosPorSemana[ev.week]=torneosPorSemana[ev.week]||{range:w,evs:[]}).evs.push(ev);
+  });
+  const upcomingWeeks=Object.keys(torneosPorSemana).sort().map(k=>torneosPorSemana[k]);
+  // {start:'2026-10-05',end:'2026-10-11'} → "05 – 11 oct" / "28 sep – 04 oct"
+  const fmtRangoSemana=({start,end})=>{
+    const [,ms,ds]=start.split('-'),[,me,de]=end.split('-');
+    return ms===me?`${ds} – ${de} ${MONTHS[+me-1]}`:`${ds} ${MONTHS[+ms-1]} – ${de} ${MONTHS[+me-1]}`;
+  };
 
   // ── 4. CARGA SEMANAL POR GRUPO (competitivos, desde /carga-resumen) ──
   const cargaLoaded = cargaResumenByLegacy != null;
@@ -4326,23 +4348,35 @@ function renderDashboard(){
   <!-- 3. PRÓXIMOS TORNEOS -->
   <div style="margin-bottom:20px;">
     <div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Próximos torneos</div>
-    ${!upcoming.length
+    ${!upcomingWeeks.length
       ?`<div style="background:#f9f9f7;border:1px solid #eee;border-radius:10px;padding:12px 16px;font-size:13px;color:#aaa;">Sin eventos en las próximas 4 semanas${!giraEvents.length?' — cargando datos…':''}</div>`
-      :upcoming.map(ev=>{
-          const pNames=(ev.player_ids||[]).slice(0,3).map(id=>{const gp=(giraPlayers||[]).find(x=>x.id===id);return gp?.full_name?.split(' ')[0]||null;}).filter(Boolean);
-          const cNames=(ev.coach_ids||[]).map(id=>{const c=(giraCoaches||[]).find(x=>x.id===id);return c?.profiles?.full_name?.split(' ')[0]||null;}).filter(Boolean);
-          return `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:8px;">
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
-              <div>
-                <div style="font-size:14px;font-weight:700;color:#1a1a1a;">${ev.city} <span style="font-weight:400;color:#888;">· ${ev.country}</span></div>
-                <div style="font-size:11px;color:#bbb;margin-top:2px;">${escHtml(weekToRangeGira(ev.week))}</div>
+      :upcomingWeeks.map(({range,evs})=>`
+        <div style="border-top:2px solid #e8e8e8;padding-top:10px;margin-top:4px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:12px;font-weight:700;color:#555;">${fmtRangoSemana(range)}</span>
+            ${range.start===torneosLunes?'<span style="font-size:10px;background:#22C55E20;color:#166534;padding:2px 8px;border-radius:99px;font-weight:600;">Esta semana</span>':''}
+            <span style="margin-left:auto;font-size:10px;font-weight:600;color:#888;background:#f2f2f2;padding:2px 8px;border-radius:99px;">${evs.length} torneo${evs.length===1?'':'s'}</span>
+          </div>
+          ${evs.map(ev=>{
+            const pNames=(ev.player_ids||[]).slice(0,3).map(id=>{const gp=(giraPlayers||[]).find(x=>x.id===id);return gp?.full_name?.split(' ')[0]||null;}).filter(Boolean);
+            const cNames=(ev.coach_ids||[]).map(id=>{const c=(giraCoaches||[]).find(x=>x.id===id);return c?.profiles?.full_name?.split(' ')[0]||null;}).filter(Boolean);
+            const evGroups=giraEventGroups(ev);
+            return `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                  <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;color:#fff;background:${giraLevelColor(ev.level)};white-space:nowrap;">${escHtml(ev.level||'—')}</span>
+                  <div style="font-size:14px;font-weight:700;color:#1a1a1a;">${ev.city} <span style="font-weight:400;color:#888;">· ${ev.country}</span></div>
+                </div>
+                <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
+                  ${evGroups.length?`<span style="font-size:10px;padding:2px 7px;border-radius:99px;font-weight:600;background:#f2f2f2;color:#555;border:1px solid #e0e0e0;">${evGroups.map(g=>g.name).join(' · ')}</span>`:''}
+                  ${ev.surface?`<span style="background:#eee;color:#555;font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600;">${ev.surface}</span>`:''}
+                </div>
               </div>
-              <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">${giraLevelBadge(ev.level)}<span style="background:#eee;color:#555;font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600;">${ev.surface||''}</span></div>
-            </div>
-            ${pNames.length?`<div style="font-size:11px;color:#555;margin-top:4px;">👤 ${pNames.join(', ')}${(ev.player_ids||[]).length>3?' +'+((ev.player_ids||[]).length-3):''}</div>`:''}
-            ${cNames.length?`<div style="font-size:11px;color:#555;margin-top:2px;">🎾 ${cNames.join(', ')}</div>`:''}
-          </div>`;
-        }).join('')}
+              ${pNames.length?`<div style="font-size:11px;color:#555;margin-top:4px;">👤 ${pNames.join(', ')}${(ev.player_ids||[]).length>3?' +'+((ev.player_ids||[]).length-3):''}</div>`:''}
+              ${cNames.length?`<div style="font-size:11px;color:#555;margin-top:2px;">🎾 ${cNames.join(', ')}</div>`:''}
+            </div>`;
+          }).join('')}
+        </div>`).join('')}
   </div>
 
   <!-- 3b. EVALUACIÓN DE TENISTA -->
@@ -10931,6 +10965,25 @@ function giraLevelBadge(level) {
   return `<span style="background:${bg};color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px">${level}</span>`;
 }
 
+// Color de la pastilla de categoría — compartido por Calendario y dashboard.
+// Familias: Grand Slam dorado, COSAT naranjo, WTA morado, CH azul, ITF M/W rosado, Junior verde.
+function giraLevelColor(level) {
+  if (!level) return '#6366F1';
+  const L = level.toUpperCase();
+  if (L.includes('GRAND SLAM')) return '#FFD700';
+  if (L.startsWith('COSAT')) return '#F97316';
+  if (L.startsWith('WTA')) return '#8B5CF6';
+  if (L.startsWith('CH')) return '#1A6FD4';
+  if (level.match(/^[MW]\d/)) return '#EC4899';
+  if (L.startsWith('J')) return '#22C55E';
+  return '#6366F1';
+}
+
+// Grupos (de GIRA_GROUPS) con al menos un jugador inscrito en el evento, vía giraPlayers[].group_id.
+function giraEventGroups(ev) {
+  return GIRA_GROUPS.filter(g => g.id !== 'all' && (ev.player_ids||[]).some(pid => (giraPlayers||[]).find(p=>p.id===pid&&p.group_id===g.id)));
+}
+
 function giraRenderCalendar() {
   const body = document.getElementById('gira-body');
   if (!body) return;
@@ -10956,15 +11009,6 @@ function giraRenderCalendar() {
     sun.setDate(mon.getDate()+6);
     const fmt = x => x.toLocaleDateString('es-CL',{day:'2-digit',month:'short'});
     return `${fmt(mon)} – ${fmt(sun)}`;
-  }
-
-  function levelColor(level) {
-    if (!level) return '#6366F1';
-    if (level.toUpperCase().includes('GRAND SLAM')) return '#FFD700';
-    if (level.toUpperCase().startsWith('CH')) return '#1A6FD4';
-    if (level.match(/^[MW]\d/)) return '#EC4899';
-    if (level.toUpperCase().startsWith('J')) return '#22C55E';
-    return '#6366F1';
   }
 
   function isPast(week) { return week < currentWeekStr; }
@@ -11023,7 +11067,6 @@ function giraRenderCalendar() {
     const [ny, nw] = getISOWeekGira(now);
     const currentWeekStrT = `${ny}-W${String(nw).padStart(2,'0')}`;
     const weeks = getWeeksInMonthGira(window.giraCalYear, window.giraCalMonth);
-    const groups = GIRA_GROUPS.filter(g => g.id !== 'all');
 
     const weeksHtml = weeks.map(({weekStr, mon, sun}) => {
       const evs = giraEvents.filter(e => e.week === weekStr);
@@ -11036,9 +11079,9 @@ function giraRenderCalendar() {
         ${evs.length === 0
           ? '<div style="padding:8px 12px;font-size:12px;color:#aaa;font-style:italic">Sin torneos</div>'
           : `<div style="padding:8px 12px;display:flex;flex-direction:column;gap:6px">${evs.map(ev => {
-              const evGroups = groups.filter(g => (ev.player_ids||[]).some(pid => (giraPlayers||[]).find(p=>p.id===pid&&p.group_id===g.id)));
+              const evGroups = giraEventGroups(ev);
               return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:0.5px solid #e8e8e8;border-radius:8px">
-                <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;color:#fff;background:${levelColor(ev.level)};white-space:nowrap">${ev.level||'—'}</span>
+                <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;color:#fff;background:${giraLevelColor(ev.level)};white-space:nowrap">${ev.level||'—'}</span>
                 <div style="flex:1">
                   <div style="font-size:12px;font-weight:500;color:#333">${ev.city}, ${ev.country}</div>
                   <div style="font-size:11px;color:#888">${ev.surface||''}</div>
@@ -11109,7 +11152,7 @@ function giraRenderCalendar() {
             <div class="gira-event-row">
               <div><strong>${ev.city}</strong><span style="color:#888;font-size:12px;margin-left:4px">${ev.country}</span></div>
               <div style="display:flex;gap:4px">
-                <span class="gira-level-badge" style="background:${levelColor(ev.level)}">${ev.level||'—'}</span>
+                <span class="gira-level-badge" style="background:${giraLevelColor(ev.level)}">${ev.level||'—'}</span>
                 ${ev.surface?`<span class="gira-surface-badge">${ev.surface}</span>`:''}
               </div>
             </div>
